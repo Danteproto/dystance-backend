@@ -1,10 +1,10 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Identity;
+using System;
 
 namespace API.Models
 {
-    public class AppUser : Iden
-    {
-
-
+    public class AppUser : IdentityUser
+    { 
+        public string DisplayName { get; set; }
     }
 }
