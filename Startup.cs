@@ -64,7 +64,7 @@ namespace BackEnd
             app.UseRouting();
 
             app.UseAuthentication();
-            app.UseAuthorization();
+            //app.UseAuthorization();
             app.UseCors("CorsPolicy");
 
 
