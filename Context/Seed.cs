@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace API.Context
 {
-    public class Seed
+    public class Seed 
     {
         public static async Task SeedData(UserDbContext context, UserManager<AppUser> userManager)
         {
