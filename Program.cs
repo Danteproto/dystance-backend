@@ -11,6 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Logging;
 
 namespace BackEnd
 {
@@ -27,9 +28,10 @@ namespace BackEnd
                 var services = scope.ServiceProvider;
                 try
                 {
+                    IdentityModelEventSource.ShowPII = true;
                     var context = services.GetRequiredService<UserDbContext>();
                     var userManager = services.GetRequiredService<UserManager<AppUser>>();
-                    context.Database.EnsureCreated(); 
+                    context.Database.Migrate(); 
                     Seed.SeedData(context, userManager).Wait();
                 }
                 catch (Exception ex)

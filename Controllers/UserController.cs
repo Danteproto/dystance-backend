@@ -2,16 +2,20 @@
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Net;
 using System.Security.Claims;
-using System.Text;
 using System.Threading.Tasks;
+using API.Context;
 using API.Models;
+using BackEnd.Errors;
+using BackEnd.Interfaces;
 using BackEnd.Models;
-using Microsoft.AspNetCore.Authorization;
+using BackEnd.Security;
+using BackEnd.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -19,49 +23,28 @@ namespace BackEnd.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class TestController : ControllerBase
+    public class UserController : ControllerBase
     {
+        private readonly UserDbContext _context;
         private readonly SignInManager<AppUser> _signInManager;
         private readonly UserManager<AppUser> _userManager;
         private readonly IConfiguration _configuration;
+        private readonly IJwtGenerator _jwtGenerator;
+        private readonly IUserService _userService;
 
-        public TestController(SignInManager<AppUser> signInManager, UserManager<AppUser> userManager, IConfiguration configuration)
+        public UserController(UserDbContext context, SignInManager<AppUser> signInManager, UserManager<AppUser> userManager, IConfiguration configuration, IUserService userService, IJwtGenerator jwtGenerator)
         {
+            _context = context;
             _signInManager = signInManager;
             _userManager = userManager;
             _configuration = configuration;
+            _jwtGenerator = jwtGenerator;
+
+
+
+            _userService = new UserService(_context, _userManager, _signInManager, _jwtGenerator);
         }
 
-
-        // GET: api/<TestController>
-        [HttpGet]
-        public IEnumerable<string> Get()
-        {
-            return new string[] { "value1", "value2" };
-        }
-
-        // GET api/<TestController>/5
-        [HttpGet("{id}")]
-        public string Get(int id)
-        {
-            return "value";
-        }
-
-        //// POST api/<TestController>
-        //[HttpPost]
-        //public async Task<IActionResult> Post([FromBody] AppUser user)
-        //{
-        //    var result = await _signInManager.PasswordSignInAsync(user.UserName, user.)
-        //    if (result.Succeeded)
-        //    {
-        //        return Ok(user);
-        //    }
-        //    else
-        //    {
-        //        return NotFound(user);
-        //    }
-            
-        //}
         [HttpPost]
         [Route("login")]
         public async Task<IActionResult> Login([FromBody] LoginModel model)
@@ -84,21 +67,17 @@ namespace BackEnd.Controllers
 
                 return Ok(user);
             }
+
             return Unauthorized();
         }
 
-
-
-        // PUT api/<TestController>/5
-        [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value)
+        [HttpPost]
+        [Route("register")]
+        public Task<IActionResult> Register([FromBody] RegisterModel model)
         {
+            return _userService.Register(model);
         }
 
-        // DELETE api/<TestController>/5
-        [HttpDelete("{id}")]
-        public void Delete(int id)
-        {
-        }
+
     }
 }
