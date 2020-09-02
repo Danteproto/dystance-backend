@@ -68,5 +68,24 @@ namespace BackEnd.Services
 
             throw new Exception("Problem creating users");
         }
+
+
+        public async Task<IActionResult> Login(LoginModel model)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Username);
+            if (user != null && await _userManager.CheckPasswordAsync(user, model.Password))
+            {
+
+                return new OkObjectResult(user);
+            }
+            else
+            {
+                throw new RestException(HttpStatusCode.BadRequest, new { User = "Not found" });
+            }
+
+        }
+
+
+
     }
 }

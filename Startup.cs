@@ -50,14 +50,23 @@ namespace BackEnd
             });
 
             //Configure for project to use Identity
-            services.AddIdentity<AppUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
-                .AddEntityFrameworkStores<UserDbContext>()
-                .AddSignInManager<SignInManager<AppUser>>();
+            var identityBuilder = services.AddIdentityCore<AppUser>(o =>
+            {
+                // configure identity options
+                o.Password.RequireDigit = false;
+                o.Password.RequireLowercase = false;
+                o.Password.RequireUppercase = false;
+                o.Password.RequireNonAlphanumeric = false;
+                o.Password.RequiredLength = 6;
+            }).AddEntityFrameworkStores<UserDbContext>()
+                .AddSignInManager<SignInManager<AppUser>>(); ;
+
 
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["TokenKey"]));
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                    .AddJwtBearer(opt => {
+                    .AddJwtBearer(opt =>
+                    {
                         opt.TokenValidationParameters = new TokenValidationParameters
                         {
                             ValidateIssuerSigningKey = true,

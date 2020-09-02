@@ -11,5 +11,8 @@ namespace BackEnd.Interfaces
     {
 
         public Task<IActionResult> Register(RegisterModel model);
+
+        public Task<IActionResult> Login(LoginModel model);
+
     }
 }

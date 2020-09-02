@@ -12,6 +12,7 @@ using BackEnd.Interfaces;
 using BackEnd.Models;
 using BackEnd.Security;
 using BackEnd.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -47,32 +48,16 @@ namespace BackEnd.Controllers
 
         [HttpPost]
         [Route("login")]
-        public async Task<IActionResult> Login([FromBody] LoginModel model)
+        [AllowAnonymous]
+        public Task<IActionResult> Login([FromBody] LoginModel model)
         {
-            var user = await _userManager.FindByEmailAsync(model.Username);
-            if (user != null && await _userManager.CheckPasswordAsync(user, model.Password))
-            {
-                var userRoles = await _userManager.GetRolesAsync(user);
 
-                var authClaims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.Name, user.UserName),
-                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                };
-
-                foreach (var userRole in userRoles)
-                {
-                    authClaims.Add(new Claim(ClaimTypes.Role, userRole));
-                }
-
-                return Ok(user);
-            }
-
-            return Unauthorized();
+            return _userService.Login(model);
         }
 
         [HttpPost]
         [Route("register")]
+        [AllowAnonymous]
         public Task<IActionResult> Register([FromBody] RegisterModel model)
         {
             return _userService.Register(model);
