@@ -10,10 +10,17 @@ namespace BackEnd.DAO
 {
     public class RoomDAO
     {
-        public static void Create(RoomDBContext context, Room room)
+        public static string Create(RoomDBContext context, Room room)
         {
-            context.Room.Add(room);
-            context.SaveChanges();
+            try
+            {
+                context.Room.Add(room);
+                context.SaveChanges();
+                return "Create successful";
+            }catch(Exception e)
+            {
+                return "Error Can't create Room";
+            }
         }
 
         public static Room Get(RoomDBContext context, int Id)

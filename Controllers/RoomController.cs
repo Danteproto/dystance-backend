@@ -5,8 +5,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using System.Web;
 
 namespace BackEnd.Controllers
@@ -23,30 +25,46 @@ namespace BackEnd.Controllers
             _context = context;
             _env = env;
         }
-        [HttpGet]
-        public string get()
-        {
-            return _env.WebRootPath;
-        }
+
         [HttpPost("Create")]
-        public string CreateRoom()
+        public IActionResult CreateRoom()
         {
-            RoomService.CreateRoom(_context, Request, _env);
-            return "create succesful";
+            var status = RoomService.CreateRoom(_context, Request, _env);
+            JObject json = new JObject();
+            JArray array = new JArray();
+            array.Add(status);
+            json["status"] = array;
+            return Content(json.ToString());
         }
+
         [HttpPost("Get")]
-        public IActionResult GetRoomById(int Id)
+        public IActionResult GetRoomById()
         {
-            Room room = RoomService.GetRoomById(_context, Id);
+            Room room = RoomService.GetRoomById(_context, Request);
             return Content(JsonConvert.SerializeObject(room));
         }
 
         [HttpPost("Get/ByUserId")]
-        public IActionResult GetRoomByUserId(int Id)
+        public IActionResult GetRoomByUserId()
         {
-            var rooms = RoomService.GetRoomByUserId(_context, Id);
+            var rooms = RoomService.GetRoomByUserId(_context, Request);
             return Content(JsonConvert.SerializeObject(rooms));
         }
-
+        [HttpPost("Get/Image")]
+        public async Task<IActionResult> GetImage()
+        {
+            var imgName = Request.Form["imgName"];
+            var rootPath = _env.ContentRootPath;
+            var path = Path.Combine(rootPath, "Images");
+            var imgPath = Path.Combine(path, imgName);
+            var image = System.IO.File.OpenRead(imgPath);
+            return File(image, "image/jpeg");
+        }
+        [HttpPost("Chat")]
+        public IActionResult CreateChat()
+        {
+            RoomService.CreateRoomChat(_context, Request);
+            return Content("Chat add successful");
+        }
     }
 }
