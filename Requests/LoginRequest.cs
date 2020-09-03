@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace BackEnd.Models
 {
-    public class LoginModel
+    public class LoginRequest
     {
         [Required(ErrorMessage = "User Name is required")]  
         public string Email { get; set; }  

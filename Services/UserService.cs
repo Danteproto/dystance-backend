@@ -1,8 +1,7 @@
-﻿using API.Context;
-using API.Models;
+﻿using BackEnd.Context;
+using BackEnd.Models;
 using BackEnd.Errors;
 using BackEnd.Interfaces;
-using BackEnd.Models;
 using BackEnd.Security;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -12,80 +11,167 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Options;
+using AutoMapper;
+using System.IdentityModel.Tokens.Jwt;
+using System.Text;
+using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Diagnostics;
 
 namespace BackEnd.Services
 {
+    public interface IUserService
+    {
+        public Task<AuthenticateResponse> Authenticate(AuthenticateRequest model, string ipAddress);
+        AuthenticateResponse RefreshToken(string token, string ipAddress);
+        bool RevokeToken(string token, string ipAddress);
+        IEnumerable<User> GetAll();
+        User GetById(string id);
+    }
+
     public class UserService : IUserService
     {
-        private readonly UserDbContext _context;
-        private readonly UserManager<AppUser> _userManager;
+        private UserDbContext _context;
+        private readonly IMapper _mapper;
         private readonly SignInManager<AppUser> _signInManager;
-        private readonly IJwtGenerator _jwtGenerator;
+        private readonly AppSettings _appSettings;
 
-        public UserService(UserDbContext context, UserManager<AppUser> userManager, SignInManager<AppUser> signInManager, IJwtGenerator jwtGenerator)
+        public UserService(
+            UserDbContext context,
+            IOptions<AppSettings> appSettings,
+            IMapper mapper,
+            SignInManager<AppUser> signInManager)
         {
             _context = context;
-            _userManager = userManager;
+            _mapper = mapper;
             _signInManager = signInManager;
-            _jwtGenerator = jwtGenerator;
+            _appSettings = appSettings.Value;
         }
 
-
-        public async Task<IActionResult> Register(RegisterModel model)
+        public async Task<AuthenticateResponse> Authenticate(AuthenticateRequest model, string ipAddress)
         {
+            var appUser = _context.Users.SingleOrDefault(x => x.UserName == model.Username);
 
-            if (await _context.Users.Where(x => x.Email == model.Email).AnyAsync())
-            {
-                throw new RestException(HttpStatusCode.BadRequest, new { Email = "Email already exists" });
-            }
+            // return null if user not found
+            if (appUser == null) return null;
 
-            if (await _context.Users.Where(x => x.UserName == model.Username).AnyAsync())
-            {
-                throw new RestException(HttpStatusCode.BadRequest, new { Username = "Username already exists" });
-            }
-
-            var user = new AppUser
-            {
-                DisplayName = model.DisplayName,
-                Email = model.Email,
-                UserName = model.Username
-            };
-
-            var result = await _userManager.CreateAsync(user, model.Password);
+            var result = await _signInManager.CheckPasswordSignInAsync(appUser, model.Password, false);
 
             if (result.Succeeded)
             {
-                var authenUser = new AuthenticatedUser
-                {
-                    DisplayName = user.DisplayName,
-                    Token = _jwtGenerator.CreateToken(user),
-                    Username = user.UserName,
-                    Image = null
-                };
 
-                return new OkObjectResult(authenUser);
+                // authentication successful so generate jwt and refresh tokens
+                User user = _mapper.Map<User>(appUser);
+
+                var jwtToken = generateJwtToken(user);
+                var refreshToken = generateRefreshToken(ipAddress);
+
+                // save refresh token
+                appUser.RefreshTokens.Add(refreshToken);
+                _context.Update(appUser);
+                _context.SaveChanges();
+
+                return new AuthenticateResponse(user, jwtToken, refreshToken.Token);
             }
-
-            throw new Exception("Problem creating users");
+            return null;
         }
 
-
-        public async Task<IActionResult> Login(LoginModel model)
+        public AuthenticateResponse RefreshToken(string token, string ipAddress)
         {
-            var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user != null && await _userManager.CheckPasswordAsync(user, model.Password))
-            {
+            var appUser = _context.Users.SingleOrDefault(u => u.RefreshTokens.Any(t => t.Token == token));
 
-                return new OkObjectResult(user);
-            }
-            else
-            {
-                throw new RestException(HttpStatusCode.BadRequest, new { User = "Not found" });
-            }
+            // return null if no user found with token
+            if (appUser == null) return null;
+
+            
+            var refreshToken = appUser.RefreshTokens.Single(x => x.Token == token);
+
+            // return null if token is no longer active
+            if (!refreshToken.IsActive) return null;
+
+            // replace old refresh token with a new one and save
+            var newRefreshToken = generateRefreshToken(ipAddress);
+            refreshToken.Revoked = DateTime.UtcNow;
+            refreshToken.RevokedByIp = ipAddress;
+            refreshToken.ReplacedByToken = newRefreshToken.Token;
+            appUser.RefreshTokens.Add(newRefreshToken);
+            _context.Update(appUser);
+            _context.SaveChanges();
+
+            // generate new jwt
+            User user = _mapper.Map<User>(appUser);
+            var jwtToken = generateJwtToken(user);
+
+            return new AuthenticateResponse(user, jwtToken, newRefreshToken.Token);
+        }
+
+        public bool RevokeToken(string token, string ipAddress)
+        {
+            var appUser = _context.Users.SingleOrDefault(u => u.RefreshTokens.Any(t => t.Token == token));
+
+            // return false if no user found with token
+            if (appUser == null) return false;
+
+            var refreshToken = appUser.RefreshTokens.Single(x => x.Token == token);
+
+            // return false if token is not active
+            if (!refreshToken.IsActive) return false;
+
+            // revoke token and save
+            refreshToken.Revoked = DateTime.UtcNow;
+            refreshToken.RevokedByIp = ipAddress;
+            _context.Update(appUser);
+            _context.SaveChanges();
+
+            return true;
+        }
+
+        public IEnumerable<User> GetAll()
+        {
+            return _mapper.Map<List<AppUser>, List<User>>(_context.Users.ToList());
 
         }
 
+        public User GetById(string id)
+        {
+            return _mapper.Map<AppUser, User>(_context.Users.Find(id));
+        }
 
+        // helper methods
 
+        private string generateJwtToken(User user)
+        {
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.ASCII.GetBytes(_appSettings.Secret);
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new Claim[]
+                {
+                    new Claim(ClaimTypes.Name, user.Id.ToString())
+                }),
+                Expires = DateTime.UtcNow.AddMinutes(15),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+            };
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            return tokenHandler.WriteToken(token);
+        }
+
+        private RefreshToken generateRefreshToken(string ipAddress)
+        {
+            using (var rngCryptoServiceProvider = new RNGCryptoServiceProvider())
+            {
+                var randomBytes = new byte[64];
+                rngCryptoServiceProvider.GetBytes(randomBytes);
+                return new RefreshToken
+                {
+                    Token = Convert.ToBase64String(randomBytes),
+                    Expires = DateTime.UtcNow.AddDays(7),
+                    Created = DateTime.UtcNow,
+                    CreatedByIp = ipAddress
+                };
+            }
+        }
     }
 }

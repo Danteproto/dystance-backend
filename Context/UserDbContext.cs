@@ -1,10 +1,10 @@
-﻿using API.Models;
+﻿using BackEnd.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System;
 
-namespace API.Context
+namespace BackEnd.Context
 {
     public class UserDbContext : IdentityDbContext<AppUser>
     {
@@ -13,10 +13,10 @@ namespace API.Context
 
         }
 
-
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
+   
         protected override void OnModelCreating(ModelBuilder builder)
-        {
-            base.OnModelCreating(builder);
+        {            base.OnModelCreating(builder);
 
             builder.Entity<AppUser>(entity => { entity.ToTable(name: "Users"); });
             builder.Entity<IdentityRole>(entity => { entity.ToTable(name: "Roles"); });
