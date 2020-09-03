@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace BackEnd.Context
 {
-    public class Seed 
+    public class Seed
     {
         public static async Task SeedData(UserDbContext context, UserManager<AppUser> userManager)
         {
@@ -36,7 +36,6 @@ namespace BackEnd.Context
                         UserName="hoang",
                         Email="hoang@test.com"
                     }
-
                 };
                 foreach (var user in users)
                 {

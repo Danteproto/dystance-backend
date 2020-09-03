@@ -255,9 +255,6 @@ namespace BackEnd.Migrations
                             b1.Property<string>("Token")
                                 .HasColumnType("nvarchar(max)");
 
-                            b1.Property<string>("UserId")
-                                .HasColumnType("nvarchar(max)");
-
                             b1.HasKey("Id");
 
                             b1.HasIndex("AppUserId");

@@ -17,6 +17,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Http;
+using AutoMapper;
+using EmailService;
+using BackEnd.Responses;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -30,12 +33,16 @@ namespace BackEnd.Controllers
         private IUserService _userService;
         private readonly SignInManager<AppUser> _signInManager;
         private readonly UserManager<AppUser> _userManager;
+        private readonly IMapper _mapper;
+        private readonly IEmailSender _emailSender;
 
-        public UsersController(IUserService userService, SignInManager<AppUser> signInManager, UserManager<AppUser> userManager)
+        public UsersController(IUserService userService, SignInManager<AppUser> signInManager, UserManager<AppUser> userManager, IMapper mapper, IEmailSender emailSender)
         {
             _userService = userService;
             _signInManager = signInManager;
             _userManager = userManager;
+            _mapper = mapper;
+            _emailSender =emailSender;
         }
 
         [AllowAnonymous]
@@ -45,7 +52,7 @@ namespace BackEnd.Controllers
             var response = await _userService.Authenticate(model, ipAddress());
 
             if (response == null)
-                return BadRequest(new { message = "Username or password is incorrect" });
+                return BadRequest(new { message = "Wrong credentials or email not yet confirmed" });
 
             setTokenCookie(response.RefreshToken);
 
@@ -127,6 +134,69 @@ namespace BackEnd.Controllers
                 return Request.Headers["X-Forwarded-For"];
             else
                 return HttpContext.Connection.RemoteIpAddress.MapToIPv4().ToString();
+        }
+
+
+
+
+        [AllowAnonymous]
+        [HttpPost("register")]
+
+        public async Task<IActionResult> Register([FromBody] RegisterRequest userModel)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest("Bad request!");
+            }
+            var user = new AppUser
+            {
+                Email = userModel.Email,
+                UserName = userModel.Username,
+                Password = userModel.Password
+            };
+            var result = await _userManager.CreateAsync(user, userModel.Password);
+            if (!result.Succeeded)
+            {
+                foreach (var error in result.Errors)
+                {
+                    ModelState.TryAddModelError(error.Code, error.Description);
+                }
+                throw new RestException(HttpStatusCode.BadRequest, ModelState);
+            }
+
+
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var confirmationLink = Url.Action("ConfirmEmail", "Users", new { token, email = user.Email }, Request.Scheme);
+            //var message = new Message(new string[] { user.Email }, "Confirmation email link", confirmationLink, null);
+            //await _emailSender.SendEmailAsync(message);
+            //await _userManager.AddToRoleAsync(user, "Visitor");
+
+
+            return Ok(new RegisterResponse
+            {
+                Email = userModel.Email,
+                Username = userModel.Username,
+                Token = token,
+                TokenLink = confirmationLink
+            });
+        }
+
+
+        [AllowAnonymous]
+        [HttpGet("confirm-email")]
+        public async Task<IActionResult> ConfirmEmail(string token, string email)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
+                return BadRequest(new { message = "Error!" });
+
+            var result = await _userManager.ConfirmEmailAsync(user, token);
+
+            if (result.Succeeded)
+            {
+                return Ok();
+            }
+            throw new RestException(HttpStatusCode.BadRequest, new { error = "Error!" });
         }
     }
 }
