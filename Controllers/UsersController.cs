@@ -59,7 +59,7 @@ namespace BackEnd.Controllers
         }
 
         [Authorize]
-        [HttpPost("refresh-token")]
+        [HttpPost("refreshToken")]
         public IActionResult RefreshToken([FromBody] RefreshTokenRequestz tokenRequest)
         {
             var refreshToken = tokenRequest.RefreshToken;
@@ -173,7 +173,7 @@ namespace BackEnd.Controllers
         }
 
         [AllowAnonymous]
-        [HttpGet("resend-email")]
+        [HttpGet("resendEmail")]
         public async Task<IActionResult> ResendEmail(string email)
         {
             var user = await _userManager.FindByEmailAsync(email);
@@ -190,7 +190,7 @@ namespace BackEnd.Controllers
 
 
         [AllowAnonymous]
-        [HttpGet("confirm-email")]
+        [HttpGet("confirmEmail")]
         public async Task<string> ConfirmEmail(string token, string email)
         {
             var user = await _userManager.FindByEmailAsync(email);
