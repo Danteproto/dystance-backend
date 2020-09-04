@@ -29,7 +29,7 @@ namespace BackEnd.Controllers
 {
     [Authorize]
     [ApiController]
-    [Route("[controller]")]
+    [Route("api/[controller]")]
     public class UsersController : ControllerBase
     {
         private IUserService _userService;
@@ -51,10 +51,6 @@ namespace BackEnd.Controllers
         [HttpPost("authenticate")]
         public async Task<IActionResult> Authenticate([FromBody] AuthenticateRequest model)
         {
-            if (!ModelState.IsValid)
-            {
-                throw new RestException(HttpStatusCode.InternalServerError, new { error = "Invalid model state" });
-            }
             var response = await _userService.Authenticate(model);
 
             //setTokenCookie(response.RefreshToken);
@@ -102,7 +98,7 @@ namespace BackEnd.Controllers
         }
         
         [Authorize]
-        [HttpGet("{id}")]
+        [HttpGet("info")]
         public IActionResult GetUserInfoById(string id)
         {
             var user = _userService.GetById(id);
@@ -132,10 +128,6 @@ namespace BackEnd.Controllers
 
         public async Task<IActionResult> Register([FromBody] RegisterRequest userModel)
         {
-            if (!ModelState.IsValid)
-            {
-                throw new RestException(HttpStatusCode.InternalServerError, new { error = "Invalid model state" });
-            }
 
             var appUser = await _userManager.FindByEmailAsync(userModel.Email);
             if (appUser != null)
