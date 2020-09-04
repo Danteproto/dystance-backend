@@ -3,14 +3,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace BackEnd.Models
+namespace BackEnd.Responses
 {
-    public class RegisterRequest
+    public class UserInfoResponse
     {
+
+        public string Id { get; set; }
+
         public string Username { get; set; }
-        public string Email { get; set; }
-        public string Password { get; set; }
         public string RealName { get; set; }
-        public string DOB { get; set; }
+        public string Avatar { get; set; }
+
+      
+
     }
 }

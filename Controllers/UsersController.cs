@@ -20,6 +20,8 @@ using Microsoft.AspNetCore.Http;
 using AutoMapper;
 using EmailService;
 using BackEnd.Responses;
+using Google.Apis.Auth.OAuth2.Requests;
+using BackEnd.Requests;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -49,27 +51,28 @@ namespace BackEnd.Controllers
         [HttpPost("authenticate")]
         public async Task<IActionResult> Authenticate([FromBody] AuthenticateRequest model)
         {
-            var response = await _userService.Authenticate(model, ipAddress());
+            if (!ModelState.IsValid)
+            {
+                throw new RestException(HttpStatusCode.InternalServerError, new { error = "Invalid model state" });
+            }
+            var response = await _userService.Authenticate(model);
 
-            if (response == null)
-                return BadRequest(new { message = "Wrong credentials or email not yet confirmed" });
-
-            setTokenCookie(response.RefreshToken);
+            //setTokenCookie(response.RefreshToken);
 
             return Ok(response);
         }
 
-        [AllowAnonymous]
+        [Authorize]
         [HttpPost("refresh-token")]
-        public IActionResult RefreshToken()
+        public IActionResult RefreshToken([FromBody] RefreshTokenRequestz tokenRequest)
         {
-            var refreshToken = Request.Cookies["refreshToken"];
-            var response = _userService.RefreshToken(refreshToken, ipAddress());
+            var refreshToken = tokenRequest.RefreshToken;
+            var response = _userService.RefreshToken(refreshToken);
 
             if (response == null)
                 return Unauthorized(new { message = "Invalid token" });
 
-            setTokenCookie(response.RefreshToken);
+            //setTokenCookie(response.RefreshToken);
 
             return Ok(response);
         }
@@ -97,14 +100,21 @@ namespace BackEnd.Controllers
             var users = _userService.GetAll();
             return Ok(users);
         }
-
+        
+        [Authorize]
         [HttpGet("{id}")]
-        public IActionResult GetById(string id)
+        public IActionResult GetUserInfoById(string id)
         {
             var user = _userService.GetById(id);
             if (user == null) return NotFound();
 
-            return Ok(user);
+            return Ok(new UserInfoResponse
+            {
+                  Id = user.Id,
+                  Username = user.UserName,
+                  RealName = user.RealName,
+                  Avatar = ""
+            });
         }
 
         [HttpGet("{id}/refresh-tokens")]
@@ -114,6 +124,94 @@ namespace BackEnd.Controllers
             if (user == null) return NotFound();
 
             return Ok(user.RefreshTokens);
+        }
+
+
+        [AllowAnonymous]
+        [HttpPost("register")]
+
+        public async Task<IActionResult> Register([FromBody] RegisterRequest userModel)
+        {
+            if (!ModelState.IsValid)
+            {
+                throw new RestException(HttpStatusCode.InternalServerError, new { error = "Invalid model state" });
+            }
+
+            var appUser = await _userManager.FindByEmailAsync(userModel.Email);
+            if (appUser != null)
+            {
+                throw new RestException(HttpStatusCode.BadRequest, new { type = "0" , message = "Email already exists"});
+            }
+
+            appUser = await _userManager.FindByNameAsync(userModel.Username);
+            if (appUser != null)
+            {
+                throw new RestException(HttpStatusCode.BadRequest, new { type = "1", message = "Username already exists" });
+            }
+
+            var user = new AppUser
+            {
+                Email = userModel.Email,
+                UserName = userModel.Username,
+                RealName = userModel.RealName,
+                DOB = userModel.DOB
+            };
+
+            var result = await _userManager.CreateAsync(user, userModel.Password);
+            if (!result.Succeeded)
+            {
+                throw new RestException(HttpStatusCode.InternalServerError, new { error = result.Errors.ToList()[0].Description });
+            }
+
+
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var confirmationLink = Url.Action("ConfirmEmail", "Users", new { token, email = user.Email }, Request.Scheme);
+            var message = new Message(new string[] { user.Email }, "Confirmation email link", confirmationLink, null);
+            await _emailSender.SendEmailAsync(message);
+            //await _userManager.AddToRoleAsync(user, "Visitor");
+
+
+            return Ok(new RegisterResponse
+            {
+                Email = userModel.Email,
+                Username = userModel.Username,
+                Token = token,
+                TokenLink = confirmationLink
+            });
+        }
+
+        [AllowAnonymous]
+        [HttpGet("resend-email")]
+        public async Task<IActionResult> ResendEmail(string email)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
+                throw new RestException(HttpStatusCode.InternalServerError, new { error = "User not found" });
+
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var confirmationLink = Url.Action("ConfirmEmail", "Users", new { token, email = user.Email }, Request.Scheme);
+            var message = new Message(new string[] { user.Email }, "Confirmation email link", confirmationLink, null);
+            await _emailSender.SendEmailAsync(message);
+
+            return Ok(new { message = "Successful" });
+        }
+
+
+        [AllowAnonymous]
+        [HttpGet("confirm-email")]
+        public async Task<string> ConfirmEmail(string token, string email)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
+                throw new RestException(HttpStatusCode.InternalServerError, new { error = "Error!" });
+
+            var result = await _userManager.ConfirmEmailAsync(user, token);
+
+            if (result.Succeeded)
+            {
+                return "Email confirmed!";
+            }
+            throw new RestException(HttpStatusCode.InternalServerError, new { error = "Error!" });
         }
 
         // helper methods
@@ -139,64 +237,6 @@ namespace BackEnd.Controllers
 
 
 
-        [AllowAnonymous]
-        [HttpPost("register")]
-
-        public async Task<IActionResult> Register([FromBody] RegisterRequest userModel)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest("Bad request!");
-            }
-            var user = new AppUser
-            {
-                Email = userModel.Email,
-                UserName = userModel.Username,
-                Password = userModel.Password
-            };
-            var result = await _userManager.CreateAsync(user, userModel.Password);
-            if (!result.Succeeded)
-            {
-                foreach (var error in result.Errors)
-                {
-                    ModelState.TryAddModelError(error.Code, error.Description);
-                }
-                throw new RestException(HttpStatusCode.BadRequest, ModelState);
-            }
-
-
-            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-            var confirmationLink = Url.Action("ConfirmEmail", "Users", new { token, email = user.Email }, Request.Scheme);
-            //var message = new Message(new string[] { user.Email }, "Confirmation email link", confirmationLink, null);
-            //await _emailSender.SendEmailAsync(message);
-            //await _userManager.AddToRoleAsync(user, "Visitor");
-
-
-            return Ok(new RegisterResponse
-            {
-                Email = userModel.Email,
-                Username = userModel.Username,
-                Token = token,
-                TokenLink = confirmationLink
-            });
-        }
-
-
-        [AllowAnonymous]
-        [HttpGet("confirm-email")]
-        public async Task<IActionResult> ConfirmEmail(string token, string email)
-        {
-            var user = await _userManager.FindByEmailAsync(email);
-            if (user == null)
-                return BadRequest(new { message = "Error!" });
-
-            var result = await _userManager.ConfirmEmailAsync(user, token);
-
-            if (result.Succeeded)
-            {
-                return Ok();
-            }
-            throw new RestException(HttpStatusCode.BadRequest, new { error = "Error!" });
-        }
+        
     }
 }

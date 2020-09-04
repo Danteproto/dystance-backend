@@ -17,22 +17,22 @@ namespace BackEnd.Context
                 var users = new List<AppUser>
                 {
                     new AppUser{
-                        DisplayName="Minh",
+                        RealName="Minh",
                         UserName="minh",
                         Email="minh@test.com"
                     },
                     new AppUser{
-                        DisplayName="Dat",
+                        RealName="Dat",
                         UserName="dat",
                         Email="dat@test.com"
                     },
                     new AppUser{
-                        DisplayName="Tu",
+                        RealName="Tu",
                         UserName="tu",
                         Email="tu@test.com"
                     },
                     new AppUser{
-                        DisplayName="Hoang",
+                        RealName="Hoang",
                         UserName="hoang",
                         Email="hoang@test.com"
                     }

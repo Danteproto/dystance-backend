@@ -19,16 +19,17 @@ using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Diagnostics;
+using BackEnd.Ultilities;
 
 namespace BackEnd.Services
 {
     public interface IUserService
     {
-        public Task<AuthenticateResponse> Authenticate(AuthenticateRequest model, string ipAddress);
-        AuthenticateResponse RefreshToken(string token, string ipAddress);
+        public Task<AuthenticateResponse> Authenticate(AuthenticateRequest model);
+        AuthenticateResponse RefreshToken(string token);
         bool RevokeToken(string token, string ipAddress);
         IEnumerable<User> GetAll();
-        User GetById(string id);
+        AppUser GetById(string id);
     }
 
     public class UserService : IUserService
@@ -50,14 +51,38 @@ namespace BackEnd.Services
             _appSettings = appSettings.Value;
         }
 
-        public async Task<AuthenticateResponse> Authenticate(AuthenticateRequest model, string ipAddress)
+        public async Task<AuthenticateResponse> Authenticate(AuthenticateRequest model)
         {
-            var appUser = _context.Users.SingleOrDefault(x => x.UserName == model.Username);
-
+            AppUser appUser = null;
+            if(String.IsNullOrWhiteSpace(model.Username))
+            {
+                if (EmailUtil.CheckIfValid(model.Email))
+                {
+                    appUser = _context.Users.SingleOrDefault(x => x.Email == model.Email);
+                }
+                else
+                {
+                    throw new RestException(HttpStatusCode.BadRequest, new { type = "0", message = "Email not found!" });
+                }
+            }
+            else
+            {
+                appUser = _context.Users.SingleOrDefault(x => x.UserName == model.Username);
+            }
             // return null if user not found
-            if (appUser == null) return null;
+            if (appUser == null)
+            {
+                throw new RestException(HttpStatusCode.BadRequest, new { type = "0", message = "Username not found" });
+            }
+
+            if(!appUser.EmailConfirmed)
+            {
+                throw new RestException(HttpStatusCode.BadRequest, new { type = "1", message = "You must confirm your email before login" });
+            }
 
             var result = await _signInManager.CheckPasswordSignInAsync(appUser, model.Password, false);
+
+
 
             if (result.Succeeded)
             {
@@ -66,19 +91,22 @@ namespace BackEnd.Services
                 User user = _mapper.Map<User>(appUser);
 
                 var jwtToken = generateJwtToken(user);
-                var refreshToken = generateRefreshToken(ipAddress);
+                var refreshToken = generateRefreshToken();
 
                 // save refresh token
                 appUser.RefreshTokens.Add(refreshToken);
                 _context.Update(appUser);
                 _context.SaveChanges();
 
-                return new AuthenticateResponse(user, jwtToken, refreshToken.Token);
+                return new AuthenticateResponse(user, jwtToken.token, refreshToken.Token, jwtToken.ExpireDate);
             }
-            return null;
+            else 
+            {
+                throw new RestException(HttpStatusCode.BadRequest, new { type = "0", message = "Password is not correct" });
+            }
         }
 
-        public AuthenticateResponse RefreshToken(string token, string ipAddress)
+        public AuthenticateResponse RefreshToken(string token)
         {
             var appUser = _context.Users.SingleOrDefault(u => u.RefreshTokens.Any(t => t.Token == token));
 
@@ -92,9 +120,9 @@ namespace BackEnd.Services
             if (!refreshToken.IsActive) return null;
 
             // replace old refresh token with a new one and save
-            var newRefreshToken = generateRefreshToken(ipAddress);
+            var newRefreshToken = generateRefreshToken();
             refreshToken.Revoked = DateTime.UtcNow;
-            refreshToken.RevokedByIp = ipAddress;
+            //refreshToken.RevokedByIp = ipAddress;
             refreshToken.ReplacedByToken = newRefreshToken.Token;
             appUser.RefreshTokens.Add(newRefreshToken);
             _context.Update(appUser);
@@ -104,7 +132,7 @@ namespace BackEnd.Services
             User user = _mapper.Map<User>(appUser);
             var jwtToken = generateJwtToken(user);
 
-            return new AuthenticateResponse(user, jwtToken, newRefreshToken.Token);
+            return new AuthenticateResponse(user, jwtToken.token, newRefreshToken.Token, jwtToken.ExpireDate);
         }
 
         public bool RevokeToken(string token, string ipAddress)
@@ -134,14 +162,14 @@ namespace BackEnd.Services
 
         }
 
-        public User GetById(string id)
+        public AppUser GetById(string id)
         {
-            return _mapper.Map<AppUser, User>(_context.Users.Find(id));
+            return _context.Users.Find(id);
         }
 
         // helper methods
 
-        private string generateJwtToken(User user)
+        private JwtToken generateJwtToken(User user)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(_appSettings.Secret);
@@ -151,14 +179,14 @@ namespace BackEnd.Services
                 {
                     new Claim(ClaimTypes.Name, user.Id.ToString())
                 }),
-                Expires = DateTime.UtcNow.AddMinutes(15),
+                Expires = DateTime.UtcNow.AddDays(1),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
             var token = tokenHandler.CreateToken(tokenDescriptor);
-            return tokenHandler.WriteToken(token);
+            return new JwtToken(tokenHandler.WriteToken(token), token.ValidTo.ToShortDateString());
         }
 
-        private RefreshToken generateRefreshToken(string ipAddress)
+        private RefreshToken generateRefreshToken()
         {
             using (var rngCryptoServiceProvider = new RNGCryptoServiceProvider())
             {
@@ -168,8 +196,8 @@ namespace BackEnd.Services
                 {
                     Token = Convert.ToBase64String(randomBytes),
                     Expires = DateTime.UtcNow.AddDays(7),
-                    Created = DateTime.UtcNow,
-                    CreatedByIp = ipAddress
+                    Created = DateTime.UtcNow
+                    //CreatedByIp = ipAddress
                 };
             }
         }

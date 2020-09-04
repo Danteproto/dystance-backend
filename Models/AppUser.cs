@@ -8,9 +8,8 @@ namespace BackEnd.Models
 {
     public class AppUser : IdentityUser
     { 
-        public string DisplayName { get; set; }
-        [JsonIgnore]
-        public string Password { get; set; }
+        public string RealName { get; set; }
+        public string DOB { get; set; }
 
         [JsonIgnore]
         public List<RefreshToken> RefreshTokens { get; set; }

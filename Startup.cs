@@ -63,9 +63,10 @@ namespace BackEnd
 
                 o.User.RequireUniqueEmail = true;
                 o.SignIn.RequireConfirmedEmail = true;
-                
+
             }).AddEntityFrameworkStores<UserDbContext>()
                 .AddSignInManager<SignInManager<AppUser>>()
+                .AddUserManager<UserManager<AppUser>>()
                 .AddDefaultTokenProviders();
 
 
