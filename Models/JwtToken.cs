@@ -8,13 +8,15 @@ namespace BackEnd.Models
 {
     public class JwtToken
     {
-        public JwtToken(string token, string expireDate)
+        public JwtToken(string token, string expireDate, string startDate)
         {
             this.token = token;
             ExpireDate = expireDate;
+            StartDate = startDate;
         }
 
         public string token { get; set; }
+        public string StartDate { get; set; }
         public string ExpireDate { get; set; }
     }
 }

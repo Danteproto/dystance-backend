@@ -98,7 +98,7 @@ namespace BackEnd.Services
                 _context.Update(appUser);
                 _context.SaveChanges();
 
-                return new AuthenticateResponse(user, jwtToken.token, refreshToken.Token, jwtToken.ExpireDate);
+                return new AuthenticateResponse(user, jwtToken.token, refreshToken.Token, toSeconds(DateTime.Parse(jwtToken.ExpireDate), DateTime.Parse(jwtToken.StartDate)));
             }
             else 
             {
@@ -132,7 +132,7 @@ namespace BackEnd.Services
             User user = _mapper.Map<User>(appUser);
             var jwtToken = generateJwtToken(user);
 
-            return new AuthenticateResponse(user, jwtToken.token, newRefreshToken.Token, jwtToken.ExpireDate);
+            return new AuthenticateResponse(user, jwtToken.token, newRefreshToken.Token, toSeconds(DateTime.Parse(jwtToken.ExpireDate), DateTime.Parse(jwtToken.StartDate)));
         }
 
         public bool RevokeToken(string token, string ipAddress)
@@ -183,7 +183,8 @@ namespace BackEnd.Services
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
             var token = tokenHandler.CreateToken(tokenDescriptor);
-            return new JwtToken(tokenHandler.WriteToken(token), token.ValidTo.ToShortDateString());
+
+            return new JwtToken(tokenHandler.WriteToken(token), token.ValidTo.ToString(), token.ValidFrom.ToString());
         }
 
         private RefreshToken generateRefreshToken()
@@ -200,6 +201,11 @@ namespace BackEnd.Services
                     //CreatedByIp = ipAddress
                 };
             }
+        }
+
+        public string toSeconds(DateTime second, DateTime first)
+        {
+            return second.Subtract(first).TotalSeconds.ToString();
         }
     }
 }
