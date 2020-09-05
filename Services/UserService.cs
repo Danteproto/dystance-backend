@@ -20,6 +20,8 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Diagnostics;
 using BackEnd.Ultilities;
+using BackEnd.Responses;
+using Microsoft.AspNetCore.Authentication;
 
 namespace BackEnd.Services
 {
@@ -30,6 +32,7 @@ namespace BackEnd.Services
         bool RevokeToken(string token, string ipAddress);
         IEnumerable<User> GetAll();
         AppUser GetById(string id);
+        public AuthenticateResponse VerifyAndReturnToken(AppUser appUser);
     }
 
     public class UserService : IUserService
@@ -53,6 +56,7 @@ namespace BackEnd.Services
 
         public async Task<AuthenticateResponse> Authenticate(AuthenticateRequest model)
         {
+            model.ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
             AppUser appUser = null;
             if(String.IsNullOrWhiteSpace(model.Username))
             {
@@ -104,6 +108,29 @@ namespace BackEnd.Services
             {
                 throw new RestException(HttpStatusCode.BadRequest, new { type = "0", message = "Password is not correct" });
             }
+        }
+
+
+        public AuthenticateResponse VerifyAndReturnToken(AppUser appUser)
+        {
+            User user = _mapper.Map<User>(appUser);
+
+            var jwtToken = generateJwtToken(user);
+            var refreshToken = generateRefreshToken();
+
+            // save refresh token
+            appUser.RefreshTokens.Add(refreshToken);
+            _context.Update(appUser);
+            _context.SaveChanges();
+
+            return new AuthenticateResponse(user, jwtToken.token, refreshToken.Token, toSeconds(DateTime.Parse(jwtToken.ExpireDate), DateTime.Parse(jwtToken.StartDate)));
+        }
+
+        public RegisterResponse registerWithGoogle()
+        {
+            //_googleClient;
+
+                return new RegisterResponse { };
         }
 
         public AuthenticateResponse RefreshToken(string token)

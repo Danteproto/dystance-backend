@@ -13,5 +13,8 @@ namespace BackEnd.Models
 
         [JsonIgnore]
         public List<RefreshToken> RefreshTokens { get; set; }
+        public string oauthSubject { get; set; }
+        public string oauthIssuer { get; set; }
+
     }
 }

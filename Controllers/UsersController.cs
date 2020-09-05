@@ -22,6 +22,8 @@ using EmailService;
 using BackEnd.Responses;
 using Google.Apis.Auth.OAuth2.Requests;
 using BackEnd.Requests;
+using System.Text.Json;
+using Google.Apis.Auth;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -37,14 +39,16 @@ namespace BackEnd.Controllers
         private readonly UserManager<AppUser> _userManager;
         private readonly IMapper _mapper;
         private readonly IEmailSender _emailSender;
+        private readonly IAuthService _authService;
 
-        public UsersController(IUserService userService, SignInManager<AppUser> signInManager, UserManager<AppUser> userManager, IMapper mapper, IEmailSender emailSender)
+        public UsersController(IUserService userService, SignInManager<AppUser> signInManager, UserManager<AppUser> userManager, IMapper mapper, IEmailSender emailSender, IAuthService authService)
         {
             _userService = userService;
             _signInManager = signInManager;
             _userManager = userManager;
             _mapper = mapper;
             _emailSender =emailSender;
+            _authService = authService;
         }
 
         [AllowAnonymous]
@@ -205,6 +209,128 @@ namespace BackEnd.Controllers
             }
             throw new RestException(HttpStatusCode.InternalServerError, new { error = "Error!" });
         }
+
+        [AllowAnonymous]
+        [HttpPost("google")]
+        public async Task<IActionResult> Google([FromBody] GoogleLoginRequest userView)
+        {
+            try
+            {
+                var payload = GoogleJsonWebSignature.ValidateAsync(userView.TokenId, new GoogleJsonWebSignature.ValidationSettings()).Result;
+                var user = await _authService.Authenticate(payload);
+
+                var token = _userService.VerifyAndReturnToken(user);
+
+                return Ok(token);
+            }
+            catch (Exception ex)
+            {
+                throw new RestException(HttpStatusCode.InternalServerError, new { message = ex.Message });
+            }
+        }
+
+
+        //[AllowAnonymous]
+        //[HttpGet("externalLoginServices")]
+        //public async Task<IActionResult> GetExternalLoginServices()
+        //{
+        //    var services = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+        //    return Ok(services[0]);
+
+        //}
+
+        //[AllowAnonymous]
+        //[HttpGet("externalLogin")]
+
+        //public IActionResult GetExternalLogin(string returnUrl)
+        //{
+
+        //    var redirectUrl = Url.Action("ExternalLoginCallback", "Users", new { ReturnUrl = returnUrl });
+
+        //    var properties = _signInManager.ConfigureExternalAuthenticationProperties("Google", redirectUrl);
+
+        //    var challenge = new ChallengeResult("Google", properties);
+        //    return challenge;
+
+        //}
+
+        //[AllowAnonymous]
+        //[HttpGet("ExternalLoginCallback")]
+
+        //public async Task<IActionResult> ExternalLoginCallback(string returnUrl = null , string remoteError = null)
+        //{
+        //    returnUrl = returnUrl ?? Url.Content("~/");
+
+        //    AuthenticateRequest authenticateRequest = new AuthenticateRequest
+        //    {
+        //        ReturnUrl = returnUrl,
+        //        ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList()
+        //    };
+
+
+        //    var info = await _signInManager.GetExternalLoginInfoAsync();
+
+        //    var signInResult = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false, bypassTwoFactor: true);
+
+        //    if (signInResult.Succeeded)
+        //    {
+        //        return LocalRedirect(returnUrl);
+        //    }
+        //    else
+        //    {
+        //        var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+
+        //        if (email != null)
+        //        {
+        //            var user = await _userManager.FindByEmailAsync(email);
+
+        //            if(user == null)
+        //            {
+        //                user = new AppUser
+        //                {
+        //                    Id = Guid.NewGuid().ToString(),
+        //                    UserName = info.Principal.FindFirstValue(ClaimTypes.Email),
+        //                    Email = info.Principal.FindFirstValue(ClaimTypes.Email)
+        //                };
+
+        //                return Ok(user);
+        //            }
+
+        //            await _userManager.AddLoginAsync(user,info);
+        //            await _signInManager.SignInAsync(user, isPersistent: false);
+
+        //            var result = info.AuthenticationTokens;
+
+        //            var response = new AuthenticateResponse(new User
+        //            { Username = user.UserName }
+
+        //            , info.AuthenticationTokens.Single(f => f.Name == "access_token").Value,
+        //                info.AuthenticationTokens.Single(f => f.Name == "refresh_token").Value,
+        //                info.AuthenticationTokens.Single(f => f.Name == "expires_at").Value);
+
+        //            return Ok(response);
+        //        }
+        //    }
+
+        //    throw new RestException(HttpStatusCode.NotFound, new { message = "Email not found" });
+        //}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         // helper methods
 
