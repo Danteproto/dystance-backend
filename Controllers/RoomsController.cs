@@ -15,39 +15,39 @@ namespace BackEnd.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class RoomController : ControllerBase
+    public class RoomsController : ControllerBase
     {
         private readonly RoomDBContext _context;
         private readonly IWebHostEnvironment _env;
 
-        public RoomController(RoomDBContext context, IWebHostEnvironment env)
+        public RoomsController(RoomDBContext context, IWebHostEnvironment env)
         {
             _context = context;
             _env = env;
         }
 
-        [HttpPost("Create")]
+        [HttpPost("create")]
         public IActionResult CreateRoom()
         {
             var status = RoomService.CreateRoom(_context, Request, _env);
-            JObject json = new JObject();
-            JArray array = new JArray();
-            array.Add(status);
-            json["status"] = array;
-            return Content(json.ToString());
+            var obj = JObject.FromObject(new
+            {
+                status,
+            });
+            return Content(obj.ToString());
         }
 
-        [HttpPost("Get")]
-        public IActionResult GetRoomById()
+        [HttpGet("getById")]
+        public IActionResult GetRoomById(int Id)
         {
-            Room room = RoomService.GetRoomById(_context, Request);
+            Room room = RoomService.GetRoomById(_context, Id);
             return Content(JsonConvert.SerializeObject(room));
         }
 
-        [HttpPost("Get/ByUserId")]
-        public IActionResult GetRoomByUserId()
+        [HttpGet("getByUserId")]
+        public IActionResult GetRoomByUserId(int Id)
         {
-            var rooms = RoomService.GetRoomByUserId(_context, Request);
+            var rooms = RoomService.GetRoomByUserId(_context, Id);
             return Content(JsonConvert.SerializeObject(rooms));
         }
         [HttpPost("Get/Image")]

@@ -17,12 +17,17 @@ namespace BackEnd.DAO
                 context.Room.Add(room);
                 context.SaveChanges();
                 return "Create successful";
-            }catch(Exception e)
+            }
+            catch (Exception e)
             {
                 return "Error Can't create Room";
             }
         }
-
+        public static int GetLastRoom(RoomDBContext context)
+        {
+            var x = context.Room.OrderByDescending(x=> x.RoomId).First().RoomId;
+            return x;
+        }
         public static Room Get(RoomDBContext context, int Id)
         {
             return context.Room.Where(x => x.RoomId == Id).FirstOrDefault<Room>();
