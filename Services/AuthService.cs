@@ -1,4 +1,5 @@
-﻿using BackEnd.Models;
+﻿using BackEnd.Errors;
+using BackEnd.Models;
 using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
@@ -28,20 +29,9 @@ namespace BackEnd.Services
 
         private async Task<AppUser> FindUserOrAdd(Google.Apis.Auth.GoogleJsonWebSignature.Payload payload)
         {
-            var u = await _userManager.FindByEmailAsync(payload.Email);
-            if (u == null)
-            {
-                u = new AppUser()
-                {
-                    UserName = payload.Name,
-                    Email = payload.Email,
-                    oauthSubject = payload.Subject,
-                    oauthIssuer = payload.Issuer
-                };
-                await _userManager.CreateAsync(u);
-            }
-
-            return u;
+            return await _userManager.FindByEmailAsync(payload.Email);
+            
+            
         }
 
     }

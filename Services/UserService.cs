@@ -56,7 +56,6 @@ namespace BackEnd.Services
 
         public async Task<AuthenticateResponse> Authenticate(AuthenticateRequest model)
         {
-            model.ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
             AppUser appUser = null;
             if(String.IsNullOrWhiteSpace(model.Username))
             {

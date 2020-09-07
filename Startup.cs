@@ -160,6 +160,7 @@ namespace BackEnd
 
 
             services.AddTransient<IEmailSender, EmailSender>();
+            services.AddScoped<IAuthService, AuthService>();
 
             services.AddAutoMapper(typeof(Startup));
             services.AddControllers().AddNewtonsoftJson(options =>

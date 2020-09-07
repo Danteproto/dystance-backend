@@ -10,7 +10,7 @@ namespace BackEnd.Models
     {
         public string Id { get; set; }
     
-        public string Username { get; set; }
+        public string UserName { get; set; }
         public string JwtToken { get; set; }
         public string RefreshToken { get; set; }
 
@@ -19,8 +19,8 @@ namespace BackEnd.Models
         public AuthenticateResponse(User user, string jwtToken, string refreshToken, string expires)
         {
             Id = user.Id;
- 
-            Username = user.Username;
+
+            UserName = user.Username;
             JwtToken = jwtToken;
             RefreshToken = refreshToken;
             Expires = expires;
