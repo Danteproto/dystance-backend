@@ -27,7 +27,7 @@ namespace BackEnd.Services
 {
     public interface IUserService
     {
-        public Task<AuthenticateResponse> Authenticate(AuthenticateRequest model);
+        public Task<IActionResult> Authenticate(AuthenticateRequest model);
         AuthenticateResponse RefreshToken(string token);
         bool RevokeToken(string token, string ipAddress);
         IEnumerable<User> GetAll();
@@ -54,7 +54,7 @@ namespace BackEnd.Services
             _appSettings = appSettings.Value;
         }
 
-        public async Task<AuthenticateResponse> Authenticate(AuthenticateRequest model)
+        public async Task<IActionResult> Authenticate(AuthenticateRequest model)
         {
             AppUser appUser = null;
             if(String.IsNullOrWhiteSpace(model.Username))
@@ -65,7 +65,7 @@ namespace BackEnd.Services
                 }
                 else
                 {
-                    throw new RestException(HttpStatusCode.BadRequest, new { type = "0", message = "Email not found!" });
+                    return new BadRequestObjectResult(new { type = "0", message = "Email not found!" });
                 }
             }
             else
@@ -75,12 +75,12 @@ namespace BackEnd.Services
             // return null if user not found
             if (appUser == null)
             {
-                throw new RestException(HttpStatusCode.BadRequest, new { type = "0", message = "Username not found" });
+                return new BadRequestObjectResult(new { type = "0", message = "Username not found!" });
             }
 
             if(!appUser.EmailConfirmed)
             {
-                throw new RestException(HttpStatusCode.BadRequest, new { type = "1", message = "You must confirm your email before login" });
+                return new BadRequestObjectResult(new { type = "1", message = "You must confirm your email before login" });
             }
 
             var result = await _signInManager.CheckPasswordSignInAsync(appUser, model.Password, false);
@@ -101,11 +101,13 @@ namespace BackEnd.Services
                 _context.Update(appUser);
                 _context.SaveChanges();
 
-                return new AuthenticateResponse(user, jwtToken.token, refreshToken.Token, toSeconds(DateTime.Parse(jwtToken.ExpireDate), DateTime.Parse(jwtToken.StartDate)));
+                var response = new AuthenticateResponse(user, jwtToken.token, refreshToken.Token, toSeconds(DateTime.Parse(jwtToken.ExpireDate), DateTime.Parse(jwtToken.StartDate)));
+
+                return new OkObjectResult(response);
             }
             else 
             {
-                throw new RestException(HttpStatusCode.BadRequest, new { type = "0", message = "Password is not correct" });
+                return new BadRequestObjectResult(new { type = "0", message = "Password is not correct" });
             }
         }
 
@@ -229,9 +231,9 @@ namespace BackEnd.Services
             }
         }
 
-        public string toSeconds(DateTime second, DateTime first)
+        public int toSeconds(DateTime second, DateTime first)
         {
-            return second.Subtract(first).TotalSeconds.ToString();
+            return Convert.ToInt32(second.Subtract(first).TotalSeconds);
         }
     }
 }

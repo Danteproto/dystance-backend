@@ -56,11 +56,8 @@ namespace BackEnd.Controllers
         [HttpPost("authenticate")]
         public async Task<IActionResult> Authenticate([FromBody] AuthenticateRequest model)
         {
-            var response = await _userService.Authenticate(model);
+            return await _userService.Authenticate(model);
 
-            //setTokenCookie(response.RefreshToken);
-
-            return Ok(response);
         }
 
         [Authorize]
@@ -137,13 +134,13 @@ namespace BackEnd.Controllers
             var appUser = await _userManager.FindByEmailAsync(userModel.Email);
             if (appUser != null)
             {
-                throw new RestException(HttpStatusCode.BadRequest, new { type = "0", message = "Email already exists" });
+                return BadRequest(new { type = "0", message = "Email already exists" });
             }
 
             appUser = await _userManager.FindByNameAsync(userModel.Username);
             if (appUser != null)
             {
-                throw new RestException(HttpStatusCode.BadRequest, new { type = "1", message = "Username already exists" });
+                return BadRequest(new { type = "1", message = "Username already exists" });
             }
 
             var user = new AppUser
@@ -157,7 +154,7 @@ namespace BackEnd.Controllers
             var result = await _userManager.CreateAsync(user, userModel.Password);
             if (!result.Succeeded)
             {
-                throw new RestException(HttpStatusCode.InternalServerError, new { error = result.Errors.ToList()[0].Description });
+                return StatusCode(500, new { error = result.Errors.ToList()[0].Description });
             }
 
 
@@ -178,12 +175,20 @@ namespace BackEnd.Controllers
         }
 
         [AllowAnonymous]
-        [HttpGet("resendEmail")]
-        public async Task<IActionResult> ResendEmail(string email)
+        [HttpPost("resendEmail")]
+        public async Task<IActionResult> ResendEmail(ResendEmailRequest req)
         {
-            var user = await _userManager.FindByEmailAsync(email);
+            AppUser user;
+            if (String.IsNullOrEmpty(req.Email))
+            {
+                user = await _userManager.FindByEmailAsync(req.Email);
+            }
+            else
+            {
+                user = await _userManager.FindByNameAsync(req.UserName);
+            }
             if (user == null)
-                throw new RestException(HttpStatusCode.InternalServerError, new { error = "User not found" });
+                return StatusCode(500, new { error = "User not found" });
 
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
             var confirmationLink = Url.Action("ConfirmEmail", "Users", new { token, email = user.Email }, Request.Scheme);
@@ -200,13 +205,13 @@ namespace BackEnd.Controllers
         {
             var user = await _userManager.FindByEmailAsync(email);
             if (user == null)
-                throw new RestException(HttpStatusCode.InternalServerError, new { error = "Error!" });
+                return "User not found";
 
             var result = await _userManager.ConfirmEmailAsync(user, token);
 
             if (result.Succeeded)
             {
-                return "Email confirmed!";
+                return "Email Confirmed";
             }
             throw new RestException(HttpStatusCode.InternalServerError, new { error = "Error!" });
         }
@@ -222,7 +227,7 @@ namespace BackEnd.Controllers
 
                 if (user == null)
                 {
-                    return NotFound(new { message = "You need to update your information before proceed", googleName = payload.Name });
+                    return NotFound(new { message = "You need to update your information before proceed", googleName = payload.Name, email = payload.Email });
                 }
 
                 var token = _userService.VerifyAndReturnToken(user);
@@ -233,11 +238,11 @@ namespace BackEnd.Controllers
             {
                 if (ex.Message.Contains("Expired"))
                 {
-                    throw new RestException(HttpStatusCode.InternalServerError, new { type = "0", error = ex.Message });
+                    return StatusCode(500, new { type = "0", error = ex.Message });
                 }
                 else
                 {
-                    throw new RestException(HttpStatusCode.InternalServerError, new { type = "1", error = ex.Message });
+                    return StatusCode(500, new { type = "1", error = ex.Message });
                 }
             }
 
@@ -247,21 +252,10 @@ namespace BackEnd.Controllers
         [HttpPost("google/updateInfo")]
         public async Task<IActionResult> GoogleUpdateInfo([FromBody] GoogleLoginRequest userView)
         {
-            Payload payload;
-            try
-            {
-                payload = GoogleJsonWebSignature.ValidateAsync(userView.TokenId, new GoogleJsonWebSignature.ValidationSettings()).Result;
-
-
-            }
-            catch (Exception ex)
-            {
-                throw new RestException(HttpStatusCode.InternalServerError, new { message = ex.Message });
-            }
             var user = new AppUser
             {
                 UserName = userView.UserName,
-                Email = payload.Email,
+                Email = userView.Email,
                 RealName = userView.RealName,
                 DOB = userView.DOB
             };
@@ -269,13 +263,13 @@ namespace BackEnd.Controllers
             var appUser = await _userManager.FindByNameAsync(userView.UserName);
             if (appUser != null)
             {
-                throw new RestException(HttpStatusCode.BadRequest, new { type = "1", message = "Username already exists" });
+                return BadRequest(new { type = "1", message = "Username already exists" });
             }
 
             var result = await _userManager.CreateAsync(user);
             if (result.Succeeded)
             {
-                appUser = await _userManager.FindByEmailAsync(payload.Email);
+                appUser = await _userManager.FindByEmailAsync(userView.Email);
 
                 var token = _userService.VerifyAndReturnToken(appUser);
 

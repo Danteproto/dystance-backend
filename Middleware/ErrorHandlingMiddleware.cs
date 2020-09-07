@@ -35,32 +35,38 @@ namespace BackEnd.Middleware
 
         private async Task HandleExceptionAsync(HttpContext context, Exception ex, ILogger<ErrorHandlingMiddleware> logger)
         {
-            object errors = null;
             switch (ex)
             {
                 case RestException re:
                     logger.LogError(ex, "REST ERROR");
-                    errors = re.Errors;
+                    context.Response.ContentType = "application/json";
                     context.Response.StatusCode = (int)re.Code;
+                    if (re.Errors != null)
+                    {
+                        var resultRe = JsonConvert.SerializeObject(new
+                        {
+                            re.Errors
+                        });
+
+                        await context.Response.WriteAsync(resultRe);
+                    }
+                    
                     break;
                 case Exception e:
                     logger.LogError(ex, "SERVER ERROR");
-                    errors = string.IsNullOrWhiteSpace(e.Message) ? "Error" : e.Message;
+                    context.Response.ContentType = "application/json";
+                    var result = JsonConvert.SerializeObject(new
+                    {
+                        e.Message
+                    });
+
+                    await context.Response.WriteAsync(result);
                     context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                     break;
 
             }
 
-            context.Response.ContentType = "application/json";
-            if (errors != null)
-            {
-                var result = JsonConvert.SerializeObject(new
-                {
-                    errors
-                });
-
-                await context.Response.WriteAsync(result);
-            }
+            
         }
     }
 }
