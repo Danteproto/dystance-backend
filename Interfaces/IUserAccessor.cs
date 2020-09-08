@@ -7,6 +7,6 @@ namespace BackEnd.Interfaces
 {
     public interface IUserAccessor
     {
-        string GetCurrentUsername();
+        string GetCurrentUserId();
     }
 }

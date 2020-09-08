@@ -17,12 +17,11 @@ namespace BackEnd.Security
             _httpContextAccessor = httpContextAccessor;
         }
 
-        public string GetCurrentUsername()
+        public string GetCurrentUserId()
         {
-            var username = _httpContextAccessor.HttpContext.User?.Claims.FirstOrDefault(x =>
-            x.Type == ClaimTypes.NameIdentifier)?.Value;
+            var userId = _httpContextAccessor.HttpContext.User.Identity.Name;
 
-            return username;
+            return userId;
         }
     }
 }

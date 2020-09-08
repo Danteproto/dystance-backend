@@ -46,6 +46,7 @@ namespace BackEnd
                 options.CheckConsentNeeded = context => true;
                 options.MinimumSameSitePolicy = SameSiteMode.None;
             });
+            services.AddHttpContextAccessor();
 
             //Add DBContext(s)
             services.AddDbContext<UserDbContext>(options => options.UseSqlServer(Configuration.GetConnectionString("SqlConnection")));
@@ -140,7 +141,7 @@ namespace BackEnd
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IJwtGenerator, JwtGenerator>();
             services.AddScoped<IUserAccessor, UserAccessor>();
-
+            services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
             var emailConfig = Configuration
                 .GetSection("EmailConfiguration")
