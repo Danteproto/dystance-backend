@@ -25,6 +25,8 @@ using Microsoft.IdentityModel.Tokens;
 using EmailService;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using AspNetCore.IServiceCollection.AddIUrlHelper;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 
 namespace BackEnd
 {
@@ -142,6 +144,7 @@ namespace BackEnd
             services.AddScoped<IJwtGenerator, JwtGenerator>();
             services.AddScoped<IUserAccessor, UserAccessor>();
             services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
+            services.AddSingleton<IActionContextAccessor, ActionContextAccessor>();
 
             var emailConfig = Configuration
                 .GetSection("EmailConfiguration")
@@ -163,6 +166,7 @@ namespace BackEnd
             services.AddTransient<IEmailSender, EmailSender>();
             services.AddScoped<IAuthService, AuthService>();
 
+            services.AddUrlHelper();
             services.AddAutoMapper(typeof(Startup));
             services.AddControllers().AddNewtonsoftJson(options =>
    options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);

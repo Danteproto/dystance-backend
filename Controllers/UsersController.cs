@@ -67,65 +67,48 @@ namespace BackEnd.Controllers
         [HttpPost("refreshToken")]
         public IActionResult RefreshToken([FromBody] RefreshTokenRequestz tokenRequest)
         {
-            var refreshToken = tokenRequest.RefreshToken;
-            var response = _userService.RefreshToken(refreshToken);
-
-            if (response == null)
-                return Unauthorized(new { message = "Invalid token" });
-
-            //setTokenCookie(response.RefreshToken);
-
-            return Ok(response);
+            return _userService.RefreshToken(tokenRequest.RefreshToken);
         }
 
-        [HttpPost("revoke-token")]
-        public IActionResult RevokeToken([FromBody] RevokeTokenRequest model)
-        {
-            // accept token from request body or cookie
-            var token = model.Token ?? Request.Cookies["refreshToken"];
+        //[HttpPost("revoke-token")]
+        //public IActionResult RevokeToken([FromBody] RevokeTokenRequest model)
+        //{
+        //    // accept token from request body or cookie
+        //    var token = model.Token ?? Request.Cookies["refreshToken"];
 
-            if (string.IsNullOrEmpty(token))
-                return BadRequest(new { message = "Token is required" });
+        //    if (string.IsNullOrEmpty(token))
+        //        return BadRequest(new { message = "Token is required" });
 
-            var response = _userService.RevokeToken(token, ipAddress());
+        //    var response = _userService.RevokeToken(token, ipAddress());
 
-            if (!response)
-                return NotFound(new { message = "Token not found" });
+        //    if (!response)
+        //        return NotFound(new { message = "Token not found" });
 
-            return Ok(new { message = "Token revoked" });
-        }
+        //    return Ok(new { message = "Token revoked" });
+        //}
 
-        [HttpGet]
-        public IActionResult GetAll()
-        {
-            var users = _userService.GetAll();
-            return Ok(users);
-        }
+        //[HttpGet]
+        //public IActionResult GetAll()
+        //{
+        //    var users = _userService.GetAll();
+        //    return Ok(users);
+        //}
 
         [Authorize]
         [HttpGet("info")]
         public IActionResult GetUserInfoById(string id)
         {
-            var user = _userService.GetById(id);
-            if (user == null) return NotFound();
-
-            return Ok(new UserInfoResponse
-            {
-                Id = user.Id,
-                UserName = user.UserName,
-                RealName = user.RealName,
-                Avatar = ""
-            });
+            return _userService.GetById(id);
         }
 
-        [HttpGet("{id}/refresh-tokens")]
-        public IActionResult GetRefreshTokens(string id)
-        {
-            var user = _userService.GetById(id);
-            if (user == null) return NotFound();
+        //[HttpGet("{id}/refresh-tokens")]
+        //public IActionResult GetRefreshTokens(string id)
+        //{
+        //    var user = _userService.GetById(id);
+        //    if (user == null) return NotFound();
 
-            return Ok(user.RefreshTokens);
-        }
+        //    return Ok(user.RefreshTokens);
+        //}
 
 
         [AllowAnonymous]
@@ -133,72 +116,14 @@ namespace BackEnd.Controllers
 
         public async Task<IActionResult> Register([FromBody] RegisterRequest userModel)
         {
-
-            var appUser = await _userManager.FindByEmailAsync(userModel.Email);
-            if (appUser != null)
-            {
-                return BadRequest(new { type = "0", message = "Email already exists" });
-            }
-
-            appUser = await _userManager.FindByNameAsync(userModel.Username);
-            if (appUser != null)
-            {
-                return BadRequest(new { type = "1", message = "Username already exists" });
-            }
-
-            var user = new AppUser
-            {
-                Email = userModel.Email,
-                UserName = userModel.Username,
-                RealName = userModel.RealName,
-                DOB = userModel.DOB
-            };
-
-            var result = await _userManager.CreateAsync(user, userModel.Password);
-            if (!result.Succeeded)
-            {
-                return StatusCode(500, new { error = result.Errors.ToList()[0].Description });
-            }
-
-
-            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-            var confirmationLink = Url.Action("ConfirmEmail", "Users", new { token, email = user.Email }, Request.Scheme);
-            var message = new Message(new string[] { user.Email }, "Confirmation email link", confirmationLink, null);
-            await _emailSender.SendEmailAsync(message);
-            //await _userManager.AddToRoleAsync(user, "Visitor");
-
-
-            return Ok(new RegisterResponse
-            {
-                Email = userModel.Email,
-                UserName = userModel.Username,
-                Token = token,
-                TokenLink = confirmationLink
-            });
+            return await _userService.Register(userModel);
         }
 
         [AllowAnonymous]
         [HttpPost("resendEmail")]
         public async Task<IActionResult> ResendEmail(ResendEmailRequest req)
         {
-            AppUser user;
-            if (String.IsNullOrEmpty(req.Email))
-            {
-                user = await _userManager.FindByEmailAsync(req.Email);
-            }
-            else
-            {
-                user = await _userManager.FindByNameAsync(req.UserName);
-            }
-            if (user == null)
-                return StatusCode(500, new { error = "User not found" });
-
-            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-            var confirmationLink = Url.Action("ConfirmEmail", "Users", new { token, email = user.Email }, Request.Scheme);
-            var message = new Message(new string[] { user.Email }, "Confirmation email link", confirmationLink, null);
-            await _emailSender.SendEmailAsync(message);
-
-            return Ok(new { message = "Successful" });
+            return await _userService.ResendEmail(req);
         }
 
 
@@ -206,48 +131,14 @@ namespace BackEnd.Controllers
         [HttpGet("confirmEmail")]
         public async Task<string> ConfirmEmail(string token, string email)
         {
-            var user = await _userManager.FindByEmailAsync(email);
-            if (user == null)
-                return "User not found";
-
-            var result = await _userManager.ConfirmEmailAsync(user, token);
-
-            if (result.Succeeded)
-            {
-                return "Email Confirmed";
-            }
-            throw new RestException(HttpStatusCode.InternalServerError, new { error = "Error!" });
+            return await _userService.ConfirmEmail( token,  email);
         }
 
         [AllowAnonymous]
         [HttpPost("google")]
         public async Task<IActionResult> Google([FromBody] GoogleLoginRequest userView)
         {
-            try
-            {
-                var payload = GoogleJsonWebSignature.ValidateAsync(userView.TokenId, new GoogleJsonWebSignature.ValidationSettings()).Result;
-                var user = await _authService.Authenticate(payload);
-
-                if (user == null)
-                {
-                    return NotFound(new { message = "You need to update your information before proceed", googleName = payload.Name, email = payload.Email });
-                }
-
-                var token = _userService.VerifyAndReturnToken(user);
-
-                return Ok(token);
-            }
-            catch (Exception ex)
-            {
-                if (ex.Message.Contains("Expired"))
-                {
-                    return StatusCode(500, new { type = "0", error = ex.Message });
-                }
-                else
-                {
-                    return StatusCode(500, new { type = "1", error = ex.Message });
-                }
-            }
+            return await _authService.Google(userView);
 
         }
 
@@ -255,51 +146,14 @@ namespace BackEnd.Controllers
         [HttpPost("google/updateInfo")]
         public async Task<IActionResult> GoogleUpdateInfo([FromBody] GoogleLoginRequest userView)
         {
-            var user = new AppUser
-            {
-                UserName = userView.UserName,
-                Email = userView.Email,
-                RealName = userView.RealName,
-                DOB = userView.DOB
-            };
-
-            var appUser = await _userManager.FindByNameAsync(userView.UserName);
-            if (appUser != null)
-            {
-                return BadRequest(new { type = "1", message = "Username already exists" });
-            }
-
-            var result = await _userManager.CreateAsync(user);
-            if (result.Succeeded)
-            {
-                appUser = await _userManager.FindByEmailAsync(userView.Email);
-
-                var token = _userService.VerifyAndReturnToken(appUser);
-
-                return Ok(token);
-            }
-
-            return NotFound();
+            return await _authService.GoogleUpdateInfo(userView);
         }
 
 
         [HttpGet("currentUser")]
         public async Task<IActionResult> GetCurrentUser()
         {
-            var appUser = await _userManager.FindByIdAsync(_userAccessor.GetCurrentUserId());
-
-            if (appUser != null)
-            {
-                return Ok(new
-                {
-                    RealName =appUser.RealName,
-                    DOB = appUser.DOB,
-                    Email = appUser.Email,
-                    UserName = appUser.UserName
-                });
-            }
-
-            return NotFound();
+            return await _userService.GetCurrentUser();
         }
 
 
@@ -389,45 +243,25 @@ namespace BackEnd.Controllers
             //}
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
             // helper methods
 
-            private void setTokenCookie(string token)
-            {
-                var cookieOptions = new CookieOptions
-                {
-                    HttpOnly = true,
-                    Expires = DateTime.UtcNow.AddDays(7)
-                };
-                Response.Cookies.Append("refreshToken", token, cookieOptions);
-            }
+            //private void setTokenCookie(string token)
+            //{
+            //    var cookieOptions = new CookieOptions
+            //    {
+            //        HttpOnly = true,
+            //        Expires = DateTime.UtcNow.AddDays(7)
+            //    };
+            //    Response.Cookies.Append("refreshToken", token, cookieOptions);
+            //}
 
-            private string ipAddress()
-            {
-                if (Request.Headers.ContainsKey("X-Forwarded-For"))
-                    return Request.Headers["X-Forwarded-For"];
-                else
-                    return HttpContext.Connection.RemoteIpAddress.MapToIPv4().ToString();
-            }
-
-
-
-
+            //private string ipAddress()
+            //{
+            //    if (Request.Headers.ContainsKey("X-Forwarded-For"))
+            //        return Request.Headers["X-Forwarded-For"];
+            //    else
+            //        return HttpContext.Connection.RemoteIpAddress.MapToIPv4().ToString();
+            //}
 
         }
     }

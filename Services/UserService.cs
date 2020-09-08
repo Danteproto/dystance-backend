@@ -22,17 +22,26 @@ using System.Diagnostics;
 using BackEnd.Ultilities;
 using BackEnd.Responses;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Mvc.Routing;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
+using EmailService;
+using BackEnd.Requests;
 
 namespace BackEnd.Services
 {
     public interface IUserService
     {
         public Task<IActionResult> Authenticate(AuthenticateRequest model);
-        AuthenticateResponse RefreshToken(string token);
+        IActionResult RefreshToken(string token);
         bool RevokeToken(string token, string ipAddress);
         IEnumerable<User> GetAll();
-        AppUser GetById(string id);
-        public AuthenticateResponse VerifyAndReturnToken(AppUser appUser);
+        IActionResult GetById(string id);
+
+        public Task<IActionResult> Register(RegisterRequest model);
+        public Task<IActionResult> ResendEmail(ResendEmailRequest req);
+        public Task<string> ConfirmEmail(string token, string email);
+        public Task<IActionResult> GetCurrentUser();
+
     }
 
     public class UserService : IUserService
@@ -40,24 +49,38 @@ namespace BackEnd.Services
         private UserDbContext _context;
         private readonly IMapper _mapper;
         private readonly SignInManager<AppUser> _signInManager;
-        private readonly AppSettings _appSettings;
-
+        private readonly UserManager<AppUser> _userManager;
+        private readonly IUrlHelperFactory _urlHelperFactory;
+        private readonly IActionContextAccessor _actionContextAccessor;
+        private readonly IEmailSender _emailSender;
+        private readonly IJwtGenerator _jwtGenerator;
+        private readonly IUserAccessor _userAccessor;
         public UserService(
             UserDbContext context,
-            IOptions<AppSettings> appSettings,
             IMapper mapper,
-            SignInManager<AppUser> signInManager)
+            SignInManager<AppUser> signInManager,
+            UserManager<AppUser> userManager,
+            IUrlHelperFactory urlHelperFactory,
+            IActionContextAccessor actionContextAccessor,
+            IEmailSender emailSender,
+            IJwtGenerator jwtGenerator,
+            IUserAccessor userAccessor)
         {
             _context = context;
             _mapper = mapper;
             _signInManager = signInManager;
-            _appSettings = appSettings.Value;
+            _userManager = userManager;
+            _urlHelperFactory = urlHelperFactory;
+            _actionContextAccessor = actionContextAccessor;
+            _emailSender = emailSender;
+            _jwtGenerator = jwtGenerator;
+            _userAccessor = userAccessor;
         }
 
         public async Task<IActionResult> Authenticate(AuthenticateRequest model)
         {
             AppUser appUser = null;
-            if(String.IsNullOrWhiteSpace(model.Username))
+            if (String.IsNullOrWhiteSpace(model.Username))
             {
                 if (EmailUtil.CheckIfValid(model.Email))
                 {
@@ -78,7 +101,7 @@ namespace BackEnd.Services
                 return new BadRequestObjectResult(new { type = "0", message = "Username not found!" });
             }
 
-            if(!appUser.EmailConfirmed)
+            if (!appUser.EmailConfirmed)
             {
                 return new BadRequestObjectResult(new { type = "1", message = "You must confirm your email before login" });
             }
@@ -93,74 +116,65 @@ namespace BackEnd.Services
                 // authentication successful so generate jwt and refresh tokens
                 User user = _mapper.Map<User>(appUser);
 
-                var jwtToken = generateJwtToken(user);
-                var refreshToken = generateRefreshToken();
+                var jwtToken = _jwtGenerator.generateJwtToken(user);
+                var refreshToken = _jwtGenerator.generateRefreshToken();
 
                 // save refresh token
                 appUser.RefreshTokens.Add(refreshToken);
                 _context.Update(appUser);
                 _context.SaveChanges();
 
-                var response = new AuthenticateResponse(user, jwtToken.token, refreshToken.Token, toSeconds(DateTime.Parse(jwtToken.ExpireDate), DateTime.Parse(jwtToken.StartDate)));
+                var response = new AuthenticateResponse(user, jwtToken.token, refreshToken.Token, _jwtGenerator.toSeconds(DateTime.Parse(jwtToken.ExpireDate), DateTime.Parse(jwtToken.StartDate)));
 
                 return new OkObjectResult(response);
             }
-            else 
+            else
             {
                 return new BadRequestObjectResult(new { type = "0", message = "Password is not correct" });
             }
         }
 
 
-        public AuthenticateResponse VerifyAndReturnToken(AppUser appUser)
-        {
-            User user = _mapper.Map<User>(appUser);
-
-            var jwtToken = generateJwtToken(user);
-            var refreshToken = generateRefreshToken();
-
-            // save refresh token
-            appUser.RefreshTokens.Add(refreshToken);
-            _context.Update(appUser);
-            _context.SaveChanges();
-
-            return new AuthenticateResponse(user, jwtToken.token, refreshToken.Token, toSeconds(DateTime.Parse(jwtToken.ExpireDate), DateTime.Parse(jwtToken.StartDate)));
-        }
-
         public RegisterResponse registerWithGoogle()
         {
             //_googleClient;
 
-                return new RegisterResponse { };
+            return new RegisterResponse { };
         }
 
-        public AuthenticateResponse RefreshToken(string token)
+        public IActionResult RefreshToken(string token)
         {
-            var appUser = _context.Users.SingleOrDefault(u => u.RefreshTokens.Any(t => t.Token == token));
+            try
+            {
+                var appUser = _context.Users.SingleOrDefault(u => u.RefreshTokens.Any(t => t.Token == token));
 
-            // return null if no user found with token
-            if (appUser == null) return null;
+                // return null if no user found with token
+                if (appUser == null) return null;
 
-            
-            var refreshToken = appUser.RefreshTokens.Single(x => x.Token == token);
+                var refreshToken = appUser.RefreshTokens.Single(x => x.Token == token);
 
-            // return null if token is no longer active
-            if (!refreshToken.IsActive) return null;
+                // return null if token is no longer active
+                if (!refreshToken.IsActive) return null;
 
-            // replace old refresh token with a new one and save
-            var newRefreshToken = generateRefreshToken();
-            refreshToken.Revoked = DateTime.UtcNow;
-            //refreshToken.RevokedByIp = ipAddress;
-            refreshToken.ReplacedByToken = newRefreshToken.Token;
-            appUser.RefreshTokens.Add(newRefreshToken);
-            _context.Update(appUser);
-            _context.SaveChanges();
+                // replace old refresh token with a new one and save
+                var newRefreshToken = _jwtGenerator.generateRefreshToken();
+                refreshToken.Revoked = DateTime.UtcNow;
+                //refreshToken.RevokedByIp = ipAddress;
+                refreshToken.ReplacedByToken = newRefreshToken.Token;
+                appUser.RefreshTokens.Add(newRefreshToken);
+                _context.Update(appUser);
+                _context.SaveChanges();
 
-            // generate new jwt
-            User user = _mapper.Map<User>(appUser);
-            var jwtToken = generateJwtToken(user);
+                // generate new jwt
+                User user = _mapper.Map<User>(appUser);
+                var jwtToken = _jwtGenerator.generateJwtToken(user);
 
-            return new AuthenticateResponse(user, jwtToken.token, newRefreshToken.Token, toSeconds(DateTime.Parse(jwtToken.ExpireDate), DateTime.Parse(jwtToken.StartDate)));
+                return new OkObjectResult(new AuthenticateResponse(user, jwtToken.token, newRefreshToken.Token, _jwtGenerator.toSeconds(DateTime.Parse(jwtToken.ExpireDate), DateTime.Parse(jwtToken.StartDate))));
+            }
+            catch (Exception ex)
+            {
+                return new UnauthorizedObjectResult(new { message = "Invalid token" });
+            }
         }
 
         public bool RevokeToken(string token, string ipAddress)
@@ -190,50 +204,155 @@ namespace BackEnd.Services
 
         }
 
-        public AppUser GetById(string id)
+        public IActionResult GetById(string id)
         {
-            return _context.Users.Find(id);
-        }
-
-        // helper methods
-
-        private JwtToken generateJwtToken(User user)
-        {
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.ASCII.GetBytes(_appSettings.Secret);
-            var tokenDescriptor = new SecurityTokenDescriptor
+            var user = _context.Users.Find(id);
+            if (user == null)
             {
-                Subject = new ClaimsIdentity(new Claim[]
-                {
-                    new Claim(ClaimTypes.Name, user.Id.ToString())
-                }),
-                Expires = DateTime.UtcNow.AddDays(1),
-                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-            };
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-
-            return new JwtToken(tokenHandler.WriteToken(token), token.ValidTo.ToString(), token.ValidFrom.ToString());
-        }
-
-        private RefreshToken generateRefreshToken()
-        {
-            using (var rngCryptoServiceProvider = new RNGCryptoServiceProvider())
-            {
-                var randomBytes = new byte[64];
-                rngCryptoServiceProvider.GetBytes(randomBytes);
-                return new RefreshToken
-                {
-                    Token = Convert.ToBase64String(randomBytes),
-                    Expires = DateTime.UtcNow.AddDays(7),
-                    Created = DateTime.UtcNow
-                    //CreatedByIp = ipAddress
-                };
+                return new NotFoundObjectResult("");
             }
+
+            var response = new UserInfoResponse
+            {
+                Id = user.Id,
+                UserName = user.UserName,
+                RealName = user.RealName,
+                Avatar = ""
+            };
+            return new OkObjectResult(response);
         }
 
-        public int toSeconds(DateTime second, DateTime first)
+
+        public async Task<IActionResult> Register(RegisterRequest userModel)
         {
-            return Convert.ToInt32(second.Subtract(first).TotalSeconds);
+
+            var appUser = await _userManager.FindByNameAsync(userModel.Username);
+            if (appUser != null)
+            {
+                return new BadRequestObjectResult(new { type = "1", message = "Username already exists" });
+            }
+
+            appUser = await _userManager.FindByEmailAsync(userModel.Email);
+            if (appUser != null)
+            {
+                return new BadRequestObjectResult(new { type = "0", message = "Email already exists" });
+            }
+
+            var registerUser = new AppUser
+            {
+                Email = userModel.Email,
+                UserName = userModel.Username,
+                RealName = userModel.RealName,
+                DOB = userModel.DOB
+            };
+
+            var result = await _userManager.CreateAsync(registerUser, userModel.Password);
+            if (!result.Succeeded)
+            {
+                var internalErr = new ObjectResult(new { error = result.Errors.ToList()[0].Description })
+                {
+                    StatusCode = 500
+                };
+                return internalErr;
+            }
+
+            var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(registerUser);
+            var confirmationLink = urlHelper.Action("ConfirmEmail", "Users", new { token, email = registerUser.Email }, "https");
+            var message = new Message(new string[] { registerUser.Email }, "Confirmation email link", confirmationLink, null);
+            await _emailSender.SendEmailAsync(message);
+            //await _userManager.AddToRoleAsync(user, "Visitor");
+
+
+            return new OkObjectResult(new RegisterResponse
+            {
+                Email = userModel.Email,
+                UserName = userModel.Username,
+                Token = token,
+                TokenLink = confirmationLink
+            });
+
         }
+
+        public async Task<IActionResult> ResendEmail(ResendEmailRequest req)
+        {
+            AppUser user;
+            if (String.IsNullOrEmpty(req.Email))
+            {
+                user = await _userManager.FindByEmailAsync(req.Email);
+            }
+            else
+            {
+                user = await _userManager.FindByNameAsync(req.UserName);
+            }
+
+
+            if (user == null)
+            {
+                var internalErr = new ObjectResult(new { error = "User not found" })
+                {
+                    StatusCode = 500
+                };
+                return internalErr;
+            }
+
+            var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
+
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var confirmationLink = urlHelper.Action("ConfirmEmail", "Users", new { token, email = user.Email }, "https");
+            var message = new Message(new string[] { user.Email }, "Confirmation email link", confirmationLink, null);
+            await _emailSender.SendEmailAsync(message);
+
+            return new OkObjectResult(new { message = "Successful" });
+        }
+
+
+        public async Task<string> ConfirmEmail(string token, string email)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
+                return "User not found";
+
+            var result = await _userManager.ConfirmEmailAsync(user, token);
+
+            if (result.Succeeded)
+            {
+                return "Email Confirmed";
+            }
+            else
+            {
+                return "Error";
+            }
+
+        }
+
+        public async Task<IActionResult> GetCurrentUser()
+        {
+            var appUser = await _userManager.FindByIdAsync(_userAccessor.GetCurrentUserId());
+
+            if (appUser != null)
+            {
+                return new OkObjectResult(new
+                {
+                    appUser.RealName,
+                    appUser.DOB,
+                    appUser.Email,
+                    appUser.UserName
+                });
+            }
+
+            return new NotFoundObjectResult("");
+        }
+
+
+
+
+
+
+
+
+
+
+
     }
 }
