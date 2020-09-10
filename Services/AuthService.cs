@@ -16,7 +16,7 @@ namespace BackEnd.Services
     {
         Task<AppUser> Authenticate(Google.Apis.Auth.GoogleJsonWebSignature.Payload payload);
         Task<IActionResult> Google([FromBody] GoogleLoginRequest userView);
-        Task<IActionResult> GoogleUpdateInfo([FromBody] GoogleLoginRequest userView)
+        Task<IActionResult> GoogleUpdateInfo([FromBody] GoogleLoginRequest userView);
 
     }
 

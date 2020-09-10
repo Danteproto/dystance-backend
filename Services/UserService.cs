@@ -41,6 +41,7 @@ namespace BackEnd.Services
         public Task<IActionResult> ResendEmail(ResendEmailRequest req);
         public Task<string> ConfirmEmail(string token, string email);
         public Task<IActionResult> GetCurrentUser();
+        public IEnumerable<AppUser> GetUsers();
 
     }
 
@@ -84,7 +85,7 @@ namespace BackEnd.Services
             {
                 if (EmailUtil.CheckIfValid(model.Email))
                 {
-                    appUser = _context.Users.SingleOrDefault(x => x.Email == model.Email);
+                    appUser = await _userManager.FindByEmailAsync(model.Email);
                 }
                 else
                 {
@@ -93,7 +94,7 @@ namespace BackEnd.Services
             }
             else
             {
-                appUser = _context.Users.SingleOrDefault(x => x.UserName == model.Username);
+                appUser = await _userManager.FindByNameAsync(model.Username);
             }
             // return null if user not found
             if (appUser == null)
@@ -112,7 +113,6 @@ namespace BackEnd.Services
 
             if (result.Succeeded)
             {
-
                 // authentication successful so generate jwt and refresh tokens
                 User user = _mapper.Map<User>(appUser);
 
@@ -134,27 +134,26 @@ namespace BackEnd.Services
             }
         }
 
-
-        public RegisterResponse registerWithGoogle()
-        {
-            //_googleClient;
-
-            return new RegisterResponse { };
-        }
-
         public IActionResult RefreshToken(string token)
         {
             try
             {
                 var appUser = _context.Users.SingleOrDefault(u => u.RefreshTokens.Any(t => t.Token == token));
 
-                // return null if no user found with token
-                if (appUser == null) return null;
+                // return 500 if no user found with token
+                if (appUser == null) return new ObjectResult(new { message = "Token not found"})
+                {
+                    StatusCode = 500
+                };
+
 
                 var refreshToken = appUser.RefreshTokens.Single(x => x.Token == token);
 
-                // return null if token is no longer active
-                if (!refreshToken.IsActive) return null;
+                // return 500 if token is no longer active
+                if (!refreshToken.IsActive) return new ObjectResult(new { message = "Token is no longer active" })
+                {
+                    StatusCode = 500
+                };
 
                 // replace old refresh token with a new one and save
                 var newRefreshToken = _jwtGenerator.generateRefreshToken();
@@ -173,7 +172,7 @@ namespace BackEnd.Services
             }
             catch (Exception ex)
             {
-                return new UnauthorizedObjectResult(new { message = "Invalid token" });
+                return new UnauthorizedObjectResult(new { message = ex.Message });
             }
         }
 
@@ -344,6 +343,10 @@ namespace BackEnd.Services
             return new NotFoundObjectResult("");
         }
 
+        public IEnumerable<AppUser> GetUsers()
+        {
+            return _context.Users;
+        }
 
 
 

@@ -89,6 +89,19 @@ namespace BackEnd
 
             // configure jwt authentication
             var appSettings = appSettingsSection.Get<AppSettings>();
+
+            //JUST FOR TESTINGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+            if(appSettings == null)
+            {
+                appSettings = new AppSettings
+                {
+                    Secret = "THIS IS USED TO SIGN AND VERIFY JWT TOKENS, REPLACE IT WITH YOUR OWN SECRET, IT CAN BE ANY STRING"
+                };
+            }
+            //JUST FOR TESTINGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+
+
+
             var key = Encoding.ASCII.GetBytes(appSettings.Secret);
             services.AddAuthentication(x =>
             {
@@ -149,6 +162,20 @@ namespace BackEnd
             var emailConfig = Configuration
                 .GetSection("EmailConfiguration")
                 .Get<EmailConfiguration>();
+
+            //JUST FOR TESTINGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+            if (emailConfig == null)
+            {
+                emailConfig = new EmailConfiguration
+                {
+                    From = "olsymailservice@gmail.com",
+                    SmtpServer = "smtp.gmail.com",
+                    Port = 465,
+                    UserName = "olsymailservice@gmail.com"
+                };
+            }
+            //JUST FOR TESTINGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+
             services.AddSingleton(emailConfig);
 
             services.AddAuthentication().AddGoogle(options =>

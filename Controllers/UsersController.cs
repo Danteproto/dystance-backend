@@ -36,23 +36,12 @@ namespace BackEnd.Controllers
     public class UsersController : ControllerBase
     {
         private IUserService _userService;
-        private readonly SignInManager<AppUser> _signInManager;
-        private readonly UserManager<AppUser> _userManager;
-        private readonly IMapper _mapper;
-        private readonly IEmailSender _emailSender;
         private readonly IAuthService _authService;
-        private readonly IUserAccessor _userAccessor;
 
-        public UsersController(IUserService userService, SignInManager<AppUser> signInManager, UserManager<AppUser> userManager, IMapper mapper, IEmailSender emailSender, IAuthService authService,
-            IUserAccessor userAccessor)
+        public UsersController(IUserService userService, IAuthService authService)
         {
             _userService = userService;
-            _signInManager = signInManager;
-            _userManager = userManager;
-            _mapper = mapper;
-            _emailSender = emailSender;
             _authService = authService;
-            _userAccessor = userAccessor;
         }
 
         [AllowAnonymous]

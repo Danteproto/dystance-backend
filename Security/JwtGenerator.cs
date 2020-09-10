@@ -17,14 +17,13 @@ namespace BackEnd.Security
 {
     public interface IJwtGenerator
     {
-        string CreateToken(AppUser user);
         public JwtToken generateJwtToken(User user);
         public RefreshToken generateRefreshToken();
         public int toSeconds(DateTime second, DateTime first);
         public AuthenticateResponse VerifyAndReturnToken(AppUser appUser);
     }
 
-    public class JwtGenerator
+    public class JwtGenerator : IJwtGenerator
     {
         private readonly AppSettings _appSettings;
         private readonly IMapper _mapper;
