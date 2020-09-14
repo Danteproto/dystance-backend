@@ -50,12 +50,11 @@ namespace BackEnd.Controllers
             var rooms = RoomService.GetRoomByUserId(_context, Id);
             return Content(JsonConvert.SerializeObject(rooms));
         }
-        [HttpPost("Get/Image")]
-        public async Task<IActionResult> GetImage()
+        [HttpGet("Get/Image/Room")]
+        public async Task<IActionResult> GetImage(int roomId, string imgName)
         {
-            var imgName = Request.Form["imgName"];
             var rootPath = _env.ContentRootPath;
-            var path = Path.Combine(rootPath, "Images");
+            var path = Path.Combine(rootPath, "Images/" + roomId);
             var imgPath = Path.Combine(path, imgName);
             var image = System.IO.File.OpenRead(imgPath);
             return File(image, "image/jpeg");
