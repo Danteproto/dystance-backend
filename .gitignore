@@ -339,6 +339,6 @@ ASALocalRun/
 # BeatPulse healthcheck temp database
 healthchecksdb
 
-.png
-.jpg
-.jpeg
+*.png
+*.jpg
+*.jpeg
