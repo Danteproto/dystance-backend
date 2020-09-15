@@ -11,6 +11,8 @@ using BackEnd.Middleware;
 using BackEnd.Security;
 using BackEnd.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using BackEnd.Socket;
+using BackEnd.DBContext;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -61,6 +63,11 @@ namespace BackEnd
                 {
                     policy.AllowAnyHeader().AllowAnyMethod().WithOrigins("http://localhost:44385");
                 });
+                options.AddPolicy("CorsPolicy", builder => builder
+                .WithOrigins("http://localhost:3000")
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials());
             });
 
             //Configure for project to use Identity
@@ -197,6 +204,9 @@ namespace BackEnd
             services.AddAutoMapper(typeof(Startup));
             services.AddControllers().AddNewtonsoftJson(options =>
    options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
+            services.AddSignalR();
+            services.AddDbContext<RoomDBContext>(x => x.UseSqlServer(Configuration.GetConnectionString("DYSRoom")));
+            services.AddControllers();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -207,6 +217,7 @@ namespace BackEnd
             if (env.IsDevelopment())
             {
                 //app.UseDeveloperExceptionPage();
+                app.UseDeveloperExceptionPage();
             }
 
             app.UseHttpsRedirection();
@@ -218,9 +229,12 @@ namespace BackEnd
             app.UseCors("CorsPolicy");
             app.UseCookiePolicy();
 
+            app.UseAuthorization();
+
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+                endpoints.MapHub<SocketHub>("/socket");
             });
         }
     }

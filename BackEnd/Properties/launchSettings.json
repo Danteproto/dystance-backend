@@ -11,16 +11,26 @@
   "profiles": {
     "IIS Express": {
       "commandName": "IISExpress",
+<<<<<<< HEAD:BackEnd/Properties/launchSettings.json
       "launchBrowser": true,
       "launchUrl": "api/values",
+=======
+      "launchBrowser": false,
+      "launchUrl": "",
+>>>>>>> helper:Properties/launchSettings.json
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },
     "WebApplication1": {
       "commandName": "Project",
+<<<<<<< HEAD:BackEnd/Properties/launchSettings.json
       "launchBrowser": true,
       "launchUrl": "api/values",
+=======
+      "launchBrowser": false,
+      "launchUrl": "",
+>>>>>>> helper:Properties/launchSettings.json
       "applicationUrl": "https://localhost:5001;http://localhost:5000",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
