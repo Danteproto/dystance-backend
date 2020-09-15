@@ -276,7 +276,7 @@ namespace BackEnd.Services
         public async Task<IActionResult> ResendEmail(ResendEmailRequest req)
         {
             AppUser user;
-            if (String.IsNullOrEmpty(req.Email))
+            if (!String.IsNullOrEmpty(req.Email))
             {
                 user = await _userManager.FindByEmailAsync(req.Email);
             }

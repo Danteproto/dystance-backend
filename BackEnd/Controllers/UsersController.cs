@@ -1,30 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
-using System.Net;
-using System.Security.Claims;
+﻿
 using System.Threading.Tasks;
-using BackEnd.Context;
 using BackEnd.Models;
-using BackEnd.Errors;
-using BackEnd.Interfaces;
-using BackEnd.Security;
 using BackEnd.Services;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.AspNetCore.Http;
 using AutoMapper;
-using EmailService;
-using BackEnd.Responses;
-using Google.Apis.Auth.OAuth2.Requests;
 using BackEnd.Requests;
-using System.Text.Json;
-using Google.Apis.Auth;
 using static Google.Apis.Auth.GoogleJsonWebSignature;
+using BackEnd.Ultilities;
+using System.Collections.Specialized;
+using Nancy.Json;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -37,26 +22,30 @@ namespace BackEnd.Controllers
     {
         private IUserService _userService;
         private readonly IAuthService _authService;
+        private readonly IMapper _mapper;
 
-        public UsersController(IUserService userService, IAuthService authService)
+        public UsersController(IUserService userService, IAuthService authService, IMapper mapper)
         {
             _userService = userService;
             _authService = authService;
+            _mapper = mapper;
         }
 
         [AllowAnonymous]
         [HttpPost("authenticate")]
-        public async Task<IActionResult> Authenticate([FromBody] AuthenticateRequest model)
+        public async Task<IActionResult> Authenticate()
         {
-            return await _userService.Authenticate(model);
-
+            var reqForm = Request.Form.GetFormParameters();
+            var loginModel = _mapper.Map<AuthenticateRequest>(reqForm);
+            return await _userService.Authenticate(loginModel);
         }
 
         [Authorize]
         [HttpPost("refreshToken")]
-        public IActionResult RefreshToken([FromBody] RefreshTokenRequestz tokenRequest)
+        public IActionResult RefreshToken()
         {
-            return _userService.RefreshToken(tokenRequest.RefreshToken);
+            var reqForm = Request.Form.GetFormParameters();
+            return _userService.RefreshToken(_mapper.Map<RefreshTokenRequestz>(reqForm).RefreshToken);
         }
 
         //[HttpPost("revoke-token")]
@@ -103,16 +92,18 @@ namespace BackEnd.Controllers
         [AllowAnonymous]
         [HttpPost("register")]
 
-        public async Task<IActionResult> Register([FromBody] RegisterRequest userModel)
+        public async Task<IActionResult> Register()
         {
-            return await _userService.Register(userModel);
+            var reqForm = Request.Form.GetFormParameters();
+            return await _userService.Register(_mapper.Map<RegisterRequest>(reqForm));
         }
 
         [AllowAnonymous]
         [HttpPost("resendEmail")]
-        public async Task<IActionResult> ResendEmail(ResendEmailRequest req)
+        public async Task<IActionResult> ResendEmail()
         {
-            return await _userService.ResendEmail(req);
+            var reqForm = Request.Form.GetFormParameters();
+            return await _userService.ResendEmail(_mapper.Map<ResendEmailRequest>(reqForm));
         }
 
 
@@ -125,17 +116,19 @@ namespace BackEnd.Controllers
 
         [AllowAnonymous]
         [HttpPost("google")]
-        public async Task<IActionResult> Google([FromBody] GoogleLoginRequest userView)
+        public async Task<IActionResult> Google()
         {
-            return await _authService.Google(userView);
+            var reqForm = Request.Form.GetFormParameters();
+            return await _authService.Google(_mapper.Map<GoogleLoginRequest>(reqForm));
 
         }
 
         [AllowAnonymous]
         [HttpPost("google/updateInfo")]
-        public async Task<IActionResult> GoogleUpdateInfo([FromBody] GoogleLoginRequest userView)
+        public async Task<IActionResult> GoogleUpdateInfo()
         {
-            return await _authService.GoogleUpdateInfo(userView);
+            var reqForm = Request.Form.GetFormParameters();
+            return await _authService.GoogleUpdateInfo(_mapper.Map<GoogleLoginRequest>(reqForm));
         }
 
 
