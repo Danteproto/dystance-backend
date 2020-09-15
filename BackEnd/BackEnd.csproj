@@ -2,14 +2,9 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
+    <UserSecretsId>b473d1f1-3ada-45f2-8036-b555152130b7</UserSecretsId>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Compile Remove="DBContext\**" />
-    <Content Remove="DBContext\**" />
-    <EmbeddedResource Remove="DBContext\**" />
-    <None Remove="DBContext\**" />
-  </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Migrations\" />

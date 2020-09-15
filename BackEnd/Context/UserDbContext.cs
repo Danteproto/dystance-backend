@@ -8,7 +8,7 @@ namespace BackEnd.Context
 {
     public class UserDbContext : IdentityDbContext<AppUser>
     {
-        public UserDbContext(DbContextOptions options) : base (options)
+        public UserDbContext(DbContextOptions<UserDbContext> options) : base (options)
         {
 
         }

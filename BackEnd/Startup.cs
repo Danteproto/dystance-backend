@@ -53,7 +53,6 @@ namespace BackEnd
             services.AddHttpContextAccessor();
 
             //Add DBContext(s)
-            services.AddDbContext<UserDbContext>(options => options.UseSqlServer(Configuration.GetConnectionString("SqlConnection")));
 
             services.AddMvc();
 
@@ -98,7 +97,7 @@ namespace BackEnd
             var appSettings = appSettingsSection.Get<AppSettings>();
 
             //JUST FOR TESTINGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
-            if(appSettings == null)
+            if (appSettings == null)
             {
                 appSettings = new AppSettings
                 {
@@ -206,6 +205,7 @@ namespace BackEnd
    options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
             services.AddSignalR();
             services.AddDbContext<RoomDBContext>(x => x.UseSqlServer(Configuration.GetConnectionString("DYSRoom")));
+            services.AddDbContext<UserDbContext>(options => options.UseSqlServer(Configuration.GetConnectionString("DYSUser")));
             services.AddControllers();
         }
 
