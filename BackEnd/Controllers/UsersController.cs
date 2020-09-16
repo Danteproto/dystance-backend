@@ -111,7 +111,7 @@ namespace BackEnd.Controllers
         [HttpGet("confirmEmail")]
         public async Task<string> ConfirmEmail(string token, string email)
         {
-            return await _userService.ConfirmEmail( token,  email);
+            return await _userService.ConfirmEmail(token, email);
         }
 
         [AllowAnonymous]
@@ -138,112 +138,136 @@ namespace BackEnd.Controllers
             return await _userService.GetCurrentUser();
         }
 
-
-            //[AllowAnonymous]
-            //[HttpGet("externalLoginServices")]
-            //public async Task<IActionResult> GetExternalLoginServices()
-            //{
-            //    var services = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
-            //    return Ok(services[0]);
-
-            //}
-
-            //[AllowAnonymous]
-            //[HttpGet("externalLogin")]
-
-            //public IActionResult GetExternalLogin(string returnUrl)
-            //{
-
-            //    var redirectUrl = Url.Action("ExternalLoginCallback", "Users", new { ReturnUrl = returnUrl });
-
-            //    var properties = _signInManager.ConfigureExternalAuthenticationProperties("Google", redirectUrl);
-
-            //    var challenge = new ChallengeResult("Google", properties);
-            //    return challenge;
-
-            //}
-
-            //[AllowAnonymous]
-            //[HttpGet("ExternalLoginCallback")]
-
-            //public async Task<IActionResult> ExternalLoginCallback(string returnUrl = null, string remoteError = null)
-            //{
-            //    returnUrl = returnUrl ?? Url.Content("~/");
-
-            //    AuthenticateRequest authenticateRequest = new AuthenticateRequest
-            //    {
-            //        ReturnUrl = returnUrl,
-            //        ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList()
-            //    };
-
-
-            //    var info = await _signInManager.GetExternalLoginInfoAsync();
-
-            //    var signInResult = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false, bypassTwoFactor: true);
-
-            //    if (signInResult.Succeeded)
-            //    {
-            //        return LocalRedirect(returnUrl);
-            //    }
-            //    else
-            //    {
-            //        var email = info.Principal.FindFirstValue(ClaimTypes.Email);
-
-            //        if (email != null)
-            //        {
-            //            var user = await _userManager.FindByEmailAsync(email);
-
-            //            if (user == null)
-            //            {
-            //                user = new AppUser
-            //                {
-            //                    Id = Guid.NewGuid().ToString(),
-            //                    UserName = info.Principal.FindFirstValue(ClaimTypes.Email),
-            //                    Email = info.Principal.FindFirstValue(ClaimTypes.Email)
-            //                };
-
-            //                return Ok(user);
-            //            }
-
-            //            await _userManager.AddLoginAsync(user, info);
-            //            await _signInManager.SignInAsync(user, isPersistent: false);
-
-            //            var result = info.AuthenticationTokens;
-
-            //            var response = new AuthenticateResponse(new User
-            //            { Username = user.UserName }
-
-            //            , info.AuthenticationTokens.Single(f => f.Name == "access_token").Value,
-            //                info.AuthenticationTokens.Single(f => f.Name == "refresh_token").Value,
-            //                info.AuthenticationTokens.Single(f => f.Name == "expires_at").Value);
-
-            //            return Ok(response);
-            //        }
-            //    }
-
-            //    throw new RestException(HttpStatusCode.NotFound, new { message = "Email not found" });
-            //}
-
-
-            // helper methods
-
-            //private void setTokenCookie(string token)
-            //{
-            //    var cookieOptions = new CookieOptions
-            //    {
-            //        HttpOnly = true,
-            //        Expires = DateTime.UtcNow.AddDays(7)
-            //    };
-            //    Response.Cookies.Append("refreshToken", token, cookieOptions);
-            //}
-
-            //private string ipAddress()
-            //{
-            //    if (Request.Headers.ContainsKey("X-Forwarded-For"))
-            //        return Request.Headers["X-Forwarded-For"];
-            //    else
-            //        return HttpContext.Connection.RemoteIpAddress.MapToIPv4().ToString();
-            //}
-
+        [AllowAnonymous]
+        [HttpPost("resetPassword")]
+        public async Task<IActionResult> ResetPassword()
+        {
+            var reqForm = Request.Form.GetFormParameters();
+            return await _userService.ResetPassword(_mapper.Map<ResetPasswordRequest>(reqForm));
         }
+
+
+        [HttpPost("resetPasswordHandler")]
+        public async Task<string> ResetPasswordHandler()
+        {
+            var reqForm = Request.Form.GetFormParameters();
+            return await _userService.ResetPasswordHandler(_mapper.Map<ResetPasswordModel>(reqForm));
+        }
+
+        [HttpPost("changePassword")]
+        public async Task<IActionResult> ChangePassword()
+        {
+            var reqForm = Request.Form.GetFormParameters();
+            return await _userService.ChangePassword(_mapper.Map<ChangePasswordRequest>(reqForm));
+        }
+
+
+
+        //[AllowAnonymous]
+        //[HttpGet("externalLoginServices")]
+        //public async Task<IActionResult> GetExternalLoginServices()
+        //{
+        //    var services = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
+        //    return Ok(services[0]);
+
+        //}
+
+        //[AllowAnonymous]
+        //[HttpGet("externalLogin")]
+
+        //public IActionResult GetExternalLogin(string returnUrl)
+        //{
+
+        //    var redirectUrl = Url.Action("ExternalLoginCallback", "Users", new { ReturnUrl = returnUrl });
+
+        //    var properties = _signInManager.ConfigureExternalAuthenticationProperties("Google", redirectUrl);
+
+        //    var challenge = new ChallengeResult("Google", properties);
+        //    return challenge;
+
+        //}
+
+        //[AllowAnonymous]
+        //[HttpGet("ExternalLoginCallback")]
+
+        //public async Task<IActionResult> ExternalLoginCallback(string returnUrl = null, string remoteError = null)
+        //{
+        //    returnUrl = returnUrl ?? Url.Content("~/");
+
+        //    AuthenticateRequest authenticateRequest = new AuthenticateRequest
+        //    {
+        //        ReturnUrl = returnUrl,
+        //        ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList()
+        //    };
+
+
+        //    var info = await _signInManager.GetExternalLoginInfoAsync();
+
+        //    var signInResult = await _signInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, isPersistent: false, bypassTwoFactor: true);
+
+        //    if (signInResult.Succeeded)
+        //    {
+        //        return LocalRedirect(returnUrl);
+        //    }
+        //    else
+        //    {
+        //        var email = info.Principal.FindFirstValue(ClaimTypes.Email);
+
+        //        if (email != null)
+        //        {
+        //            var user = await _userManager.FindByEmailAsync(email);
+
+        //            if (user == null)
+        //            {
+        //                user = new AppUser
+        //                {
+        //                    Id = Guid.NewGuid().ToString(),
+        //                    UserName = info.Principal.FindFirstValue(ClaimTypes.Email),
+        //                    Email = info.Principal.FindFirstValue(ClaimTypes.Email)
+        //                };
+
+        //                return Ok(user);
+        //            }
+
+        //            await _userManager.AddLoginAsync(user, info);
+        //            await _signInManager.SignInAsync(user, isPersistent: false);
+
+        //            var result = info.AuthenticationTokens;
+
+        //            var response = new AuthenticateResponse(new User
+        //            { Username = user.UserName }
+
+        //            , info.AuthenticationTokens.Single(f => f.Name == "access_token").Value,
+        //                info.AuthenticationTokens.Single(f => f.Name == "refresh_token").Value,
+        //                info.AuthenticationTokens.Single(f => f.Name == "expires_at").Value);
+
+        //            return Ok(response);
+        //        }
+        //    }
+
+        //    throw new RestException(HttpStatusCode.NotFound, new { message = "Email not found" });
+        //}
+
+
+        // helper methods
+
+        //private void setTokenCookie(string token)
+        //{
+        //    var cookieOptions = new CookieOptions
+        //    {
+        //        HttpOnly = true,
+        //        Expires = DateTime.UtcNow.AddDays(7)
+        //    };
+        //    Response.Cookies.Append("refreshToken", token, cookieOptions);
+        //}
+
+        //private string ipAddress()
+        //{
+        //    if (Request.Headers.ContainsKey("X-Forwarded-For"))
+        //        return Request.Headers["X-Forwarded-For"];
+        //    else
+        //        return HttpContext.Connection.RemoteIpAddress.MapToIPv4().ToString();
+        //}
+
     }
+}

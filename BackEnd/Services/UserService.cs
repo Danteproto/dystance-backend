@@ -42,6 +42,10 @@ namespace BackEnd.Services
         public Task<string> ConfirmEmail(string token, string email);
         public Task<IActionResult> GetCurrentUser();
         public IEnumerable<AppUser> GetUsers();
+        public Task<IActionResult> ResetPassword(ResetPasswordRequest model);
+        public Task<string> ResetPasswordHandler(ResetPasswordModel model);
+        public Task<IActionResult> ChangePassword(ChangePasswordRequest model);
+
 
     }
 
@@ -214,8 +218,9 @@ namespace BackEnd.Services
             var response = new UserInfoResponse
             {
                 Id = user.Id,
-                UserName = user.UserName,
                 RealName = user.RealName,
+                Email = user.Email,
+                DOB = user.DOB,
                 Avatar = ""
             };
             return new OkObjectResult(response);
@@ -349,12 +354,75 @@ namespace BackEnd.Services
         }
 
 
+        public async Task<IActionResult> ResetPassword(ResetPasswordRequest model)
+        {
+            AppUser user;
+            //Find the user by email or by username
+            if (!String.IsNullOrEmpty(model.Email))
+            {
+                user = await _userManager.FindByEmailAsync(model.Email);
+            }
+            else
+            {
+                user = await _userManager.FindByNameAsync(model.UserName);
+            }
+
+            if (user == null)
+            {
+                return new BadRequestObjectResult(new { type = "0", message = "Missing fields" });
+            }
+
+            //Generate url 
+            var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
 
 
+            //Send email
+            var resetLink = urlHelper.Action("ResetPasswordHandler", "Users", new { token, email = user.Email }, "https");
+            var message = new Message(new string[] { user.Email }, "Reset password link", resetLink, null);
+            await _emailSender.SendEmailAsync(message);
 
+            return new OkObjectResult("Email sent successfully");
+        }
 
+        public async Task<string> ResetPasswordHandler(ResetPasswordModel model)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null)
+            {
+                return "User not found.";
+            }
 
+            var resetPassResult = await _userManager.ResetPasswordAsync(user, model.Token, model.Password);
 
+            if (!resetPassResult.Succeeded)
+            {
+                return "Error changing password!";
+            }
+
+            return "Password reset successfully";
+        }
+
+        public async Task<IActionResult> ChangePassword(ChangePasswordRequest model)
+        {
+
+            var user = await _userManager.FindByIdAsync(_userAccessor.GetCurrentUserId());
+
+            //Change password
+            var result = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
+
+            if (result.Succeeded)
+            {
+                return new OkObjectResult(new { message = "Password changed successfully" });
+            }
+            else
+            {
+                return new ObjectResult(new { type = "0", code = result.Errors.ToList()[0].Code, description = result.Errors.ToList()[0].Description })
+                {
+                    StatusCode = 500
+                };
+            }
+        }
 
 
     }
