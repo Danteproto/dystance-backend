@@ -71,7 +71,6 @@ namespace BackEnd.Controllers
         //    return Ok(users);
         //}
 
-        [Authorize]
         [HttpGet("info")]
         public IActionResult GetUserInfoById(string id)
         {
@@ -160,6 +159,14 @@ namespace BackEnd.Controllers
             return await _userService.ChangePassword(_mapper.Map<ChangePasswordRequest>(reqForm));
         }
 
+
+        [HttpPost("updateProfile")]
+        public async Task<IActionResult> UpdateProfile()
+        {
+            var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
+            return await _userService.UpdateProfile(_mapper.Map<UpdateProfileRequest>(reqForm));
+        }
+        
 
 
         //[AllowAnonymous]

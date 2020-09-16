@@ -45,7 +45,7 @@ namespace BackEnd.Services
         public Task<IActionResult> ResetPassword(ResetPasswordRequest model);
         public Task<string> ResetPasswordHandler(ResetPasswordModel model);
         public Task<IActionResult> ChangePassword(ChangePasswordRequest model);
-
+        public Task<IActionResult> UpdateProfile(UpdateProfileRequest model);
 
     }
 
@@ -417,6 +417,7 @@ namespace BackEnd.Services
             }
             else
             {
+
                 return new ObjectResult(new { type = "0", code = result.Errors.ToList()[0].Code, description = result.Errors.ToList()[0].Description })
                 {
                     StatusCode = 500
@@ -424,6 +425,31 @@ namespace BackEnd.Services
             }
         }
 
+        public async Task<IActionResult> UpdateProfile(UpdateProfileRequest model)
+        {
 
+            var user = await _userManager.FindByIdAsync(_userAccessor.GetCurrentUserId());
+
+            user.UserName = model.UserName ?? user.UserName;
+            user.RealName = model.RealName ?? user.RealName;
+            user.DOB = model.Dob ?? user.DOB;
+            user.PhoneNumber = model.PhoneNumber ?? user.PhoneNumber;
+            user.Email = model.Email ?? user.Email;
+
+            var result = await _userManager.UpdateAsync(user);
+
+            if (result.Succeeded)
+            {
+                return new OkObjectResult(new { message = "Update Profile Successfully" });
+            }
+            else
+            {
+
+                return new ObjectResult(new { type = "0", code = result.Errors.ToList()[0].Code, description = result.Errors.ToList()[0].Description })
+                {
+                    StatusCode = 500
+                };
+            }
+        }
     }
 }
