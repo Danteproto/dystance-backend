@@ -9,7 +9,7 @@ using BackEnd.Requests;
 using static Google.Apis.Auth.GoogleJsonWebSignature;
 using BackEnd.Ultilities;
 using System.Collections.Specialized;
-using Nancy.Json;
+using System.Collections.Generic;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -35,16 +35,15 @@ namespace BackEnd.Controllers
         [HttpPost("authenticate")]
         public async Task<IActionResult> Authenticate()
         {
-            var reqForm = Request.Form.GetFormParameters();
-            var loginModel = _mapper.Map<AuthenticateRequest>(reqForm);
-            return await _userService.Authenticate(loginModel);
+            var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
+            return await _userService.Authenticate(_mapper.Map<AuthenticateRequest>(reqForm));
         }
 
         [Authorize]
         [HttpPost("refreshToken")]
         public IActionResult RefreshToken()
         {
-            var reqForm = Request.Form.GetFormParameters();
+            var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
             return _userService.RefreshToken(_mapper.Map<RefreshTokenRequestz>(reqForm).RefreshToken);
         }
 
@@ -94,7 +93,7 @@ namespace BackEnd.Controllers
 
         public async Task<IActionResult> Register()
         {
-            var reqForm = Request.Form.GetFormParameters();
+            var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
             return await _userService.Register(_mapper.Map<RegisterRequest>(reqForm));
         }
 
@@ -102,7 +101,7 @@ namespace BackEnd.Controllers
         [HttpPost("resendEmail")]
         public async Task<IActionResult> ResendEmail()
         {
-            var reqForm = Request.Form.GetFormParameters();
+            var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
             return await _userService.ResendEmail(_mapper.Map<ResendEmailRequest>(reqForm));
         }
 
@@ -118,7 +117,7 @@ namespace BackEnd.Controllers
         [HttpPost("google")]
         public async Task<IActionResult> Google()
         {
-            var reqForm = Request.Form.GetFormParameters();
+            var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
             return await _authService.Google(_mapper.Map<GoogleLoginRequest>(reqForm));
 
         }
@@ -127,7 +126,7 @@ namespace BackEnd.Controllers
         [HttpPost("google/updateInfo")]
         public async Task<IActionResult> GoogleUpdateInfo()
         {
-            var reqForm = Request.Form.GetFormParameters();
+            var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
             return await _authService.GoogleUpdateInfo(_mapper.Map<GoogleLoginRequest>(reqForm));
         }
 
@@ -142,7 +141,7 @@ namespace BackEnd.Controllers
         [HttpPost("resetPassword")]
         public async Task<IActionResult> ResetPassword()
         {
-            var reqForm = Request.Form.GetFormParameters();
+            var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
             return await _userService.ResetPassword(_mapper.Map<ResetPasswordRequest>(reqForm));
         }
 
@@ -150,14 +149,14 @@ namespace BackEnd.Controllers
         [HttpPost("resetPasswordHandler")]
         public async Task<string> ResetPasswordHandler()
         {
-            var reqForm = Request.Form.GetFormParameters();
+            var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
             return await _userService.ResetPasswordHandler(_mapper.Map<ResetPasswordModel>(reqForm));
         }
 
         [HttpPost("changePassword")]
         public async Task<IActionResult> ChangePassword()
         {
-            var reqForm = Request.Form.GetFormParameters();
+            var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
             return await _userService.ChangePassword(_mapper.Map<ChangePasswordRequest>(reqForm));
         }
 

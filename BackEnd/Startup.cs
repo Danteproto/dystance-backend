@@ -29,7 +29,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using AspNetCore.IServiceCollection.AddIUrlHelper;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
-using FluentAssertions.Common;
 
 namespace BackEnd
 {

@@ -85,7 +85,7 @@ namespace BackEnd.Services
         public async Task<IActionResult> Authenticate(AuthenticateRequest model)
         {
             AppUser appUser = null;
-            if (String.IsNullOrWhiteSpace(model.Username))
+            if (String.IsNullOrWhiteSpace(model.UserName))
             {
                 if (EmailUtil.CheckIfValid(model.Email))
                 {
@@ -98,7 +98,7 @@ namespace BackEnd.Services
             }
             else
             {
-                appUser = await _userManager.FindByNameAsync(model.Username);
+                appUser = await _userManager.FindByNameAsync(model.UserName);
             }
             // return null if user not found
             if (appUser == null)
@@ -220,7 +220,7 @@ namespace BackEnd.Services
                 Id = user.Id,
                 RealName = user.RealName,
                 Email = user.Email,
-                DOB = user.DOB,
+                Dob = user.DOB,
                 Avatar = ""
             };
             return new OkObjectResult(response);
@@ -230,7 +230,7 @@ namespace BackEnd.Services
         public async Task<IActionResult> Register(RegisterRequest userModel)
         {
 
-            var appUser = await _userManager.FindByNameAsync(userModel.Username);
+            var appUser = await _userManager.FindByNameAsync(userModel.UserName);
             if (appUser != null)
             {
                 return new BadRequestObjectResult(new { type = "1", message = "Username already exists" });
@@ -245,9 +245,9 @@ namespace BackEnd.Services
             var registerUser = new AppUser
             {
                 Email = userModel.Email,
-                UserName = userModel.Username,
+                UserName = userModel.UserName,
                 RealName = userModel.RealName,
-                DOB = userModel.DOB
+                DOB = userModel.Dob
             };
 
             var result = await _userManager.CreateAsync(registerUser, userModel.Password);
@@ -271,7 +271,7 @@ namespace BackEnd.Services
             return new OkObjectResult(new RegisterResponse
             {
                 Email = userModel.Email,
-                UserName = userModel.Username,
+                UserName = userModel.UserName,
                 Token = token,
                 TokenLink = confirmationLink
             });
