@@ -45,7 +45,7 @@ namespace BackEnd.Services
         public Task<IActionResult> ResetPassword(ResetPasswordRequest model);
         public Task<string> ResetPasswordHandler(ResetPasswordModel model);
         public Task<IActionResult> ChangePassword(ChangePasswordRequest model);
-
+        public Task<IActionResult> UpdateProfile(UpdateProfileRequest model);
 
     }
 
@@ -85,7 +85,7 @@ namespace BackEnd.Services
         public async Task<IActionResult> Authenticate(AuthenticateRequest model)
         {
             AppUser appUser = null;
-            if (String.IsNullOrWhiteSpace(model.Username))
+            if (String.IsNullOrWhiteSpace(model.UserName))
             {
                 if (EmailUtil.CheckIfValid(model.Email))
                 {
@@ -98,7 +98,7 @@ namespace BackEnd.Services
             }
             else
             {
-                appUser = await _userManager.FindByNameAsync(model.Username);
+                appUser = await _userManager.FindByNameAsync(model.UserName);
             }
             // return null if user not found
             if (appUser == null)
@@ -220,7 +220,7 @@ namespace BackEnd.Services
                 Id = user.Id,
                 RealName = user.RealName,
                 Email = user.Email,
-                DOB = user.DOB,
+                Dob = user.DOB,
                 Avatar = ""
             };
             return new OkObjectResult(response);
@@ -230,7 +230,7 @@ namespace BackEnd.Services
         public async Task<IActionResult> Register(RegisterRequest userModel)
         {
 
-            var appUser = await _userManager.FindByNameAsync(userModel.Username);
+            var appUser = await _userManager.FindByNameAsync(userModel.UserName);
             if (appUser != null)
             {
                 return new BadRequestObjectResult(new { type = "1", message = "Username already exists" });
@@ -245,9 +245,9 @@ namespace BackEnd.Services
             var registerUser = new AppUser
             {
                 Email = userModel.Email,
-                UserName = userModel.Username,
+                UserName = userModel.UserName,
                 RealName = userModel.RealName,
-                DOB = userModel.DOB
+                DOB = userModel.Dob
             };
 
             var result = await _userManager.CreateAsync(registerUser, userModel.Password);
@@ -271,7 +271,7 @@ namespace BackEnd.Services
             return new OkObjectResult(new RegisterResponse
             {
                 Email = userModel.Email,
-                UserName = userModel.Username,
+                UserName = userModel.UserName,
                 Token = token,
                 TokenLink = confirmationLink
             });
@@ -353,77 +353,102 @@ namespace BackEnd.Services
             return _context.Users;
         }
 
+        public async Task<IActionResult> ResetPassword(ResetPasswordRequest model)
+        {
+            AppUser user;
+            //Find the user by email or by username
+            if (!String.IsNullOrEmpty(model.Email))
+            {
+                user = await _userManager.FindByEmailAsync(model.Email);
+            }
+            else
+            {
+                user = await _userManager.FindByNameAsync(model.UserName);
+            }
 
-        //public async Task<IActionResult> ResetPassword(ResetPasswordRequest model)
-        //{
-        //    AppUser user;
-        //    //Find the user by email or by username
-        //    if (!String.IsNullOrEmpty(model.Email))
-        //    {
-        //        user = await _userManager.FindByEmailAsync(model.Email);
-        //    }
-        //    else
-        //    {
-        //        user = await _userManager.FindByNameAsync(model.UserName);
-        //    }
+            if (user == null)
+            {
+                return new BadRequestObjectResult(new { type = "0", message = "Missing fields" });
+            }
 
-        //    if (user == null)
-        //    {
-        //        return new BadRequestObjectResult(new { type = "0", message ="Missing fields"});
-        //    }
-
-        //    //Generate url 
-        //    var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
-        //    var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-
-            
-        //    //Send email
-        //    var resetLink = urlHelper.Action("ResetPasswordHandler", "Users", new { token, email = user.Email }, "https");
-        //    var message = new Message(new string[] { user.Email }, "Reset password link", resetLink, null);
-        //    await _emailSender.SendEmailAsync(message);
-
-        //    return new OkObjectResult("Email sent successfully");
-        //}
-
-        //public async Task<string> ResetPasswordHandler(ResetPasswordModel model)
-        //{
-        //    var user = await _userManager.FindByEmailAsync(model.Email);
-        //    if (user == null)
-        //    {
-        //        return "User not found.";
-        //    }
-
-        //    var resetPassResult = await _userManager.ResetPasswordAsync(user, model.Token, model.Password);
-
-        //    if (!resetPassResult.Succeeded)
-        //    {
-        //        return "Error changing password!";
-        //    }
-
-        //    return "Password reset successfully";
-        //}
-
-        //public async Task<IActionResult> ChangePassword(ChangePasswordRequest model)
-        //{
-
-        //    var user = await _userManager.FindByIdAsync(_userAccessor.GetCurrentUserId());
-
-        //    //Change password
-        //    var result = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
-
-        //    if (result.Succeeded)
-        //    {
-        //        return new OkObjectResult(new { message = "Password changed successfully" });
-        //    }
-        //    else
-        //    {
-        //        return new ObjectResult(new { type ="0", code = result.Errors.ToList()[0].Code, description = result.Errors.ToList()[0].Description })
-        //        {
-        //            StatusCode = 500
-        //        };
-        //    }
-        //}
+            //Generate url 
+            var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
 
 
+            //Send email
+            var resetLink = urlHelper.Action("ResetPasswordHandler", "Users", new { token, email = user.Email }, "https");
+            var message = new Message(new string[] { user.Email }, "Reset password link", resetLink, null);
+            await _emailSender.SendEmailAsync(message);
+
+            return new OkObjectResult("Email sent successfully");
+        }
+
+        public async Task<string> ResetPasswordHandler(ResetPasswordModel model)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null)
+            {
+                return "User not found.";
+            }
+
+            var resetPassResult = await _userManager.ResetPasswordAsync(user, model.Token, model.Password);
+
+            if (!resetPassResult.Succeeded)
+            {
+                return "Error changing password!";
+            }
+
+            return "Password reset successfully";
+        }
+
+        public async Task<IActionResult> ChangePassword(ChangePasswordRequest model)
+        {
+
+            var user = await _userManager.FindByIdAsync(_userAccessor.GetCurrentUserId());
+
+            //Change password
+            var result = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
+
+            if (result.Succeeded)
+            {
+                return new OkObjectResult(new { message = "Password changed successfully" });
+            }
+            else
+            {
+
+                return new ObjectResult(new { type = "0", code = result.Errors.ToList()[0].Code, description = result.Errors.ToList()[0].Description })
+                {
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<IActionResult> UpdateProfile(UpdateProfileRequest model)
+        {
+
+            var user = await _userManager.FindByIdAsync(_userAccessor.GetCurrentUserId());
+
+            user.UserName = model.UserName ?? user.UserName;
+            user.RealName = model.RealName ?? user.RealName;
+            user.DOB = model.Dob ?? user.DOB;
+            user.PhoneNumber = model.PhoneNumber ?? user.PhoneNumber;
+            user.Email = model.Email ?? user.Email;
+
+            var result = await _userManager.UpdateAsync(user);
+
+            if (result.Succeeded)
+            {
+                return new OkObjectResult(new { message = "Update Profile Successfully" });
+            }
+            else
+            {
+
+                return new ObjectResult(new { type = "0", code = result.Errors.ToList()[0].Code, description = result.Errors.ToList()[0].Description })
+                {
+                    StatusCode = 500
+                };
+            }
+        }
     }
 }

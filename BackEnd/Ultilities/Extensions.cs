@@ -38,8 +38,26 @@ namespace BackEnd.Ultilities
             }
 
             return formParameters;
-
-
         }
+
+        public static string ToPascalCase(this string str)
+        {
+            if (!string.IsNullOrEmpty(str) && str.Length > 1)
+            {
+                return Char.ToUpperInvariant(str[0]) + str.Substring(1);
+            }
+            return str;
+        }
+
+        public static IDictionary<string, object> DictionaryToPascal(IDictionary<string, object> source)
+        {
+            var dest = new Dictionary<string, object>();
+            foreach (var couple in source)
+            {
+                dest.Add(couple.Key.ToPascalCase(), couple.Value);
+            }
+            return dest;
+        }
+
     }
 }

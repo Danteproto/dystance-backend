@@ -13,10 +13,12 @@ namespace BackEnd.Profiles
     {
         public UserProfile()
         {
+
+
             CreateMap<AppUser, User>();
 
             CreateMap<AppUser, RegisterRequest>().ForMember(dest =>
-            dest.Username,
+            dest.UserName,
             opt => opt.MapFrom(src => src.UserName))
         .ForMember(dest =>
             dest.Email,
@@ -31,8 +33,8 @@ namespace BackEnd.Profiles
             //CreateMap<Object, ResendEmailRequest>();
 
             //CreateMap<Object, GoogleLoginRequest>();
-       
-            
+
+
         }
     }
 }

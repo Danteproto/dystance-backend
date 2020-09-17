@@ -5,9 +5,9 @@ using System.Threading.Tasks;
 
 namespace BackEnd.Requests
 {
-    public class ExternalLoginRequest
+    public class ChangePasswordRequest
     {
-        public string provider { get; set; }
-        public string returnUrl { get; set; }
+        public string CurrentPassword { get; set; }
+        public string NewPassword { get; set; }
     }
 }

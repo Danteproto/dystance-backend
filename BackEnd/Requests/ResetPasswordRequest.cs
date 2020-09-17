@@ -3,14 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace BackEnd.Models
+namespace BackEnd.Requests
 {
-    public class RegisterRequest
+    public class ResetPasswordRequest
     {
         public string UserName { get; set; }
         public string Email { get; set; }
-        public string Password { get; set; }
-        public string RealName { get; set; }
-        public string Dob { get; set; }
     }
 }

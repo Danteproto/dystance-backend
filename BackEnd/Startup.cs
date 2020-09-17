@@ -130,7 +130,7 @@ namespace BackEnd
                 };
             }).AddCookie(IdentityConstants.ApplicationScheme, o =>
             {
-                o.LoginPath = new PathString("/Users/Login");
+                o.LoginPath = new PathString("/Users/Authenticate");
                 o.Events = new CookieAuthenticationEvents
                 {
                     OnValidatePrincipal = SecurityStampValidator.ValidatePrincipalAsync
@@ -196,18 +196,25 @@ namespace BackEnd
         });
 
 
+            //Configure token lifespan (FOR TOKEN SENT BY EMAILS)
+            services.Configure<DataProtectionTokenProviderOptions>(opt =>
+            opt.TokenLifespan = TimeSpan.FromHours(2));
+
+
             services.AddTransient<IEmailSender, EmailSender>();
             services.AddScoped<IAuthService, AuthService>();
 
             services.AddUrlHelper();
             services.AddAutoMapper(typeof(Startup));
             services.AddControllers().AddNewtonsoftJson(options =>
-   options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
+            options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
             services.AddSignalR();
             services.AddDbContext<RoomDBContext>(x => x.UseSqlServer(Configuration.GetConnectionString("DYSRoom")));
             services.AddDbContext<UserDbContext>(options => options.UseSqlServer(Configuration.GetConnectionString("DYSUser")));
             services.AddControllers();
         }
+
+
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
