@@ -5,10 +5,8 @@ using System.Threading.Tasks;
 
 namespace BackEnd.Requests
 {
-    public class ResetPasswordModel
+    public class ResetPasswordVerify
     {
-        public string Password { get; set; }
-        public string ConfirmPassword { get; set; }
         public string Email { get; set; }
         public string Token { get; set; }
     }

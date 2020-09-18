@@ -137,19 +137,27 @@ namespace BackEnd.Controllers
         }
 
         [AllowAnonymous]
-        [HttpPost("resetPassword")]
-        public async Task<IActionResult> ResetPassword()
+        [HttpPost("resetPassword/send")]
+        public async Task<IActionResult> ResetPasswordSend()
         {
             var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
-            return await _userService.ResetPassword(_mapper.Map<ResetPasswordRequest>(reqForm));
+            return await _userService.ResetPasswordSend(_mapper.Map<ResetPasswordRequest>(reqForm));
         }
 
-
-        [HttpPost("resetPasswordHandler")]
-        public async Task<string> ResetPasswordHandler()
+        [AllowAnonymous]
+        [HttpPost("resetPassword/verify")]
+        public async Task<IActionResult> ResetPasswordVerify()
         {
             var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
-            return await _userService.ResetPasswordHandler(_mapper.Map<ResetPasswordModel>(reqForm));
+            return await _userService.ResetPasswordVerify(_mapper.Map<ResetPasswordVerify>(reqForm));
+        }
+
+        [AllowAnonymous]
+        [HttpPost("resetPassword/update")]
+        public async Task<IActionResult> ResetPasswordUpdate()
+        {
+            var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
+            return await _userService.ResetPasswordUpdate(_mapper.Map<ResetPasswordUpdate>(reqForm));
         }
 
         [HttpPost("changePassword")]

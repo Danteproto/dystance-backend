@@ -29,6 +29,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using AspNetCore.IServiceCollection.AddIUrlHelper;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
+using BackEnd.Ultilities;
+using BackEnd.Stores;
 
 namespace BackEnd
 {
@@ -85,7 +87,8 @@ namespace BackEnd
             }).AddEntityFrameworkStores<UserDbContext>()
                 .AddSignInManager<SignInManager<AppUser>>()
                 .AddUserManager<UserManager<AppUser>>()
-                .AddDefaultTokenProviders();
+                .AddDefaultTokenProviders()
+                .AddResetPasswordTokenProvider();
 
 
 
@@ -158,12 +161,14 @@ namespace BackEnd
             services.Configure<DataProtectionTokenProviderOptions>(opt =>
                opt.TokenLifespan = TimeSpan.FromHours(2));
 
-
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IJwtGenerator, JwtGenerator>();
             services.AddScoped<IUserAccessor, UserAccessor>();
             services.AddSingleton<IHttpContextAccessor, HttpContextAccessor>();
             services.AddSingleton<IActionContextAccessor, ActionContextAccessor>();
+            services.AddSingleton<IUserStore, UserStore>();
+            services.AddScoped<IUserAccessor, UserAccessor>();
+            services.AddSingleton<ITOTP, TOTPUtil>();
 
             var emailConfig = Configuration
                 .GetSection("EmailConfiguration")

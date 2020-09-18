@@ -26,6 +26,8 @@ using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using EmailService;
 using BackEnd.Requests;
+using OtpNet;
+using BackEnd.Stores;
 
 namespace BackEnd.Services
 {
@@ -42,8 +44,9 @@ namespace BackEnd.Services
         public Task<string> ConfirmEmail(string token, string email);
         public Task<IActionResult> GetCurrentUser();
         public IEnumerable<AppUser> GetUsers();
-        public Task<IActionResult> ResetPassword(ResetPasswordRequest model);
-        public Task<string> ResetPasswordHandler(ResetPasswordModel model);
+        public Task<IActionResult> ResetPasswordSend(ResetPasswordRequest model);
+        public Task<IActionResult> ResetPasswordVerify(ResetPasswordVerify model);
+        public Task<IActionResult> ResetPasswordUpdate(ResetPasswordUpdate model);
         public Task<IActionResult> ChangePassword(ChangePasswordRequest model);
         public Task<IActionResult> UpdateProfile(UpdateProfileRequest model);
 
@@ -60,6 +63,8 @@ namespace BackEnd.Services
         private readonly IEmailSender _emailSender;
         private readonly IJwtGenerator _jwtGenerator;
         private readonly IUserAccessor _userAccessor;
+        private readonly IUserStore _userStore;
+
         public UserService(
             UserDbContext context,
             IMapper mapper,
@@ -69,7 +74,8 @@ namespace BackEnd.Services
             IActionContextAccessor actionContextAccessor,
             IEmailSender emailSender,
             IJwtGenerator jwtGenerator,
-            IUserAccessor userAccessor)
+            IUserAccessor userAccessor,
+            IUserStore userStore)
         {
             _context = context;
             _mapper = mapper;
@@ -80,6 +86,7 @@ namespace BackEnd.Services
             _emailSender = emailSender;
             _jwtGenerator = jwtGenerator;
             _userAccessor = userAccessor;
+            _userStore = userStore;
         }
 
         public async Task<IActionResult> Authenticate(AuthenticateRequest model)
@@ -353,7 +360,7 @@ namespace BackEnd.Services
             return _context.Users;
         }
 
-        public async Task<IActionResult> ResetPassword(ResetPasswordRequest model)
+        public async Task<IActionResult> ResetPasswordSend(ResetPasswordRequest model)
         {
             AppUser user;
             //Find the user by email or by username
@@ -368,38 +375,64 @@ namespace BackEnd.Services
 
             if (user == null)
             {
-                return new BadRequestObjectResult(new { type = "0", message = "Missing fields" });
+                return new BadRequestObjectResult(new { type = "0", message = "User does not exist" });
             }
 
-            //Generate url 
-            var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
-            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-
+            //Generate token 
+            //var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
+            //var token = await _userManager.GenerateUserTokenAsync(user, "ResetPasswordTokenProvider", "PasswordReset");
+            var token = _userStore.GenerateTokenAndSave(user.Email);
 
             //Send email
-            var resetLink = urlHelper.Action("ResetPasswordHandler", "Users", new { token, email = user.Email }, "https");
-            var message = new Message(new string[] { user.Email }, "Reset password link", resetLink, null);
+            //var resetLink = urlHelper.Action("ResetPasswordHandler", "Users", new { token, email = user.Email }, "https");
+            var content = "Your token: " + token;
+            var message = new Message(new string[] { user.Email }, "Reset password at Dystance", content, null);
             await _emailSender.SendEmailAsync(message);
 
-            return new OkObjectResult("Email sent successfully");
+            return new OkObjectResult(new { email = user.Email, message = "Email sent successfully" });
         }
 
-        public async Task<string> ResetPasswordHandler(ResetPasswordModel model)
+        public async Task<IActionResult> ResetPasswordVerify(ResetPasswordVerify model)
         {
             var user = await _userManager.FindByEmailAsync(model.Email);
             if (user == null)
             {
-                return "User not found.";
+                return new BadRequestObjectResult(new { type = "0", message = "User does not exist" });
             }
 
-            var resetPassResult = await _userManager.ResetPasswordAsync(user, model.Token, model.Password);
+            //var result = await _userManager.VerifyUserTokenAsync(user, _userManager.Options.Tokens.PasswordResetTokenProvider, "PasswordReset", model.Token);
+            var result = _userStore.IsTokenValid(model.Token);
 
-            if (!resetPassResult.Succeeded)
+            if (result)
             {
-                return "Error changing password!";
+                return new OkObjectResult("");
             }
 
-            return "Password reset successfully";
+            return new BadRequestObjectResult(new { message = "Wrong token or token expired" });
+        }
+
+        
+        public async Task<IActionResult> ResetPasswordUpdate(ResetPasswordUpdate model)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null)
+            {
+                return new BadRequestObjectResult(new { type = 0, message = "User does not exist" });
+            }
+            if (_userStore.IsResetPasswordTokenVerified)
+            {
+                _userStore.IsResetPasswordTokenVerified = false;
+                var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                var result = await _userManager.ResetPasswordAsync(user, token, model.NewPassword);
+
+                if (result.Succeeded)
+                {
+                    return new OkObjectResult("");
+                }
+            }
+            return new BadRequestObjectResult("Token not verified or generated");
+            
+            
         }
 
         public async Task<IActionResult> ChangePassword(ChangePasswordRequest model)

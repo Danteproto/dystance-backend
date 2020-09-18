@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using BackEnd.Security;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -59,5 +61,13 @@ namespace BackEnd.Ultilities
             return dest;
         }
 
+
+        // IDENTITY BUILDER EXTENSIONS
+        public static IdentityBuilder AddResetPasswordTokenProvider(this IdentityBuilder builder)
+        {
+            var userType = builder.UserType;
+            var provider = typeof(ResetPasswordTokenProvider<>).MakeGenericType(userType);
+            return builder.AddTokenProvider("ResetPasswordTokenProvider", provider);
+        }
     }
 }
