@@ -26,21 +26,21 @@ namespace BackEnd.Service
 
                 Room room = new Room
                 {
-                    RoomName = request.Form["Name"],
-                    CreatorId = Convert.ToInt32(request.Form["CreatorId"]),
-                    Description = request.Form["Description"],
+                    RoomName = request.Form["name"],
+                    CreatorId = Convert.ToInt32(request.Form["creatorId"]),
+                    Description = request.Form["description"],
                     Image = imgName + extension,
-                    StartDate = Convert.ToDateTime(request.Form["StartDate"]),
-                    EndDate = Convert.ToDateTime(request.Form["EndDate"]),
-                    StartHour = TimeSpan.Parse(request.Form["StartHour"]),
-                    EndHour = TimeSpan.Parse(request.Form["EndHour"])
+                    StartDate = Convert.ToDateTime(request.Form["startDate"]),
+                    EndDate = Convert.ToDateTime(request.Form["endDate"]),
+                    StartHour = TimeSpan.Parse(request.Form["startHour"]),
+                    EndHour = TimeSpan.Parse(request.Form["endHour"])
                 };
 
                 var result = RoomDAO.Create(context, room);
                 var roomId = RoomDAO.GetLastRoom(context);
                 var roomUserLink = new RoomUserLink
                 {
-                    UserId = Convert.ToInt32(request.Form["CreatorId"]),
+                    UserId = Convert.ToInt32(request.Form["creatorId"]),
                     RoomId = roomId,
                 };
 
@@ -82,9 +82,9 @@ namespace BackEnd.Service
         {
             var roomChat = new RoomChat
             {
-                RoomId = Convert.ToInt32(request.Form["RoomId"]),
-                UserId = Convert.ToInt32(request.Form["UserId"]),
-                Content = request.Form["Content"],
+                RoomId = Convert.ToInt32(request.Form["roomId"]),
+                UserId = Convert.ToInt32(request.Form["userId"]),
+                Content = request.Form["content"],
                 Date = DateTime.Now
             };
             RoomChatDAO.Create(context, roomChat);
