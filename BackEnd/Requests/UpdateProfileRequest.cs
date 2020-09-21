@@ -12,7 +12,8 @@ namespace BackEnd.Requests
         public string Dob { get; set; }
         public string PhoneNumber { get; set; }
         public string RealName { get; set; }
-
+        public string CurrentPassword { get; set; }
+        public string NewPassword { get; set; }
 
     }
 }

@@ -32,7 +32,7 @@ namespace BackEnd.Controllers
         }
 
         [AllowAnonymous]
-        [HttpPost("authenticate")]
+        [HttpPost("login")]
         public async Task<IActionResult> Authenticate()
         {
             var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
@@ -159,14 +159,6 @@ namespace BackEnd.Controllers
             var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
             return await _userService.ResetPasswordUpdate(_mapper.Map<ResetPasswordUpdate>(reqForm));
         }
-
-        [HttpPost("changePassword")]
-        public async Task<IActionResult> ChangePassword()
-        {
-            var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
-            return await _userService.ChangePassword(_mapper.Map<ChangePasswordRequest>(reqForm));
-        }
-
 
         [HttpPost("updateProfile")]
         public async Task<IActionResult> UpdateProfile()

@@ -87,8 +87,8 @@ namespace BackEnd
             }).AddEntityFrameworkStores<UserDbContext>()
                 .AddSignInManager<SignInManager<AppUser>>()
                 .AddUserManager<UserManager<AppUser>>()
-                .AddDefaultTokenProviders()
-                .AddResetPasswordTokenProvider();
+                .AddDefaultTokenProviders();
+
 
 
 

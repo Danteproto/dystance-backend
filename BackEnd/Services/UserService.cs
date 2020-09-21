@@ -28,6 +28,7 @@ using EmailService;
 using BackEnd.Requests;
 using OtpNet;
 using BackEnd.Stores;
+using System.Linq.Expressions;
 
 namespace BackEnd.Services
 {
@@ -47,7 +48,6 @@ namespace BackEnd.Services
         public Task<IActionResult> ResetPasswordSend(ResetPasswordRequest model);
         public Task<IActionResult> ResetPasswordVerify(ResetPasswordVerify model);
         public Task<IActionResult> ResetPasswordUpdate(ResetPasswordUpdate model);
-        public Task<IActionResult> ChangePassword(ChangePasswordRequest model);
         public Task<IActionResult> UpdateProfile(UpdateProfileRequest model);
 
     }
@@ -152,7 +152,7 @@ namespace BackEnd.Services
                 var appUser = _context.Users.SingleOrDefault(u => u.RefreshTokens.Any(t => t.Token == token));
 
                 // return 500 if no user found with token
-                if (appUser == null) return new ObjectResult(new { message = "Token not found"})
+                if (appUser == null) return new ObjectResult(new { message = "Token not found" })
                 {
                     StatusCode = 500
                 };
@@ -411,7 +411,7 @@ namespace BackEnd.Services
             return new BadRequestObjectResult(new { message = "Wrong token or token expired" });
         }
 
-        
+
         public async Task<IActionResult> ResetPasswordUpdate(ResetPasswordUpdate model)
         {
             var user = await _userManager.FindByEmailAsync(model.Email);
@@ -431,57 +431,80 @@ namespace BackEnd.Services
                 }
             }
             return new BadRequestObjectResult("Token not verified or generated");
-            
-            
-        }
 
-        public async Task<IActionResult> ChangePassword(ChangePasswordRequest model)
-        {
 
-            var user = await _userManager.FindByIdAsync(_userAccessor.GetCurrentUserId());
-
-            //Change password
-            var result = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
-
-            if (result.Succeeded)
-            {
-                return new OkObjectResult(new { message = "Password changed successfully" });
-            }
-            else
-            {
-
-                return new ObjectResult(new { type = "0", code = result.Errors.ToList()[0].Code, description = result.Errors.ToList()[0].Description })
-                {
-                    StatusCode = 500
-                };
-            }
         }
 
         public async Task<IActionResult> UpdateProfile(UpdateProfileRequest model)
         {
 
             var user = await _userManager.FindByIdAsync(_userAccessor.GetCurrentUserId());
-
-            user.UserName = model.UserName ?? user.UserName;
-            user.RealName = model.RealName ?? user.RealName;
-            user.DOB = model.Dob ?? user.DOB;
-            user.PhoneNumber = model.PhoneNumber ?? user.PhoneNumber;
-            user.Email = model.Email ?? user.Email;
-
-            var result = await _userManager.UpdateAsync(user);
-
-            if (result.Succeeded)
+            try
             {
-                return new OkObjectResult(new { message = "Update Profile Successfully" });
-            }
-            else
-            {
+                var resultCheckpass = await _userManager.CheckPasswordAsync(user, model.CurrentPassword);
+                if (resultCheckpass)
+                {
+                    //Update Profile
+                    user.UserName = model.UserName ?? user.UserName;
+                    user.RealName = model.RealName ?? user.RealName;
+                    user.DOB = model.Dob ?? user.DOB;
+                    user.PhoneNumber = model.PhoneNumber ?? user.PhoneNumber;
+                    user.Email = model.Email ?? user.Email;
 
-                return new ObjectResult(new { type = "0", code = result.Errors.ToList()[0].Code, description = result.Errors.ToList()[0].Description })
+                    var resultUpdate = await _userManager.UpdateAsync(user);
+
+                    if (!string.IsNullOrEmpty(model.NewPassword))
+                    {
+                        //Change password
+                        var resultPass = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
+
+
+                        if (resultPass.Succeeded)
+                        {
+                            return new OkObjectResult(new { message = "Password changed and updated profile successfully" });
+                        }
+                        else
+                        {
+
+                            return new ObjectResult(new { type = "1", code = resultPass.Errors.ToList()[0].Code, description = resultPass.Errors.ToList()[0].Description })
+                            {
+                                StatusCode = 500
+                            };
+                        }
+                    }
+
+
+                    if (resultUpdate.Succeeded)
+                    {
+                        return new OkObjectResult(new { message = "Update Profile Successfully" });
+                    }
+                    else
+                    {
+
+                        return new ObjectResult(new { type = "1", code = resultUpdate.Errors.ToList()[0].Code, description = resultUpdate.Errors.ToList()[0].Description })
+                        {
+                            StatusCode = 500
+                        };
+                    }
+                }
+                else
+                {
+
+                    return new ObjectResult(new { type = "0", message = "Password mismatched" })
+                    {
+                        StatusCode = 500
+                    };
+                }
+            }catch(Exception ex)
+            {
+                return new ObjectResult(new { type = "0", message = ex.Message})
                 {
                     StatusCode = 500
                 };
             }
+
         }
+
     }
+
 }

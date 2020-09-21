@@ -62,12 +62,5 @@ namespace BackEnd.Ultilities
         }
 
 
-        // IDENTITY BUILDER EXTENSIONS
-        public static IdentityBuilder AddResetPasswordTokenProvider(this IdentityBuilder builder)
-        {
-            var userType = builder.UserType;
-            var provider = typeof(ResetPasswordTokenProvider<>).MakeGenericType(userType);
-            return builder.AddTokenProvider("ResetPasswordTokenProvider", provider);
-        }
     }
 }
