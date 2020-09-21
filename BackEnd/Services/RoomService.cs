@@ -1,15 +1,18 @@
-﻿using BackEnd.DAO;
+using BackEnd.Context;
+using BackEnd.DAO;
 using BackEnd.DBContext;
 using BackEnd.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore.Internal;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
-namespace BackEnd.Service
+namespace BackEnd.Services
 {
     public class RoomService
     {
@@ -19,71 +22,57 @@ namespace BackEnd.Service
             Image,
             File
         }
-        public static string CreateRoom(RoomDBContext context, HttpRequest request, IWebHostEnvironment env)
+        public async static Task<IActionResult> CreateRoom(RoomDBContext context, HttpRequest request, IWebHostEnvironment env)
         {
-            try
+            var img = request.Form.Files[0];
+            var extension = Path.GetExtension(img.FileName);
+
+            var imgName = Convert.ToBase64String(
+                    System.Text.Encoding.UTF8.GetBytes(DateTime.Now.ToString())
+                );
+
+            Room room = new Room
             {
-                var img = request.Form.Files[0];
-                var extension = Path.GetExtension(img.FileName);
+                RoomName = request.Form["Name"],
+                CreatorId = request.Form["CreatorId"],
+                Description = request.Form["Description"],
+                Image = imgName + extension,
+                StartDate = Convert.ToDateTime(request.Form["StartDate"]),
+                EndDate = Convert.ToDateTime(request.Form["EndDate"]),
+                StartHour = TimeSpan.Parse(request.Form["StartHour"]),
+                EndHour = TimeSpan.Parse(request.Form["EndHour"])
+            };
 
-                var imgName = Convert.ToBase64String(
-                        System.Text.Encoding.UTF8.GetBytes(DateTime.Now.ToString())
-                    );
-
-                Room room = new Room
-                {
-                    RoomName = request.Form["name"],
-                    CreatorId = request.Form["creatorId"],
-                    Description = request.Form["description"],
-                    StartDate = Convert.ToDateTime(request.Form["startDate"]),
-                    EndDate = Convert.ToDateTime(request.Form["endDate"]),
-                    StartHour = TimeSpan.Parse(request.Form["startHour"]),
-                    EndHour = TimeSpan.Parse(request.Form["endHour"])
-                };
-
-                var result = RoomDAO.Create(context, room);
-                room = RoomDAO.GetLastRoom(context);
-                room.Image = $"api/rooms/getImage?roomId={room.RoomId}&imgName={imgName + extension}";
-                var roomUserLink = new RoomUserLink
-                {
-                    UserId = request.Form["creatorId"],
-                    RoomId = room.RoomId,
-                };
-                RoomDAO.UpdateRoom(context, room);
-                RoomUserLinkDAO.Create(context, roomUserLink);
-
-                var path = Path.Combine(env.ContentRootPath, $"Files/{room.RoomId}/Images");
-
-                if (!Directory.Exists(path))
-                {
-                    Directory.CreateDirectory(path);
-                }
-
-                var imgPath = Path.Combine(path, imgName + extension);
-                if (img.Length > 0)
-                {
-                    using var fileStream = new FileStream(imgPath, FileMode.Create);
-                    img.CopyTo(fileStream);
-                }
-
-                return result;
-            }
-            catch (Exception e)
+            var result = await RoomDAO.Create(context, room);
+            var lastRoom = RoomDAO.GetLastRoom(context);
+            var roomUserLink = new RoomUserLink
             {
-                Console.Error.WriteLine(e.StackTrace);
-                return "Error Can't create Room";
+                UserId = request.Form["CreatorId"],
+                RoomId = lastRoom.RoomId,
+            };
+
+            await RoomUserLinkDAO.Create(context, roomUserLink);
+
+            var path = Path.Combine(env.ContentRootPath, $"Images/{lastRoom.RoomId}");
+
+            if (!Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
             }
+
+            var imgPath = Path.Combine(path, imgName + extension);
+            if (img.Length > 0)
+            {
+                using var fileStream = new FileStream(imgPath, FileMode.Create);
+                img.CopyTo(fileStream);
+            }
+
+            return result;
         }
         public static Room GetRoomById(RoomDBContext context, int Id)
         {
             return RoomDAO.Get(context, Id);
         }
-
-        public static void CreateRoomUserLink(RoomDBContext context, RoomUserLink roomUserLink)
-        {
-            RoomUserLinkDAO.Create(context, roomUserLink);
-        }
-
         public static async Task<IActionResult> CreateRoomChat(RoomDBContext context, HttpRequest request, IWebHostEnvironment env)
         {
             var type = (ChatType)Convert.ToInt32(request.Form["chatType"]);
@@ -175,7 +164,6 @@ namespace BackEnd.Service
         {
             return RoomDAO.GetRoomsByUserId(context, userId);
         }
-
         public static List<RoomChat> GetChatByRoomId(RoomDBContext context, int roomId)
         {
             return RoomChatDAO.GetChatByRoomId(context, roomId);
@@ -184,6 +172,25 @@ namespace BackEnd.Service
         public static RoomChat GetLastChat(RoomDBContext context, int roomId)
         {
             return RoomChatDAO.GetLastChat(context, roomId);
+        }
+
+        public static async Task<IActionResult> Invite(RoomDBContext roomContext, UserDbContext userContext, HttpRequest request)
+        {
+            var roomId = Convert.ToInt32(request.Form["roomId"]);
+            string emailLists = request.Form["emailLists"];
+            var list = emailLists.Split(",").ToList();
+            var userIds = userContext.Users.Where(user => list.Any(x => user.Email == x)).Select(user => user.Id).ToList();
+            var roomUserLinks = userIds.Select(userId => new RoomUserLink
+            {
+                RoomId = roomId,
+                UserId = userId
+            }).ToList();
+            var existLink = roomContext.RoomUserLink.Where(link => link.RoomId == roomId).ToList();
+            if (existLink.Count != 0)
+            {
+                roomUserLinks = roomUserLinks.Where(link => !existLink.Any(x => x.UserId == link.UserId)).ToList();
+            }
+            return await RoomUserLinkDAO.Create(roomContext, roomUserLinks);
         }
 
     }

@@ -5,22 +5,29 @@ using System.Threading.Tasks;
 using System.ComponentModel.DataAnnotations;
 using BackEnd.Models;
 using BackEnd.DBContext;
+using Microsoft.AspNetCore.Mvc;
 
 namespace BackEnd.DAO
 {
     public class RoomDAO
     {
-        public static string Create(RoomDBContext context, Room room)
+        public static async Task<IActionResult> Create(RoomDBContext context, Room room)
         {
             try
             {
                 context.Room.Add(room);
                 context.SaveChanges();
-                return "Create successful";
+                return new ObjectResult("success")
+                {
+                    StatusCode = 200,
+                };
             }
             catch (Exception e)
             {
-                return "Error Can't create Room";
+                return new ObjectResult(e.Message)
+                {
+                    StatusCode = 500,
+                };
             }
         }
         public static Room GetLastRoom(RoomDBContext context)

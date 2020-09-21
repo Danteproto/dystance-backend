@@ -1,7 +1,7 @@
 ﻿using BackEnd.Context;
 using BackEnd.DBContext;
 using BackEnd.Models;
-using BackEnd.Service;
+using BackEnd.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -37,14 +37,9 @@ namespace BackEnd.Controllers
         }
 
         [HttpPost("create")]
-        public IActionResult CreateRoom()
+        public async Task<IActionResult> CreateRoom()
         {
-            var status = RoomService.CreateRoom(_roomContext, Request, _env);
-            var obj = JObject.FromObject(new
-            {
-                status,
-            });
-            return Content(obj.ToString());
+            return await RoomService.CreateRoom(_roomContext, Request, _env);
         }
 
         [HttpGet("getById")]
@@ -122,6 +117,12 @@ namespace BackEnd.Controllers
             new FileExtensionContentTypeProvider().TryGetContentType(fileName, out contentType);
             Response.Headers.Add("Content-Disposition", $"attachment; filename={realName}");
             return File(file, contentType);
+        }
+
+        [HttpPost("invite")]
+        public async Task<IActionResult> InviteToRoom()
+        {
+            return await RoomService.Invite(_roomContext, _userContext, Request);
         }
     }
 }
