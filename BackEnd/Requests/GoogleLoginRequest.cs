@@ -11,6 +11,6 @@ namespace BackEnd.Requests
         public string Email { get; set; }
         public string UserName { get; set; }
         public string RealName { get; set; }
-        public string DOB { get; set; }
+        public string Dob { get; set; }
     }
 }
