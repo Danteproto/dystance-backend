@@ -23,22 +23,26 @@ namespace BackEnd.DAO
                 return "Error Can't create Room";
             }
         }
-        public static int GetLastRoom(RoomDBContext context)
+        public static Room GetLastRoom(RoomDBContext context)
         {
-            var x = context.Room.OrderByDescending(x=> x.RoomId).First().RoomId;
-            return x;
+            return context.Room.OrderByDescending(x=> x.RoomId).First();
         }
         public static Room Get(RoomDBContext context, int Id)
         {
             return context.Room.Where(x => x.RoomId == Id).FirstOrDefault<Room>();
         }
 
-        public static List<Room> GetRoomsByUserId(RoomDBContext context, int userId)
+        public static List<Room> GetRoomsByUserId(RoomDBContext context, string userId)
         {
             var roomIds = context.RoomUserLink.Where(x => x.UserId == userId).Select(x => x.RoomId).ToList();
             return context.Room
                 .Where(x => roomIds.Contains(x.RoomId))
                 .ToList();
+        }
+        public static void UpdateRoom(RoomDBContext context, Room room)
+        {
+            context.Room.Update(room);
+            context.SaveChanges();
         }
     }
 }

@@ -9,14 +9,18 @@ namespace BackEnd.Models
     public class RoomChat
     {
         [Key]
-        public int ChatId { get; set; }
+        public int Id { get; set; }
         [Required]
         public int RoomId { get; set; }
         [Required]
-        public int UserId { get; set; }
+        public string UserId { get; set; }
         [Required]
         public DateTime Date { get; set; }
         [Required]
         public string Content { get; set; }
+        [Required]
+        public int Type { get; set; }
+        public string FileName { get; set; }
+
     }
 }

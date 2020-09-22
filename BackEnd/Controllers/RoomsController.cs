@@ -1,9 +1,11 @@
-﻿using BackEnd.DBContext;
+﻿using BackEnd.Context;
+using BackEnd.DBContext;
 using BackEnd.Models;
 using BackEnd.Service;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.StaticFiles;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
@@ -19,12 +21,14 @@ namespace BackEnd.Controllers
     public class RoomsController : ControllerBase
     {
         private readonly DefaultContractResolver _contractResolver;
-        private readonly RoomDBContext _context;
+        private readonly RoomDBContext _roomContext;
+        private readonly UserDbContext _userContext;
         private readonly IWebHostEnvironment _env;
 
-        public RoomsController(RoomDBContext context, IWebHostEnvironment env)
+        public RoomsController(RoomDBContext roomContext, UserDbContext userContext, IWebHostEnvironment env)
         {
-            _context = context;
+            _roomContext = roomContext;
+            _userContext = userContext;
             _env = env;
             _contractResolver = new DefaultContractResolver
             {
@@ -35,7 +39,7 @@ namespace BackEnd.Controllers
         [HttpPost("create")]
         public IActionResult CreateRoom()
         {
-            var status = RoomService.CreateRoom(_context, Request, _env);
+            var status = RoomService.CreateRoom(_roomContext, Request, _env);
             var obj = JObject.FromObject(new
             {
                 status,
@@ -46,7 +50,7 @@ namespace BackEnd.Controllers
         [HttpGet("getById")]
         public IActionResult GetRoomById(int Id)
         {
-            Room room = RoomService.GetRoomById(_context, Id);
+            Room room = RoomService.GetRoomById(_roomContext, Id);
             return Content(JsonConvert.SerializeObject(room, new JsonSerializerSettings
             {
                 ContractResolver = _contractResolver,
@@ -55,29 +59,68 @@ namespace BackEnd.Controllers
         }
 
         [HttpGet("getByUserId")]
-        public IActionResult GetRoomByUserId(int Id)
+        public IActionResult GetRoomByUserId(string Id)
         {
-            var rooms = RoomService.GetRoomByUserId(_context, Id);
+            var rooms = RoomService.GetRoomByUserId(_roomContext, Id);
             return Content(JsonConvert.SerializeObject(rooms, new JsonSerializerSettings
             {
                 ContractResolver = _contractResolver,
                 Formatting = Formatting.Indented
             }));
         }
-        [HttpGet("Get/Image/Room")]
+        [HttpGet("getImage")]
         public async Task<IActionResult> GetImage(int roomId, string imgName)
         {
             var rootPath = _env.ContentRootPath;
-            var path = Path.Combine(rootPath, $"Images/{roomId}");
+            var path = Path.Combine(rootPath, $"Files/{roomId}/Images");
             var imgPath = Path.Combine(path, imgName);
             var image = System.IO.File.OpenRead(imgPath);
             return File(image, "image/jpeg");
         }
-        [HttpPost("Chat")]
-        public IActionResult CreateChat()
+        [HttpPost("chat/add")]
+        public async Task<IActionResult> CreateChat()
         {
-            RoomService.CreateRoomChat(_context, Request);
-            return Content("Chat add successful");
+            return await RoomService.CreateRoomChat(_roomContext, Request, _env);
+        }
+        [HttpGet("chat/get")]
+        public IActionResult GetChat(int id)
+        {
+            var roomChats = RoomService.GetChatByRoomId(_roomContext, id);
+            return Content(JsonConvert.SerializeObject(roomChats, new JsonSerializerSettings
+            {
+                ContractResolver = _contractResolver,
+                Formatting = Formatting.Indented
+            }));
+        }
+        [HttpGet("chat/getLast")]
+        public IActionResult GetLastChat(int id)
+        {
+            var roomChat = RoomService.GetLastChat(_roomContext, id);
+            return Content(JsonConvert.SerializeObject(roomChat, new JsonSerializerSettings
+            {
+                ContractResolver = _contractResolver,
+                Formatting = Formatting.Indented
+            }));
+        }
+        [HttpGet("chat/getFile")]
+        public async Task<IActionResult> GetFile(string fileName, int type, int roomId)
+        {
+
+            var rootPath = _env.ContentRootPath;
+            string path = "";
+            if (type == (int)RoomService.ChatType.Image)
+            {
+                path = Path.Combine(rootPath, $"Files/{roomId}/Chat/Images");
+            }
+            else if (type == (int)RoomService.ChatType.File)
+            {
+                path = Path.Combine(rootPath, $"Files/{roomId}/Chat/Files");
+            }
+            var filePath = Path.Combine(path, fileName);
+            var file = System.IO.File.OpenRead(filePath);
+            string contentType;
+            new FileExtensionContentTypeProvider().TryGetContentType(fileName, out contentType);
+            return File(file, contentType);
         }
     }
 }
