@@ -13,8 +13,7 @@ namespace BackEnd.Models
         [Required]
         public string RoomName { get; set; }
         [Required]
-        public int CreatorId { get; set; }
-        [Required]
+        public string CreatorId { get; set; }
         public string Image { get; set; }
         [Required]
         public string Description { get; set; }

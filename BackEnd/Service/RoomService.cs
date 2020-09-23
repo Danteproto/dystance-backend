@@ -3,23 +3,29 @@ using BackEnd.DBContext;
 using BackEnd.Models;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace BackEnd.Service
 {
-    
-
     public class RoomService
     {
+        public enum ChatType
+        {
+            Text,
+            Image,
+            File
+        }
         public static string CreateRoom(RoomDBContext context, HttpRequest request, IWebHostEnvironment env)
         {
             try
             {
                 var img = request.Form.Files[0];
                 var extension = Path.GetExtension(img.FileName);
-                
+
                 var imgName = Convert.ToBase64String(
                         System.Text.Encoding.UTF8.GetBytes(DateTime.Now.ToString())
                     );
@@ -27,9 +33,8 @@ namespace BackEnd.Service
                 Room room = new Room
                 {
                     RoomName = request.Form["name"],
-                    CreatorId = Convert.ToInt32(request.Form["creatorId"]),
+                    CreatorId = request.Form["creatorId"],
                     Description = request.Form["description"],
-                    Image = imgName + extension,
                     StartDate = Convert.ToDateTime(request.Form["startDate"]),
                     EndDate = Convert.ToDateTime(request.Form["endDate"]),
                     StartHour = TimeSpan.Parse(request.Form["startHour"]),
@@ -37,16 +42,17 @@ namespace BackEnd.Service
                 };
 
                 var result = RoomDAO.Create(context, room);
-                var roomId = RoomDAO.GetLastRoom(context);
+                room = RoomDAO.GetLastRoom(context);
+                room.Image = $"api/rooms/getImage?roomId={room.RoomId}&imgName={imgName + extension}";
                 var roomUserLink = new RoomUserLink
                 {
-                    UserId = Convert.ToInt32(request.Form["creatorId"]),
-                    RoomId = roomId,
+                    UserId = request.Form["creatorId"],
+                    RoomId = room.RoomId,
                 };
-
+                RoomDAO.UpdateRoom(context, room);
                 RoomUserLinkDAO.Create(context, roomUserLink);
 
-                var path = Path.Combine(env.ContentRootPath, $"Images/{roomId}");
+                var path = Path.Combine(env.ContentRootPath, $"Files/{room.RoomId}/Images");
 
                 if (!Directory.Exists(path))
                 {
@@ -78,21 +84,106 @@ namespace BackEnd.Service
             RoomUserLinkDAO.Create(context, roomUserLink);
         }
 
-        public static void CreateRoomChat(RoomDBContext context, HttpRequest request)
+        public static async Task<IActionResult> CreateRoomChat(RoomDBContext context, HttpRequest request, IWebHostEnvironment env)
         {
-            var roomChat = new RoomChat
+            var type = (ChatType)Convert.ToInt32(request.Form["chatType"]);
+            var roomId = Convert.ToInt32(request.Form["roomId"]);
+            switch (type)
             {
-                RoomId = Convert.ToInt32(request.Form["roomId"]),
-                UserId = Convert.ToInt32(request.Form["userId"]),
-                Content = request.Form["content"],
-                Date = DateTime.Now
-            };
-            RoomChatDAO.Create(context, roomChat);
+                case ChatType.Text:
+                    {
+                        var roomChat = new RoomChat
+                        {
+                            RoomId = roomId,
+                            UserId = request.Form["userId"],
+                            Content = request.Form["content"],
+                            Date = DateTime.Now,
+                            Type = (int)ChatType.Text
+                        };
+                        return await RoomChatDAO.Create(context, roomChat);
+                    }
+                case ChatType.Image:
+                    {
+                        var img = request.Form.Files[0];
+                        var extension = Path.GetExtension(img.FileName);
+
+                        var imgName = Convert.ToBase64String(
+                                System.Text.Encoding.UTF8.GetBytes(DateTime.Now.ToString())
+                            );
+                        var path = Path.Combine(env.ContentRootPath, $"Files/{roomId}/Chat/Images");
+                        if (!Directory.Exists(path))
+                        {
+                            Directory.CreateDirectory(path);
+                        }
+
+                        var imgPath = Path.Combine(path, imgName + extension);
+                        if (img.Length > 0)
+                        {
+                            using var fileStream = new FileStream(imgPath, FileMode.Create);
+                            img.CopyTo(fileStream);
+                        }
+                        var roomChat = new RoomChat
+                        {
+                            RoomId = roomId,
+                            UserId = request.Form["userId"],
+                            Content = $"api/rooms/chat/getFile?fileName={imgName + extension}&roomId={roomId}&type={(int)ChatType.Image}&realName={Path.GetFileName(img.FileName)}",
+                            Date = DateTime.Now,
+                            Type = (int)ChatType.Image,
+                            FileName = Path.GetFileName(img.FileName)
+                        };
+                        return await RoomChatDAO.Create(context, roomChat);
+                    }
+                case ChatType.File:
+                    {
+                        var file = request.Form.Files[0];
+                        var extension = Path.GetExtension(file.FileName);
+                        var fileName = Convert.ToBase64String(
+                                System.Text.Encoding.UTF8.GetBytes(DateTime.Now.ToString())
+                            );
+                        var path = Path.Combine(env.ContentRootPath, $"Files/{roomId}/Chat/Files");
+                        if (!Directory.Exists(path))
+                        {
+                            Directory.CreateDirectory(path);
+                        }
+                        var filePath = Path.Combine(path, fileName + extension);
+                        if (file.Length > 0)
+                        {
+                            using var fileStream = new FileStream(filePath, FileMode.Create);
+                            file.CopyTo(fileStream);
+                        }
+                        var roomChat = new RoomChat
+                        {
+                            RoomId = roomId,
+                            UserId = request.Form["userId"],
+                            Content = $"api/rooms/chat/getFile?fileName={fileName + extension}&roomId={roomId}&type={(int)ChatType.File}&realName={Path.GetFileName(file.FileName)}",
+                            Date = DateTime.Now,
+                            Type = (int)ChatType.File,
+                            FileName = Path.GetFileName(file.FileName)
+                        };
+                        return await RoomChatDAO.Create(context, roomChat);
+                    }
+                default:
+                    return new ObjectResult(new { message = "wrong chat type" })
+                    {
+                        StatusCode = 500,
+                    };
+            }
+
         }
 
-        public static List<Room> GetRoomByUserId(RoomDBContext context,int userId)
+        public static List<Room> GetRoomByUserId(RoomDBContext context, string userId)
         {
             return RoomDAO.GetRoomsByUserId(context, userId);
+        }
+
+        public static List<RoomChat> GetChatByRoomId(RoomDBContext context, int roomId)
+        {
+            return RoomChatDAO.GetChatByRoomId(context, roomId);
+        }
+
+        public static RoomChat GetLastChat(RoomDBContext context, int roomId)
+        {
+            return RoomChatDAO.GetLastChat(context, roomId);
         }
 
     }

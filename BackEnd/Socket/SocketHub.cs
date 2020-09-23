@@ -22,9 +22,9 @@ namespace BackEnd.Socket
             await Clients.Group(groupName).SendAsync("RemoveFromGroup", $"{Context.ConnectionId} has left the group {groupName}.");
         }
 
-        public async Task SendChat(string groupName, string username, string chatContent)
+        public async Task Broadcast(string groupName)
         {
-            await Clients.Group(groupName).SendAsync("SendChat", $"{Context.ConnectionId}|{username}:{chatContent}.");
+            await Clients.Group(groupName).SendAsync("Broadcast", $"{Context.ConnectionId} add new chat");
 
         }
     }
