@@ -126,10 +126,10 @@ namespace BackEnd.Service
                         {
                             RoomId = roomId,
                             UserId = request.Form["userId"],
-                            Content = $"api/rooms/chat/getFile?fileName={imgName + extension}&roomId={roomId}&type={(int)ChatType.Image}",
+                            Content = $"api/rooms/chat/getFile?fileName={imgName + extension}&roomId={roomId}&type={(int)ChatType.Image}&realName={Path.GetFileName(img.FileName)}",
                             Date = DateTime.Now,
                             Type = (int)ChatType.Image,
-                            FileName = Path.GetFileNameWithoutExtension(img.FileName)
+                            FileName = Path.GetFileName(img.FileName)
                         };
                         return await RoomChatDAO.Create(context, roomChat);
                     }
@@ -155,10 +155,10 @@ namespace BackEnd.Service
                         {
                             RoomId = roomId,
                             UserId = request.Form["userId"],
-                            Content = $"api/rooms/chat/getFile?fileName={fileName + extension}&roomId={roomId}&type={(int)ChatType.File}",
+                            Content = $"api/rooms/chat/getFile?fileName={fileName + extension}&roomId={roomId}&type={(int)ChatType.File}&realName={Path.GetFileName(file.FileName)}",
                             Date = DateTime.Now,
                             Type = (int)ChatType.File,
-                            FileName = Path.GetFileNameWithoutExtension(file.FileName)
+                            FileName = Path.GetFileName(file.FileName)
                         };
                         return await RoomChatDAO.Create(context, roomChat);
                     }

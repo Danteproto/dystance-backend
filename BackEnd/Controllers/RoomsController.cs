@@ -103,7 +103,7 @@ namespace BackEnd.Controllers
             }));
         }
         [HttpGet("chat/getFile")]
-        public async Task<IActionResult> GetFile(string fileName, int type, int roomId)
+        public async Task<IActionResult> GetFile(string fileName, int type, int roomId,string realName)
         {
 
             var rootPath = _env.ContentRootPath;
@@ -120,6 +120,7 @@ namespace BackEnd.Controllers
             var file = System.IO.File.OpenRead(filePath);
             string contentType;
             new FileExtensionContentTypeProvider().TryGetContentType(fileName, out contentType);
+            Response.Headers.Add("Content-Disposition", $"attachment; filename={realName}");
             return File(file, contentType);
         }
     }
