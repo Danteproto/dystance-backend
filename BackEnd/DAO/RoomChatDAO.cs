@@ -38,5 +38,24 @@ namespace BackEnd.DAO
         {
             return context.RoomChat.Where(x => x.RoomId == roomId).OrderByDescending(x => x.Id).First();
         }
+        public static async Task<IActionResult> DeleteRoomChat(RoomDBContext context, List<RoomChat> roomChats)
+        {
+            try
+            {
+                context.RoomChat.RemoveRange(roomChats);
+                context.SaveChanges();
+                return new ObjectResult(new { message = "success" })
+                {
+                    StatusCode = 200,
+                };
+            }
+            catch (Exception e)
+            {
+                return new ObjectResult(new { message = e.Message })
+                {
+                    StatusCode = 500,
+                };
+            }
+        }
     }
 }

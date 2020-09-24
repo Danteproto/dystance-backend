@@ -22,25 +22,17 @@ namespace BackEnd.Services
             Image,
             File
         }
-        public async static Task<IActionResult> CreateRoom(RoomDBContext context, HttpRequest request, IWebHostEnvironment env)
+        public async static Task<IActionResult> CreateRoom(RoomDBContext context, HttpRequest request)
         {
-            var img = request.Form.Files[0];
-            var extension = Path.GetExtension(img.FileName);
-
-            var imgName = Convert.ToBase64String(
-                    System.Text.Encoding.UTF8.GetBytes(DateTime.Now.ToString())
-                );
-
             Room room = new Room
             {
-                RoomName = request.Form["Name"],
-                CreatorId = request.Form["CreatorId"],
-                Description = request.Form["Description"],
-                Image = imgName + extension,
-                StartDate = Convert.ToDateTime(request.Form["StartDate"]),
-                EndDate = Convert.ToDateTime(request.Form["EndDate"]),
-                StartHour = TimeSpan.Parse(request.Form["StartHour"]),
-                EndHour = TimeSpan.Parse(request.Form["EndHour"])
+                RoomName = request.Form["name"],
+                CreatorId = request.Form["creatorId"],
+                Description = request.Form["description"],
+                StartDate = Convert.ToDateTime(request.Form["startDate"]),
+                EndDate = Convert.ToDateTime(request.Form["endDate"]),
+                StartHour = TimeSpan.Parse(request.Form["startHour"]),
+                EndHour = TimeSpan.Parse(request.Form["endHour"])
             };
 
             var result = await RoomDAO.Create(context, room);
@@ -52,21 +44,21 @@ namespace BackEnd.Services
             };
 
             await RoomUserLinkDAO.Create(context, roomUserLink);
-
-            var path = Path.Combine(env.ContentRootPath, $"Images/{lastRoom.RoomId}");
-
-            if (!Directory.Exists(path))
+            return result;
+        }
+        public async static Task<IActionResult> DeleteRoom(RoomDBContext context, int roomId, IWebHostEnvironment env)
+        {
+            var room = RoomDAO.Get(context, roomId);
+            var roomUserLinks = RoomUserLinkDAO.GetRoomLink(context, roomId);
+            var roomChats = RoomChatDAO.GetChatByRoomId(context, roomId);
+            var result = await RoomUserLinkDAO.Delete(context, roomUserLinks);
+            result = await RoomChatDAO.DeleteRoomChat(context, roomChats);
+            var path = Path.Combine(env.ContentRootPath, $"Files/{roomId}");
+            if (Directory.Exists(path))
             {
-                Directory.CreateDirectory(path);
+                Directory.Delete(path,true);
             }
-
-            var imgPath = Path.Combine(path, imgName + extension);
-            if (img.Length > 0)
-            {
-                using var fileStream = new FileStream(imgPath, FileMode.Create);
-                img.CopyTo(fileStream);
-            }
-
+            result = await RoomDAO.Delete(context, room);
             return result;
         }
         public static Room GetRoomById(RoomDBContext context, int Id)

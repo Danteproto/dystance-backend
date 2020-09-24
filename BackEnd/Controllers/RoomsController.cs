@@ -39,7 +39,12 @@ namespace BackEnd.Controllers
         [HttpPost("create")]
         public async Task<IActionResult> CreateRoom()
         {
-            return await RoomService.CreateRoom(_roomContext, Request, _env);
+            return await RoomService.CreateRoom(_roomContext, Request);
+        }
+        [HttpGet("delete")]
+        public async Task<IActionResult> DeleteRoom(int id)
+        {
+            return await RoomService.DeleteRoom(_roomContext, id, _env);
         }
 
         [HttpGet("getById")]

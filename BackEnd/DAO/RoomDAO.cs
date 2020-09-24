@@ -17,14 +17,33 @@ namespace BackEnd.DAO
             {
                 context.Room.Add(room);
                 context.SaveChanges();
-                return new ObjectResult("success")
+                return new ObjectResult(new { message = "success" })
                 {
                     StatusCode = 200,
                 };
             }
             catch (Exception e)
             {
-                return new ObjectResult(e.Message)
+                return new ObjectResult(new { message = e.Message })
+                {
+                    StatusCode = 500,
+                };
+            }
+        }
+        public static async Task<IActionResult> Delete(RoomDBContext context, Room room)
+        {
+            try
+            {
+                context.Room.Remove(room);
+                context.SaveChanges();
+                return new ObjectResult(new { message = "Delete room finish" })
+                {
+                    StatusCode = 200,
+                };
+            }
+            catch (Exception e)
+            {
+                return new ObjectResult(new { message = e.Message })
                 {
                     StatusCode = 500,
                 };
@@ -32,7 +51,7 @@ namespace BackEnd.DAO
         }
         public static Room GetLastRoom(RoomDBContext context)
         {
-            return context.Room.OrderByDescending(x=> x.RoomId).First();
+            return context.Room.OrderByDescending(x => x.RoomId).First();
         }
         public static Room Get(RoomDBContext context, int Id)
         {
