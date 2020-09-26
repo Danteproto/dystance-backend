@@ -6,12 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using AutoMapper;
 using BackEnd.Requests;
-using static Google.Apis.Auth.GoogleJsonWebSignature;
 using BackEnd.Ultilities;
-using System.Collections.Specialized;
-using System.Collections.Generic;
-
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
 namespace BackEnd.Controllers
 {

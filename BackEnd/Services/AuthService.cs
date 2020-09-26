@@ -17,7 +17,7 @@ namespace BackEnd.Services
 {
     public interface IAuthService
     {
-        Task<AppUser> Authenticate(Google.Apis.Auth.GoogleJsonWebSignature.Payload payload);
+        Task<AppUser> Authenticate(GoogleJsonWebSignature.Payload payload);
         Task<IActionResult> Google( GoogleLoginRequest userView);
         Task<IActionResult> GoogleUpdateInfo( GoogleLoginRequest userView);
 
@@ -115,14 +115,11 @@ namespace BackEnd.Services
             if (result.Succeeded)
             {
                 appUser = await _userManager.FindByEmailAsync(userView.Email);
-                //gui email
-                var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
-                var token = await _userManager.GenerateEmailConfirmationTokenAsync(appUser);
-                var confirmationLink = urlHelper.Action("ConfirmEmail", "Users", new { token, email = appUser.Email }, "https");
-                var message = new Message(new string[] { appUser.Email }, "Confirmation email link", confirmationLink, null);
-                await _emailSender.SendEmailAsync(message);
+                //confirm email
+                string token = await _userManager.GenerateEmailConfirmationTokenAsync(appUser);
+                await _userManager.ConfirmEmailAsync(appUser, token);
 
-                return new OkObjectResult("Confirm email sent");
+                return new OkObjectResult("");
             }
 
             return new NotFoundObjectResult("");
