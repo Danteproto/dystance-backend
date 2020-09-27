@@ -1,34 +1,21 @@
 ﻿using BackEnd.Context;
 using BackEnd.Models;
-using BackEnd.Errors;
 using BackEnd.Interfaces;
 using BackEnd.Security;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Options;
 using AutoMapper;
-using System.IdentityModel.Tokens.Jwt;
-using System.Text;
-using Microsoft.IdentityModel.Tokens;
-using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Diagnostics;
 using BackEnd.Ultilities;
 using BackEnd.Responses;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using EmailService;
 using BackEnd.Requests;
-using OtpNet;
 using BackEnd.Stores;
-using System.Linq.Expressions;
 
 namespace BackEnd.Services
 {
