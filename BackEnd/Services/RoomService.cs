@@ -2,6 +2,7 @@ using BackEnd.Context;
 using BackEnd.DAO;
 using BackEnd.DBContext;
 using BackEnd.Models;
+using EmailService;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -21,6 +22,11 @@ namespace BackEnd.Services
             Text,
             Image,
             File
+        }
+        private readonly static IEmailSender _emailSender;
+        public RoomService(IEmailSender emailSender)
+        {
+            _emailSender = emailSender;
         }
         public async static Task<IActionResult> CreateRoom(RoomDBContext context, HttpRequest request)
         {
@@ -56,7 +62,7 @@ namespace BackEnd.Services
             var path = Path.Combine(env.ContentRootPath, $"Files/{roomId}");
             if (Directory.Exists(path))
             {
-                Directory.Delete(path,true);
+                Directory.Delete(path, true);
             }
             result = await RoomDAO.Delete(context, room);
             return result;
@@ -169,7 +175,9 @@ namespace BackEnd.Services
         public static async Task<IActionResult> Invite(RoomDBContext roomContext, UserDbContext userContext, HttpRequest request)
         {
             var roomId = Convert.ToInt32(request.Form["roomId"]);
-            string emailLists = request.Form["emailLists"];
+            var room = RoomDAO.Get(roomContext, roomId);
+            var message = request.Form["message"].ToString();
+            string emailLists = request.Form["emailList"];
             var list = emailLists.Split(",").ToList();
             var userIds = userContext.Users.Where(user => list.Any(x => user.Email == x)).Select(user => user.Id).ToList();
             var roomUserLinks = userIds.Select(userId => new RoomUserLink
@@ -182,7 +190,16 @@ namespace BackEnd.Services
             {
                 roomUserLinks = roomUserLinks.Where(link => !existLink.Any(x => x.UserId == link.UserId)).ToList();
             }
-            return await RoomUserLinkDAO.Create(roomContext, roomUserLinks);
+            var result = await RoomUserLinkDAO.Create(roomContext, roomUserLinks);
+            roomUserLinks.ForEach(async link =>
+            {
+                var email = userContext.Users.Where(user => user.Id == link.UserId).Select(user => user.Email).ToString();
+
+                var mailMessage = new Message(new string[] { email }, "Invite To Class", message == "" ? $"You have been invite to class {room.RoomName}" : message, null);
+
+                await _emailSender.SendEmailAsync(mailMessage);
+            });
+            return result;
         }
 
     }
