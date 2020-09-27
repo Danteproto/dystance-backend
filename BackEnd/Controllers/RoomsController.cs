@@ -41,8 +41,8 @@ namespace BackEnd.Controllers
         {
             return await RoomService.CreateRoom(_roomContext, Request);
         }
-        [HttpGet("delete")]
-        public async Task<IActionResult> DeleteRoom(int id)
+
+        public async Task<IActionResult> Delete(int id)
         {
             return await RoomService.DeleteRoom(_roomContext, id, _env);
         }
