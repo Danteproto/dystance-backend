@@ -364,7 +364,10 @@ namespace BackEnd.Services
             {
                 return new BadRequestObjectResult(new { type = 0, message = "User does not exist" });
             }
-
+            if (String.IsNullOrEmpty(user.PasswordHash))
+            {
+                return new BadRequestObjectResult(new { type = 2, message = "Google accounts are not allowed" });
+            }
             //Generate token 
             //var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
             //var token = await _userManager.GenerateUserTokenAsync(user, "ResetPasswordTokenProvider", "PasswordReset");
@@ -385,6 +388,10 @@ namespace BackEnd.Services
             if (user == null)
             {
                 return new BadRequestObjectResult(new { type = 0, message = "User does not exist" });
+            }
+            if (String.IsNullOrEmpty(user.PasswordHash))
+            {
+                return new BadRequestObjectResult(new { type = 2, message = "Google accounts are not allowed" });
             }
 
             //var result = await _userManager.VerifyUserTokenAsync(user, _userManager.Options.Tokens.PasswordResetTokenProvider, "PasswordReset", model.Token);
