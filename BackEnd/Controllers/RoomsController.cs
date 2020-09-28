@@ -2,6 +2,7 @@
 using BackEnd.DBContext;
 using BackEnd.Models;
 using BackEnd.Services;
+using EmailService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -24,12 +25,14 @@ namespace BackEnd.Controllers
         private readonly RoomDBContext _roomContext;
         private readonly UserDbContext _userContext;
         private readonly IWebHostEnvironment _env;
+        private readonly IEmailSender _emailSender;
 
-        public RoomsController(RoomDBContext roomContext, UserDbContext userContext, IWebHostEnvironment env)
+        public RoomsController(RoomDBContext roomContext, UserDbContext userContext, IWebHostEnvironment env, IEmailSender emailSender)
         {
             _roomContext = roomContext;
             _userContext = userContext;
             _env = env;
+            _emailSender = emailSender;
             _contractResolver = new DefaultContractResolver
             {
                 NamingStrategy = new CamelCaseNamingStrategy()
@@ -127,7 +130,7 @@ namespace BackEnd.Controllers
         [HttpPost("invite")]
         public async Task<IActionResult> InviteToRoom()
         {
-            return await RoomService.Invite(_roomContext, _userContext, Request);
+            return await RoomService.Invite(_roomContext, _userContext, Request, _emailSender);
         }
     }
 }

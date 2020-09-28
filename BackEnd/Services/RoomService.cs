@@ -23,11 +23,7 @@ namespace BackEnd.Services
             Image,
             File
         }
-        private readonly static IEmailSender _emailSender;
-        public RoomService(IEmailSender emailSender)
-        {
-            _emailSender = emailSender;
-        }
+
         public async static Task<IActionResult> CreateRoom(RoomDBContext context, HttpRequest request)
         {
             Room room = new Room
@@ -172,7 +168,9 @@ namespace BackEnd.Services
             return RoomChatDAO.GetLastChat(context, roomId);
         }
 
-        public static async Task<IActionResult> Invite(RoomDBContext roomContext, UserDbContext userContext, HttpRequest request)
+        public static async Task<IActionResult> Invite(
+            RoomDBContext roomContext, UserDbContext userContext, 
+            HttpRequest request, IEmailSender emailSender)
         {
             var roomId = Convert.ToInt32(request.Form["roomId"]);
             var room = RoomDAO.Get(roomContext, roomId);
@@ -193,11 +191,11 @@ namespace BackEnd.Services
             var result = await RoomUserLinkDAO.Create(roomContext, roomUserLinks);
             roomUserLinks.ForEach(async link =>
             {
-                var email = userContext.Users.Where(user => user.Id == link.UserId).Select(user => user.Email).ToString();
+                var email = userContext.Users.Where(user => user.Id == link.UserId).Select(user => user.Email).FirstOrDefault().ToString();
 
                 var mailMessage = new Message(new string[] { email }, "Invite To Class", message == "" ? $"You have been invite to class {room.RoomName}" : message, null);
 
-                await _emailSender.SendEmailAsync(mailMessage);
+                await emailSender.SendEmailAsync(mailMessage);
             });
             return result;
         }
