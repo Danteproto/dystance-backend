@@ -17,7 +17,6 @@ namespace BackEnd.Services
 {
     public interface IAuthService
     {
-        Task<AppUser> Authenticate(GoogleJsonWebSignature.Payload payload);
         Task<IActionResult> Google( GoogleLoginRequest userView);
         Task<IActionResult> GoogleUpdateInfo( GoogleLoginRequest userView);
 
@@ -27,30 +26,11 @@ namespace BackEnd.Services
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly IJwtGenerator _jwtGenerator;
-        private readonly IEmailSender _emailSender;
-        private readonly IUrlHelperFactory _urlHelperFactory;
-        private readonly IActionContextAccessor _actionContextAccessor;
 
-        public AuthService(UserManager<AppUser> userManager, IJwtGenerator jwtGenerator, IEmailSender emailSender, IUrlHelperFactory urlHelperFactory,
-            IActionContextAccessor actionContextAccessor)
+        public AuthService(UserManager<AppUser> userManager, IJwtGenerator jwtGenerator)
         {
             _userManager = userManager;
             _jwtGenerator = jwtGenerator;
-            _emailSender = emailSender;
-            _urlHelperFactory = urlHelperFactory;
-            _actionContextAccessor = actionContextAccessor;
-        }
-        public async Task<AppUser> Authenticate(GoogleJsonWebSignature.Payload payload)
-        {
-            await Task.Delay(1);
-            return await this.FindUserOrAdd(payload);
-        }
-
-        private async Task<AppUser> FindUserOrAdd(GoogleJsonWebSignature.Payload payload)
-        {
-            return await _userManager.FindByEmailAsync(payload.Email);
-            
-            
         }
 
         public async Task<IActionResult> Google(GoogleLoginRequest userView)
@@ -58,7 +38,7 @@ namespace BackEnd.Services
             try
             {
                 var payload = GoogleJsonWebSignature.ValidateAsync(userView.TokenId, new GoogleJsonWebSignature.ValidationSettings()).Result;
-                var user = await Authenticate(payload);
+                var user = await _userManager.FindByEmailAsync(payload.Email);
 
                 if (user == null)
                 {

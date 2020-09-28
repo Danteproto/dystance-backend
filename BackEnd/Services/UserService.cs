@@ -215,7 +215,8 @@ namespace BackEnd.Services
                 RealName = user.RealName,
                 Email = user.Email,
                 Dob = user.DOB,
-                Avatar = ""
+                Avatar = "",
+                UserName = user.UserName
             };
             return new OkObjectResult(response);
         }
