@@ -128,7 +128,7 @@ namespace BackEnd.Services
             }
             else
             {
-                return new BadRequestObjectResult(new { type = 4 , message = "Password is not correct" });
+                return new BadRequestObjectResult(new { type = 4, message = "Password is not correct" });
             }
         }
 
@@ -247,7 +247,7 @@ namespace BackEnd.Services
             var result = await _userManager.CreateAsync(registerUser, userModel.Password);
             if (!result.Succeeded)
             {
-                var internalErr = new ObjectResult(new {type = 2, error = result.Errors.ToList()[0].Description })
+                var internalErr = new ObjectResult(new { type = 2, error = result.Errors.ToList()[0].Description })
                 {
                     StatusCode = 500
                 };
@@ -287,7 +287,7 @@ namespace BackEnd.Services
 
             if (user == null)
             {
-                var internalErr = new ObjectResult(new {type = 0 , error = "User not found" })
+                var internalErr = new ObjectResult(new { type = 0, error = "User not found" })
                 {
                     StatusCode = 500
                 };
@@ -395,7 +395,7 @@ namespace BackEnd.Services
                 return new OkObjectResult("");
             }
 
-            return new BadRequestObjectResult(new { type = 1 ,message = "Wrong token or token expired" });
+            return new BadRequestObjectResult(new { type = 1, message = "Wrong token or token expired" });
         }
 
 
@@ -417,7 +417,7 @@ namespace BackEnd.Services
                     return new OkObjectResult("");
                 }
             }
-            return new BadRequestObjectResult(new { type =1 , message = "Token not verified or generated" });
+            return new BadRequestObjectResult(new { type = 1, message = "Token not verified or generated" });
 
 
         }
@@ -428,19 +428,20 @@ namespace BackEnd.Services
             var user = await _userManager.FindByIdAsync(_userAccessor.GetCurrentUserId());
             try
             {
-                var resultCheckpass = await _userManager.CheckPasswordAsync(user, model.CurrentPassword);
-                if (resultCheckpass)
+                //Update Profile
+                user.UserName = model.UserName ?? user.UserName;
+                user.RealName = model.RealName ?? user.RealName;
+                user.DOB = model.Dob ?? user.DOB;
+                user.PhoneNumber = model.PhoneNumber ?? user.PhoneNumber;
+                user.Email = model.Email ?? user.Email;
+
+                var resultUpdate = await _userManager.UpdateAsync(user);
+
+
+                if (!string.IsNullOrEmpty(model.NewPassword))
                 {
-                    //Update Profile
-                    user.UserName = model.UserName ?? user.UserName;
-                    user.RealName = model.RealName ?? user.RealName;
-                    user.DOB = model.Dob ?? user.DOB;
-                    user.PhoneNumber = model.PhoneNumber ?? user.PhoneNumber;
-                    user.Email = model.Email ?? user.Email;
-
-                    var resultUpdate = await _userManager.UpdateAsync(user);
-
-                    if (!string.IsNullOrEmpty(model.NewPassword))
+                    var resultCheckpass = await _userManager.CheckPasswordAsync(user, model.CurrentPassword);
+                    if (resultCheckpass)
                     {
                         //Change password
                         var resultPass = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
@@ -459,36 +460,39 @@ namespace BackEnd.Services
                             };
                         }
                     }
-
-
-                    if (resultUpdate.Succeeded)
-                    {
-                        return new OkObjectResult(new { message = "Update Profile Successfully" });
-                    }
                     else
                     {
 
-                        return new ObjectResult(new { type = 2, code = resultUpdate.Errors.ToList()[0].Code, description = resultUpdate.Errors.ToList()[0].Description })
+                        return new ObjectResult(new { type = 0, message = "Password mismatched" })
                         {
                             StatusCode = 500
                         };
                     }
                 }
+                if (resultUpdate.Succeeded)
+                {
+                    return new OkObjectResult(new { message = "Update Profile Successfully" });
+                }
                 else
                 {
 
-                    return new ObjectResult(new { type = 0, message = "Password mismatched" })
+                    return new ObjectResult(new { type = 2, code = resultUpdate.Errors.ToList()[0].Code, description = resultUpdate.Errors.ToList()[0].Description })
                     {
                         StatusCode = 500
                     };
                 }
-            }catch(Exception ex)
+
+
+            }
+            catch (Exception ex)
             {
-                return new ObjectResult(new { type = 3, message = ex.Message})
+                return new ObjectResult(new { type = 3, message = ex.Message })
                 {
                     StatusCode = 500
                 };
             }
+
+
 
         }
 
