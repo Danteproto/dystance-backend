@@ -119,7 +119,9 @@ namespace BackEnd.Services
                 string token = await _userManager.GenerateEmailConfirmationTokenAsync(appUser);
                 await _userManager.ConfirmEmailAsync(appUser, token);
 
-                return new OkObjectResult("");
+                var userToken = _jwtGenerator.VerifyAndReturnToken(user);
+
+                return new OkObjectResult(userToken);
             }
 
             return new NotFoundObjectResult("");
