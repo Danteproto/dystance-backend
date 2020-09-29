@@ -16,6 +16,8 @@ using Microsoft.AspNetCore.Mvc.Infrastructure;
 using EmailService;
 using BackEnd.Requests;
 using BackEnd.Stores;
+using System.IO;
+using Microsoft.AspNetCore.Hosting;
 
 namespace BackEnd.Services
 {
@@ -51,6 +53,7 @@ namespace BackEnd.Services
         private readonly IJwtGenerator _jwtGenerator;
         private readonly IUserAccessor _userAccessor;
         private readonly IUserStore _userStore;
+        private readonly IWebHostEnvironment _env;
 
         public UserService(
             UserDbContext context,
@@ -62,7 +65,8 @@ namespace BackEnd.Services
             IEmailSender emailSender,
             IJwtGenerator jwtGenerator,
             IUserAccessor userAccessor,
-            IUserStore userStore)
+            IUserStore userStore,
+            IWebHostEnvironment env)
         {
             _context = context;
             _mapper = mapper;
@@ -74,6 +78,7 @@ namespace BackEnd.Services
             _jwtGenerator = jwtGenerator;
             _userAccessor = userAccessor;
             _userStore = userStore;
+            _env = env;
         }
 
         public async Task<IActionResult> Authenticate(AuthenticateRequest model)
@@ -237,12 +242,44 @@ namespace BackEnd.Services
                 return new BadRequestObjectResult(new { type = 0, message = "Email already exists" });
             }
 
+            string imgPath = "";
+
+            //if avatar is empty, use default
+            if(userModel.Avatar != null)
+            {
+                var img = userModel.Avatar;
+                var extension = Path.GetExtension(img.FileName);
+
+                var imgName = Convert.ToBase64String(
+                        System.Text.Encoding.UTF8.GetBytes(DateTime.Now.ToString())
+                    );
+                var path = Path.Combine(_env.ContentRootPath, $"Files/Users/{userModel.UserName}/Images");
+                if (!Directory.Exists(path))
+                {
+                    Directory.CreateDirectory(path);
+                }
+
+                imgPath = Path.Combine(path, imgName + extension);
+                if (img.Length > 0)
+                {
+                    using var fileStream = new FileStream(imgPath, FileMode.Create);
+                    img.CopyTo(fileStream);
+                }
+            }
+            else
+            {
+                imgPath = Path.Combine(_env.ContentRootPath, $"Files/Users/image.png");
+            }
+
+            //save file to local server
+            
             var registerUser = new AppUser
             {
                 Email = userModel.Email,
                 UserName = userModel.UserName,
                 RealName = userModel.RealName,
-                DOB = userModel.Dob
+                DOB = userModel.Dob,
+                Avatar = imgPath
             };
 
             var result = await _userManager.CreateAsync(registerUser, userModel.Password);
@@ -265,10 +302,9 @@ namespace BackEnd.Services
 
             return new OkObjectResult(new RegisterResponse
             {
-                Email = userModel.Email,
-                UserName = userModel.UserName,
-                Token = token,
-                TokenLink = confirmationLink
+                Email = registerUser.Email,
+                UserName = registerUser.UserName,
+                Avatar = registerUser.Avatar,
             });
 
         }

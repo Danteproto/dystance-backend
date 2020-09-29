@@ -9,8 +9,7 @@ namespace BackEnd.Responses
     {
         public string UserName { get; set; }
         public string Email { get; set; }
-        public string Token { get; set; }
-        public string TokenLink { get; set; }
+        public string Avatar { get; set; }
 
     }
 }

@@ -39,6 +39,18 @@ namespace BackEnd.Ultilities
                 }
             }
 
+            for (int i = 0; i< collection.Files.Count;i++)
+            {
+                if (collection.Files[i].Name == null) continue;
+                var value = collection.Files[i];
+
+                // value = CrossSiteAttackUtil.CleanHtml(value);
+                if (value != null)
+                {
+                    formParameters.Add(collection.Files[i].Name, value);
+                }
+            }
+
             return formParameters;
         }
 
