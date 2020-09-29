@@ -2,6 +2,7 @@
 using BackEnd.Models;
 using BackEnd.Requests;
 using BackEnd.Security;
+using BackEnd.Stores;
 using EmailService;
 using Google.Apis.Auth;
 using Microsoft.AspNetCore.Identity;
@@ -26,11 +27,30 @@ namespace BackEnd.Services
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly IJwtGenerator _jwtGenerator;
+        private readonly IEmailSender _emailSender;
+        private readonly IUrlHelperFactory _urlHelperFactory;
+        private readonly IActionContextAccessor _actionContextAccessor;
+        private readonly IUserStore _userStore;
 
-        public AuthService(UserManager<AppUser> userManager, IJwtGenerator jwtGenerator)
+        public AuthService(UserManager<AppUser> userManager, IJwtGenerator jwtGenerator, IEmailSender emailSender, IUrlHelperFactory urlHelperFactory,
+            IActionContextAccessor actionContextAccessor, IUserStore userStore)
         {
             _userManager = userManager;
             _jwtGenerator = jwtGenerator;
+            _emailSender = emailSender;
+            _urlHelperFactory = urlHelperFactory;
+            _actionContextAccessor = actionContextAccessor;
+            _userStore = userStore;
+        }
+        public async Task<AppUser> Authenticate(GoogleJsonWebSignature.Payload payload)
+        {
+            await Task.Delay(1);
+            return await this.FindUserOrAdd(payload);
+        }
+
+        private async Task<AppUser> FindUserOrAdd(GoogleJsonWebSignature.Payload payload)
+        {
+            return await _userManager.FindByEmailAsync(payload.Email);
         }
 
         public async Task<IActionResult> Google(GoogleLoginRequest userView)
@@ -39,6 +59,7 @@ namespace BackEnd.Services
             {
                 var payload = GoogleJsonWebSignature.ValidateAsync(userView.TokenId, new GoogleJsonWebSignature.ValidationSettings()).Result;
                 var user = await _userManager.FindByEmailAsync(payload.Email);
+                _userStore.TokenIdVerified = true;
 
                 if (user == null)
                 {
@@ -77,6 +98,12 @@ namespace BackEnd.Services
 
         public async Task<IActionResult> GoogleUpdateInfo(GoogleLoginRequest userView)
         {
+
+            if (!_userStore.TokenIdVerified)
+            {
+                return new BadRequestObjectResult(new { type = 0, message = "Google token not verified" });
+            }
+
             var user = new AppUser
             {
                 UserName = userView.UserName,

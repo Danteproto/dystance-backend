@@ -27,6 +27,9 @@ namespace BackEnd.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
 
+                    b.Property<string>("Avatar")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
@@ -76,12 +79,6 @@ namespace BackEnd.Migrations
                     b.Property<string>("UserName")
                         .HasColumnType("nvarchar(256)")
                         .HasMaxLength(256);
-
-                    b.Property<string>("oauthIssuer")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("oauthSubject")
-                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
