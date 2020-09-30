@@ -1,9 +1,11 @@
 ﻿using BackEnd.Security;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -72,7 +74,29 @@ namespace BackEnd.Ultilities
             }
             return dest;
         }
+        public static IFormFile GetDefaultAvatar(IWebHostEnvironment _env)
+        {
+            var ms = new MemoryStream();
+            var rootPath = _env.ContentRootPath;
+            string path = Path.Combine(rootPath, $"Files/Users/Images");
 
+            var filePath = Path.Combine(path, "default.png");
+            var file = File.OpenRead(filePath);
+            try
+            {
+                file.CopyTo(ms);
+                return new FormFile(ms, 0, ms.Length, "default", "default.png");
+            }
+            catch (Exception e)
+            {
+                ms.Dispose();
+                throw;
+            }
+            finally
+            {
+                ms.Dispose();
+            }
+        }
 
     }
 }

@@ -18,6 +18,7 @@ using BackEnd.Requests;
 using BackEnd.Stores;
 using System.IO;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 
 namespace BackEnd.Services
 {
@@ -38,6 +39,7 @@ namespace BackEnd.Services
         public Task<IActionResult> ResetPasswordVerify(ResetPasswordVerify model);
         public Task<IActionResult> ResetPasswordUpdate(ResetPasswordUpdate model);
         public Task<IActionResult> UpdateProfile(UpdateProfileRequest model);
+        public FileStream getAvatar(string realName, string userName, string fileName);
 
     }
 
@@ -220,7 +222,7 @@ namespace BackEnd.Services
                 RealName = user.RealName,
                 Email = user.Email,
                 Dob = user.DOB,
-                Avatar = "",
+                Avatar = $"api/users/getAvatar?fileName={user.Avatar}&realName=&userName={user.UserName}",
                 UserName = user.UserName
             };
             return new OkObjectResult(response);
@@ -242,15 +244,17 @@ namespace BackEnd.Services
                 return new BadRequestObjectResult(new { type = 0, message = "Email already exists" });
             }
 
-            string imgPath = "";
-
+            string imgPath;
+            string imgName = "";
+            string extension = "";
+            IFormFile img = null;
             //if avatar is empty, use default
-            if(userModel.Avatar != null)
+            if (userModel.Avatar != null)
             {
-                var img = userModel.Avatar;
-                var extension = Path.GetExtension(img.FileName);
+                img = userModel.Avatar;
+                extension = Path.GetExtension(img.FileName);
 
-                var imgName = Convert.ToBase64String(
+                imgName = Convert.ToBase64String(
                         System.Text.Encoding.UTF8.GetBytes(DateTime.Now.ToString())
                     );
                 var path = Path.Combine(_env.ContentRootPath, $"Files/Users/{userModel.UserName}/Images");
@@ -268,18 +272,18 @@ namespace BackEnd.Services
             }
             else
             {
-                imgPath = Path.Combine(_env.ContentRootPath, $"Files/Users/image.png");
+                imgName = "default";
+                extension = ".png";
+                img = Extensions.GetDefaultAvatar(_env);
             }
 
-            //save file to local server
-            
             var registerUser = new AppUser
             {
                 Email = userModel.Email,
                 UserName = userModel.UserName,
                 RealName = userModel.RealName,
                 DOB = userModel.Dob,
-                Avatar = imgPath
+                Avatar = imgName + extension
             };
 
             var result = await _userManager.CreateAsync(registerUser, userModel.Password);
@@ -304,7 +308,7 @@ namespace BackEnd.Services
             {
                 Email = registerUser.Email,
                 UserName = registerUser.UserName,
-                Avatar = registerUser.Avatar,
+                Avatar = $"api/users/getAvatar?fileName={imgName + extension}&realName={Path.GetFileName(img.FileName)}&userName={userModel.UserName}",
             });
 
         }
@@ -473,11 +477,39 @@ namespace BackEnd.Services
             try
             {
                 //Update Profile
-                user.UserName = model.UserName ?? user.UserName;
                 user.RealName = model.RealName ?? user.RealName;
                 user.DOB = model.Dob ?? user.DOB;
-                user.PhoneNumber = model.PhoneNumber ?? user.PhoneNumber;
-                user.Email = model.Email ?? user.Email;
+
+                string imgPath;
+                string imgName = "";
+                string extension = "";
+                
+                IFormFile img = null;
+                //if avatar is empty, use default
+                if (model.Avatar != null)
+                {
+                    img = model.Avatar;
+                    extension = Path.GetExtension(img.FileName);
+
+                    imgName = Convert.ToBase64String(
+                            System.Text.Encoding.UTF8.GetBytes(DateTime.Now.ToString())
+                        );
+                    var path = Path.Combine(_env.ContentRootPath, $"Files/Users/{user.UserName}/Images");
+                    if (!Directory.Exists(path))
+                    {
+                        Directory.CreateDirectory(path);
+                    }
+
+                    imgPath = Path.Combine(path, imgName + extension);
+                    if (img.Length > 0)
+                    {
+                        using var fileStream = new FileStream(imgPath, FileMode.Create);
+                        img.CopyTo(fileStream);
+                    }
+                }
+
+                user.Avatar = imgName + extension;
+
 
                 var resultUpdate = await _userManager.UpdateAsync(user);
 
@@ -535,11 +567,21 @@ namespace BackEnd.Services
                     StatusCode = 500
                 };
             }
-
-
-
         }
 
+
+        public FileStream getAvatar(string realName, string userName, string fileName)
+        {
+            string path;
+            var rootPath = _env.ContentRootPath;
+            path = fileName !="default.png" ? Path.Combine(rootPath, $"Files/Users/{userName}/Images"): Path.Combine(rootPath, $"Files/Users/Images");
+
+            var filePath = Path.Combine(path, fileName);
+            var file = File.OpenRead(filePath);
+           
+            return file;
+
+        }
     }
 
 }
