@@ -200,5 +200,14 @@ namespace BackEnd.Services
             return result;
         }
 
+        public static async Task<IActionResult> DeleteRoomLink(RoomDBContext roomContext, HttpRequest request)
+        {
+            var roomId = Convert.ToInt32(request.Form["roomId"]);
+            var userId = request.Form["userId"];
+            var link = RoomUserLinkDAO.GetUserRoomLink(roomContext, roomId, userId);
+            return await RoomUserLinkDAO.Delete(roomContext, link);
+        }
+
+        
     }
 }

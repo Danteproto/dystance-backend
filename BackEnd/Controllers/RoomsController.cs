@@ -132,5 +132,11 @@ namespace BackEnd.Controllers
         {
             return await RoomService.Invite(_roomContext, _userContext, Request, _emailSender);
         }
+
+        [HttpPost("kick")]
+        public async Task<IActionResult> KickFromRoom()
+        {
+            return await RoomService.DeleteRoomLink(_roomContext, Request);
+        }
     }
 }

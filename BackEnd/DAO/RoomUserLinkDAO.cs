@@ -55,6 +55,11 @@ namespace BackEnd.DAO
         {
             return context.RoomUserLink.Where(link => link.RoomId == roomId).ToList();
         }
+
+        public static RoomUserLink GetUserRoomLink(RoomDBContext context, int roomId, string userId)
+        {
+            return context.RoomUserLink.Where(link => link.RoomId == roomId && link.UserId == userId).FirstOrDefault();
+        }
         public static async Task<IActionResult> Delete(RoomDBContext context, List<RoomUserLink> roomUserLinks)
         {
             try
@@ -67,6 +72,25 @@ namespace BackEnd.DAO
                 };
             }
             catch(Exception e)
+            {
+                return new ObjectResult(new { message = e.Message })
+                {
+                    StatusCode = 500,
+                };
+            }
+        }
+        public static async Task<IActionResult> Delete(RoomDBContext context, RoomUserLink link)
+        {
+            try
+            {
+                context.RoomUserLink.Remove(link);
+                context.SaveChanges();
+                return new ObjectResult(new { message = "User have been remove from room" })
+                {
+                    StatusCode = 200,
+                };
+            }
+            catch (Exception e)
             {
                 return new ObjectResult(new { message = e.Message })
                 {
