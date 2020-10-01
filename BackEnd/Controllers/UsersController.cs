@@ -163,7 +163,7 @@ namespace BackEnd.Controllers
             var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
             return await _userService.UpdateProfile(_mapper.Map<UpdateProfileRequest>(reqForm));
         }
-
+        [AllowAnonymous]
         [HttpGet("getAvatar")]
         public async Task<IActionResult> GetAvatar(string userName, string fileName, string realName)
         {

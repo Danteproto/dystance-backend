@@ -35,7 +35,7 @@ namespace BackEnd.Ultilities
                 var value = collection[key];
 
                 // value = CrossSiteAttackUtil.CleanHtml(value);
-                if (!String.IsNullOrEmpty(value))
+                if (!(String.IsNullOrEmpty(value) || value == "null"))
                 {
                     formParameters.Add(key, value);
                 }

@@ -506,11 +506,10 @@ namespace BackEnd.Services
                         using var fileStream = new FileStream(imgPath, FileMode.Create);
                         img.CopyTo(fileStream);
                     }
+                    user.Avatar = imgName + extension;
                 }
 
-                user.Avatar = imgName + extension;
-
-
+                
                 var resultUpdate = await _userManager.UpdateAsync(user);
 
 

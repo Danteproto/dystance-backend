@@ -19,6 +19,7 @@ namespace BackEnd.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class RoomsController : ControllerBase
     {
         private readonly DefaultContractResolver _contractResolver;
@@ -71,6 +72,7 @@ namespace BackEnd.Controllers
                 Formatting = Formatting.Indented
             }));
         }
+        [AllowAnonymous]
         [HttpGet("getImage")]
         public async Task<IActionResult> GetImage(int roomId, string imgName)
         {
@@ -105,6 +107,7 @@ namespace BackEnd.Controllers
                 Formatting = Formatting.Indented
             }));
         }
+        [AllowAnonymous]
         [HttpGet("chat/getFile")]
         public async Task<IActionResult> GetFile(string fileName, int type, int roomId,string realName)
         {
