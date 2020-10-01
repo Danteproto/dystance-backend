@@ -5,14 +5,18 @@ using BackEnd.Security;
 using BackEnd.Stores;
 using EmailService;
 using Google.Apis.Auth;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Routing;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using BackEnd.Ultilities;
 
 namespace BackEnd.Services
 {
@@ -27,20 +31,15 @@ namespace BackEnd.Services
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly IJwtGenerator _jwtGenerator;
-        private readonly IEmailSender _emailSender;
-        private readonly IUrlHelperFactory _urlHelperFactory;
-        private readonly IActionContextAccessor _actionContextAccessor;
         private readonly IUserStore _userStore;
+        private readonly IWebHostEnvironment _env;
 
-        public AuthService(UserManager<AppUser> userManager, IJwtGenerator jwtGenerator, IEmailSender emailSender, IUrlHelperFactory urlHelperFactory,
-            IActionContextAccessor actionContextAccessor, IUserStore userStore)
+        public AuthService(UserManager<AppUser> userManager, IJwtGenerator jwtGenerator, IUserStore userStore, IWebHostEnvironment env)
         {
             _userManager = userManager;
             _jwtGenerator = jwtGenerator;
-            _emailSender = emailSender;
-            _urlHelperFactory = urlHelperFactory;
-            _actionContextAccessor = actionContextAccessor;
             _userStore = userStore;
+            _env = env;
         }
         public async Task<AppUser> Authenticate(GoogleJsonWebSignature.Payload payload)
         {
@@ -104,12 +103,46 @@ namespace BackEnd.Services
                 return new BadRequestObjectResult(new { type = 0, message = "Google token not verified" });
             }
 
+            string imgPath;
+            string imgName = "";
+            string extension = "";
+            IFormFile img = null;
+            //if avatar is empty, use default
+            if (userView.Avatar != null)
+            {
+                img = userView.Avatar;
+                extension = Path.GetExtension(img.FileName);
+
+                imgName = Convert.ToBase64String(
+                        System.Text.Encoding.UTF8.GetBytes(DateTime.Now.ToString())
+                    );
+                var path = Path.Combine(_env.ContentRootPath, $"Files/Users/{userView.UserName}/Images");
+                if (!Directory.Exists(path))
+                {
+                    Directory.CreateDirectory(path);
+                }
+
+                imgPath = Path.Combine(path, imgName + extension);
+                if (img.Length > 0)
+                {
+                    using var fileStream = new FileStream(imgPath, FileMode.Create);
+                    img.CopyTo(fileStream);
+                }
+            }
+            else
+            {
+                imgName = "default";
+                extension = ".png";
+                img = Extensions.GetDefaultAvatar(_env);
+            }
+
             var user = new AppUser
             {
                 UserName = userView.UserName,
                 Email = userView.Email,
                 RealName = userView.RealName,
-                DOB = userView.Dob
+                DOB = userView.Dob,
+                Avatar = imgName + extension
             };
 
             var appUser = await _userManager.FindByNameAsync(userView.UserName);
