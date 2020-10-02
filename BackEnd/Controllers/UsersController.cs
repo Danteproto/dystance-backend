@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 using AutoMapper;
 using BackEnd.Requests;
 using BackEnd.Ultilities;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.StaticFiles;
 
 namespace BackEnd.Controllers
 {
@@ -161,8 +163,17 @@ namespace BackEnd.Controllers
             var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
             return await _userService.UpdateProfile(_mapper.Map<UpdateProfileRequest>(reqForm));
         }
-        
 
+        [HttpGet("getAvatar")]
+        public async Task<IActionResult> GetAvatar(string userName, string fileName, string realName)
+        {
+            realName = realName == null ? "default" : realName;
+            var file = _userService.getAvatar(realName, userName, fileName);
+            string contentType;
+            new FileExtensionContentTypeProvider().TryGetContentType(fileName, out contentType);
+            Response.Headers.Add("Content-Disposition", $"attachment; filename={realName}");
+            return File(file, contentType);
+        }
 
         //[AllowAnonymous]
         //[HttpGet("externalLoginServices")]
