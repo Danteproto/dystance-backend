@@ -483,7 +483,7 @@ namespace BackEnd.Services
                 string imgPath;
                 string imgName = "";
                 string extension = "";
-                
+
                 IFormFile img = null;
                 //if avatar is empty, use default
                 if (model.Avatar != null)
@@ -509,7 +509,7 @@ namespace BackEnd.Services
                     user.Avatar = imgName + extension;
                 }
 
-                
+
                 var resultUpdate = await _userManager.UpdateAsync(user);
 
 
@@ -524,7 +524,19 @@ namespace BackEnd.Services
 
                         if (resultPass.Succeeded)
                         {
-                            return new OkObjectResult(new { message = "Password changed and updated profile successfully" });
+                            user = await _userManager.FindByIdAsync(user.Id);
+                            return new OkObjectResult(
+                                    new UserInfoResponse
+                                    {
+                                        Id = user.Id,
+                                        UserName = user.UserName,
+                                        RealName = user.RealName,
+                                        Email = user.Email,
+                                        Dob = user.DOB,
+                                        Avatar = $"api/users/getAvatar?fileName={user.Avatar}&realName={Path.GetFileName(user.Avatar)}&userName={user.UserName}",
+
+                                    }
+                            );
                         }
                         else
                         {
@@ -546,7 +558,19 @@ namespace BackEnd.Services
                 }
                 if (resultUpdate.Succeeded)
                 {
-                    return new OkObjectResult(new { message = "Update Profile Successfully" });
+                    user = await _userManager.FindByIdAsync(user.Id);
+                    return new OkObjectResult(
+                                     new UserInfoResponse
+                                     {
+                                         Id = user.Id,
+                                         UserName = user.UserName,
+                                         RealName = user.RealName,
+                                         Email = user.Email,
+                                         Dob = user.DOB,
+                                         Avatar = $"api/users/getAvatar?fileName={user.Avatar}&realName={Path.GetFileName(user.Avatar)}&userName={user.UserName}",
+
+                                     }
+                             );
                 }
                 else
                 {
@@ -573,11 +597,11 @@ namespace BackEnd.Services
         {
             string path;
             var rootPath = _env.ContentRootPath;
-            path = fileName !="default.png" ? Path.Combine(rootPath, $"Files/Users/{userName}/Images"): Path.Combine(rootPath, $"Files/Users/Images");
+            path = fileName != "default.png" ? Path.Combine(rootPath, $"Files/Users/{userName}/Images") : Path.Combine(rootPath, $"Files/Users/Images");
 
             var filePath = Path.Combine(path, fileName);
             var file = File.OpenRead(filePath);
-           
+
             return file;
 
         }
