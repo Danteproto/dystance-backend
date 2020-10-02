@@ -568,7 +568,6 @@ namespace BackEnd.Services
                                          Email = user.Email,
                                          Dob = user.DOB,
                                          Avatar = $"api/users/getAvatar?fileName={user.Avatar}&realName={Path.GetFileName(user.Avatar)}&userName={user.UserName}",
-
                                      }
                              );
                 }
