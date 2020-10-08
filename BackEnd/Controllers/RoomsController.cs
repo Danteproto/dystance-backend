@@ -2,6 +2,7 @@
 using BackEnd.DBContext;
 using BackEnd.Models;
 using BackEnd.Services;
+using BackEnd.Socket;
 using EmailService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
@@ -115,7 +116,7 @@ namespace BackEnd.Controllers
         }
         [AllowAnonymous]
         [HttpGet("chat/getFile")]
-        public async Task<IActionResult> GetFile(string fileName, int type, int roomId,string realName)
+        public async Task<IActionResult> GetFile(string fileName, int type, int roomId, string realName)
         {
 
             var rootPath = _env.ContentRootPath;
@@ -140,6 +141,34 @@ namespace BackEnd.Controllers
         public async Task<IActionResult> InviteToRoom()
         {
             return await RoomService.Invite(_roomContext, _userContext, Request, _emailSender);
+        }
+        [HttpGet("whiteboard/load")]
+        public IActionResult LoadWhiteBoard(int id)
+        {
+            if (SocketHub._whiteBoards.ContainsKey(id.ToString()) && SocketHub._whiteBoards[id.ToString()] != null)
+            {
+                return Content(JsonConvert.SerializeObject(SocketHub._whiteBoards[id.ToString()][0], new JsonSerializerSettings
+                {
+                    ContractResolver = _contractResolver,
+                    Formatting = Formatting.Indented
+                }));
+            }
+            return Content(JsonConvert.SerializeObject(new object[] { }));
+        }
+        [HttpPost("whiteboard/upload")]
+        public IActionResult UploadImage()
+        {
+            return RoomService.WhiteboardUploadImage(Request, _env);
+        }
+        [AllowAnonymous]
+        [HttpGet("whiteboard/img")]
+        public async Task<IActionResult> GetWhiteboardImage(int id, string imgName)
+        {
+            var rootPath = _env.ContentRootPath;
+            var path = Path.Combine(rootPath, $"Files/{id}/Whiteboard");
+            var imgPath = Path.Combine(path, imgName);
+            var image = System.IO.File.OpenRead(imgPath);
+            return File(image, "image/png");
         }
     }
 }
