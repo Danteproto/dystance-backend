@@ -169,6 +169,7 @@ namespace BackEnd
             services.AddSingleton<IUserStore, UserStore>();
             services.AddScoped<IUserAccessor, UserAccessor>();
             services.AddSingleton<ITOTP, TOTPUtil>();
+            services.AddScoped<IUserRoomService, UserRoomService>();
 
             var emailConfig = Configuration
                 .GetSection("EmailConfiguration")
