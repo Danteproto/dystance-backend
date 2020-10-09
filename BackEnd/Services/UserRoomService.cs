@@ -18,6 +18,9 @@ namespace BackEnd.Services
 {
     public interface IUserRoomService {
         public Task<IActionResult> GetTimeTable(TimetableRequest model);
+        public Task<IActionResult> KickOutMember(KickOutMemberRequest model);
+
+
     }
 
     public class UserRoomService: IUserRoomService
@@ -53,5 +56,52 @@ namespace BackEnd.Services
             }
             return new OkObjectResult(list);
         }
+
+        public async Task<IActionResult> KickOutMember(KickOutMemberRequest model)
+        {
+            var appUser = await _userManager.FindByIdAsync(_userAccessor.GetCurrentUserId());
+            var room = await _roomDbContext.Room.FirstOrDefaultAsync(r => r.RoomId.ToString() == model.RoomId);
+
+            if (room == null)
+            {
+                return new BadRequestObjectResult(new { type = 1, message = "Not Found Room!" });
+            }
+
+
+            if (room.CreatorId == model.UserId)
+            {
+                return new BadRequestObjectResult(new { type = 0, message = "Can not kick out creator!" });
+            }
+
+            //check if creator
+            if(appUser.Id != room.CreatorId)
+            {
+                return new BadRequestObjectResult(new { type = 2, message = "Not Creator Of The Room!" });
+            }
+
+            //Find kick member
+            var kickMember = await _roomDbContext.RoomUserLink.FirstOrDefaultAsync(r => r.UserId == model.UserId && r.RoomId.ToString() == model.RoomId);
+            if(kickMember == null)
+            {
+                return new BadRequestObjectResult(new { type = 3, message = "Not Found The Member In The Room!" });
+            }
+
+            //kick
+            var result = _roomDbContext.RoomUserLink.Remove(kickMember);
+            await _roomDbContext.SaveChangesAsync();
+            if(result.State == EntityState.Detached)
+            {
+                return new OkObjectResult(result);
+            }
+            else
+            {
+                return new BadRequestObjectResult(new { type = 4, message = "Fail To Kick The Member Out Of The Room!" });
+            }
+            
+        }
+
+
+
+
     }
 }

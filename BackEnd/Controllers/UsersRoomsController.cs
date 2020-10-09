@@ -36,5 +36,14 @@ namespace BackEnd.Controllers
                 EndDate = DateTime.Parse(endDate)
             });
         }
+
+        [HttpPost("kickout")]
+        //Timetable Req
+        public async Task<IActionResult> KickOutMember()
+        {
+            var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
+            return await _userRoomService.KickOutMember(_mapper.Map<KickOutMemberRequest>(reqForm));
+        }
+
     }
 }
