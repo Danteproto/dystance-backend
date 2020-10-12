@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Internal;
+using Microsoft.Extensions.Primitives;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -169,7 +171,7 @@ namespace BackEnd.Services
         }
 
         public static async Task<IActionResult> Invite(
-            RoomDBContext roomContext, UserDbContext userContext, 
+            RoomDBContext roomContext, UserDbContext userContext,
             HttpRequest request, IEmailSender emailSender)
         {
             var roomId = Convert.ToInt32(request.Form["roomId"]);
@@ -198,6 +200,27 @@ namespace BackEnd.Services
                 await emailSender.SendEmailAsync(mailMessage);
             });
             return result;
+        }
+
+        public static IActionResult WhiteboardUploadImage(HttpRequest request, IWebHostEnvironment env)
+        {
+            Console.WriteLine(request.Form);
+            var roomId = Convert.ToInt32(request.Form["whiteboardId"]);
+            string rawdata = request.Form["imagedata"];
+            var imagedata = Convert.FromBase64String(rawdata.Split(",")[1]);
+            var path = Path.Combine(env.ContentRootPath, $"Files/{roomId}/Whiteboard");
+            var imgName = Convert.ToBase64String(
+                System.Text.Encoding.UTF8.GetBytes(DateTime.Now.ToString())) + ".png";
+            if (!Directory.Exists(path))
+            {
+                Directory.CreateDirectory(path);
+            }
+            var imgPath = Path.Combine(path, imgName);
+            File.WriteAllBytes(imgPath, imagedata);
+            return new OkObjectResult(JsonConvert.SerializeObject(new
+            {
+                imageUrl = $"api/rooms/whiteboard/img?id={roomId}&imgName={imgName}"
+            }));
         }
 
     }
