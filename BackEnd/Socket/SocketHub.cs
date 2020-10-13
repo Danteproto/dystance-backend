@@ -17,7 +17,86 @@ namespace BackEnd.Socket
         private static Dictionary<string, List<SocketUser>> _currentUsers = new Dictionary<string, List<SocketUser>>();
         public static Dictionary<string, List<Whiteboard>[]> _whiteBoards
             = new Dictionary<string, List<Whiteboard>[]>();
+        public enum RoomType
+        {
+            Join,
+            Leave,
+            Chat,
+            Kick,
+            Mute,
+        }
+        public async Task RoomAction(string roomId, int t, string userId)
+        {
+            var type = (RoomType)t;
+            switch (type)
+            {
+                case RoomType.Join:
+                    {
+                        await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
+                        if (!_currentUsers.ContainsKey(roomId))
+                        {
+                            _currentUsers.Add(roomId, new List<SocketUser>());
+                        }
 
+                        if (_currentUsers[roomId].Any(user => user.UserId == userId))
+                        {
+                            _currentUsers[roomId].First(user => user.UserId == userId).connectionId = Context.ConnectionId;
+                        }
+
+                        if (!_currentUsers[roomId].Any(user => user.UserId == userId))
+                        {
+                            _currentUsers[roomId].Add(new SocketUser
+                            {
+                                UserId = userId,
+                                connectionId = Context.ConnectionId
+                            });
+                        }
+
+                        await Clients.Group(roomId).SendAsync("RoomAction",
+                            JsonConvert.SerializeObject(JObject.FromObject(new
+                            {
+                                type = t,
+                                payload = _currentUsers[roomId].Select(x => x.UserId).ToList()
+                            })));
+                        break;
+                    }
+                case RoomType.Leave:
+                    {
+                        await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomId);
+                        _currentUsers[roomId].Remove(_currentUsers[roomId].Where(x => x.UserId == userId).FirstOrDefault());
+
+                        await Clients.Group(roomId).SendAsync("RoomAction",
+                            JsonConvert.SerializeObject(JObject.FromObject(new
+                            {
+                                type = t,
+                                payload = _currentUsers[roomId].Select(x => x.UserId).ToList()
+                            })));
+                        break;
+                    }
+                case RoomType.Chat:
+                    {
+                        await Clients.Group(roomId).SendAsync("RoomAction",
+                            JsonConvert.SerializeObject(JObject.FromObject(new
+                            {
+                                type = t,
+                                payload = _currentUsers[roomId].Select(x => x.UserId).ToList()
+                            })));
+                        break;
+                    }
+                default:
+                    {
+                        await Clients.Client(
+                            _currentUsers[roomId].Where(user => user.UserId == userId).Select(user => user.connectionId).FirstOrDefault())
+                            .SendAsync("RoomAction",
+                            JsonConvert.SerializeObject(JObject.FromObject(new
+                            {
+                                type = t,
+                                payload = userId
+                            })));
+                        break;
+                    }
+            }
+        }
         public async Task JoinRoom(string roomId, string userId)
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
@@ -30,7 +109,7 @@ namespace BackEnd.Socket
                 _currentUsers[roomId].Add(new SocketUser
                 {
                     UserId = userId,
-                    LastPing = DateTime.Now
+                    connectionId = Context.ConnectionId
                 });
             }
 

@@ -8,6 +8,6 @@ namespace BackEnd.Models
     public class SocketUser
     {
         public string UserId { get; set; }
-        public DateTime LastPing { get; set; }
+        public string connectionId { get; set; }
     }
 }
