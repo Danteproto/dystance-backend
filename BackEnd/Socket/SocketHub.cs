@@ -34,7 +34,7 @@ namespace BackEnd.Socket
                 });
             }
 
-            await Clients.Group(roomId).SendAsync("Join", JsonConvert.SerializeObject(_currentUsers[roomId].Select(x => x.UserId).ToList()));
+            await Clients.Group(roomId).SendAsync("UserListChange", JsonConvert.SerializeObject(_currentUsers[roomId].Select(x => x.UserId).ToList()));
         }
 
         public async Task LeaveRoom(string roomId, string userId)
@@ -42,7 +42,7 @@ namespace BackEnd.Socket
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomId);
             _currentUsers[roomId].Remove(_currentUsers[roomId].Where(x => x.UserId == userId).FirstOrDefault());
 
-            await Clients.Group(roomId).SendAsync("Leave", JsonConvert.SerializeObject(_currentUsers[roomId]));
+            await Clients.Group(roomId).SendAsync("UserListChange", JsonConvert.SerializeObject(_currentUsers[roomId].Select(x => x.UserId).ToList()));
         }
 
         public async Task NewChat(string roomId)
