@@ -25,34 +25,24 @@ namespace BackEnd.Socket
             {
                 _currentUsers.Add(roomId, new List<SocketUser>());
             }
-            _currentUsers[roomId].Add(new SocketUser
+            if (!_currentUsers[roomId].Any(users => users.UserId == userId))
             {
-                UserId = userId,
-                LastPing = DateTime.Now
-            });
-            await Clients.Group(roomId).SendAsync("Join", JsonConvert.SerializeObject(_currentUsers[roomId].Select(x => x.UserId).ToList(), new JsonSerializerSettings
-            {
-                ContractResolver = new DefaultContractResolver
+                _currentUsers[roomId].Add(new SocketUser
                 {
-                    NamingStrategy = new CamelCaseNamingStrategy()
-                },
-                Formatting = Formatting.Indented
-            }));
+                    UserId = userId,
+                    LastPing = DateTime.Now
+                });
+            }
+
+            await Clients.Group(roomId).SendAsync("UserListChange", JsonConvert.SerializeObject(_currentUsers[roomId].Select(x => x.UserId).ToList()));
         }
 
         public async Task LeaveRoom(string roomId, string userId)
         {
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomId);
-            _currentUsers[roomId].Remove((SocketUser)_currentUsers[roomId].Where(x => x.UserId == userId));
+            _currentUsers[roomId].Remove(_currentUsers[roomId].Where(x => x.UserId == userId).FirstOrDefault());
 
-            await Clients.Group(roomId).SendAsync("Leave", JsonConvert.SerializeObject(_currentUsers[roomId], new JsonSerializerSettings
-            {
-                ContractResolver = new DefaultContractResolver
-                {
-                    NamingStrategy = new CamelCaseNamingStrategy()
-                },
-                Formatting = Formatting.Indented
-            }));
+            await Clients.Group(roomId).SendAsync("UserListChange", JsonConvert.SerializeObject(_currentUsers[roomId].Select(x => x.UserId).ToList()));
         }
 
         public async Task NewChat(string roomId)
@@ -80,7 +70,7 @@ namespace BackEnd.Socket
                         {
                             _whiteBoards[roomId] = new List<Whiteboard>[2];
                         }
-                        if(_whiteBoards[roomId][1] == null)
+                        if (_whiteBoards[roomId][1] == null)
                         {
                             _whiteBoards[roomId][1] = new List<Whiteboard>();
                         }
@@ -136,11 +126,11 @@ namespace BackEnd.Socket
                             {
                                 _whiteBoards[roomId] = new List<Whiteboard>[2];
                             }
-                            if(_whiteBoards[roomId][0] == null)
+                            if (_whiteBoards[roomId][0] == null)
                             {
                                 _whiteBoards[roomId][0] = new List<Whiteboard>();
                             }
-                            
+
                             if (wb.Tool == "setTextboxText")
                             {
                                 var tempWhiteboard = _whiteBoards[roomId][0]

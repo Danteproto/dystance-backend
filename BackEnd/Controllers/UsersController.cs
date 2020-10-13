@@ -36,7 +36,7 @@ namespace BackEnd.Controllers
             return await _userService.Authenticate(_mapper.Map<AuthenticateRequest>(reqForm));
         }
 
-        [Authorize]
+        [AllowAnonymous]
         [HttpPost("refreshToken")]
         public IActionResult RefreshToken()
         {
