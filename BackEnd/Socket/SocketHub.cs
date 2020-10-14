@@ -17,7 +17,6 @@ namespace BackEnd.Socket
         private static Dictionary<string, List<SocketUser>> _currentUsers = new Dictionary<string, List<SocketUser>>();
         public static Dictionary<string, List<Whiteboard>[]> _whiteBoards
             = new Dictionary<string, List<Whiteboard>[]>();
-
         private static Dictionary<string, SocketUser> _pmLists = new Dictionary<string, SocketUser>();
         public enum ChatType
         {
@@ -151,6 +150,48 @@ namespace BackEnd.Socket
             }
         }
         
+
+        public async Task ConnectionState(int t, string userId)
+        {
+            var type = (ChatType)t;
+            switch (type)
+            {
+                case ChatType.Connect:
+                    {
+                        if (_pmLists.ContainsKey(userId))
+                        {
+                            _pmLists[userId].ConnectionId = Context.ConnectionId;
+                        }
+                        else
+                        {
+                            _pmLists[userId] = new SocketUser
+                            {
+                                UserId = userId,
+                                ConnectionId = Context.ConnectionId
+                            };
+                        }
+                        break;
+                    }
+                case ChatType.Disconnect:
+                    {
+                        if (_pmLists.ContainsKey(userId))
+                        {
+                            _pmLists.Remove(userId);
+                        }
+                        break;
+                    }
+            }
+        }
+
+        public async Task PrivateMessage(string senderId, string receiverId)
+        {
+            if (_pmLists.ContainsKey(receiverId))
+            {
+                await Clients
+                    .Client(_pmLists[receiverId].ConnectionId)
+                    .SendAsync("PrivateMessage", "new private message");
+            }
+        }
 
         public async Task DrawToWhiteboard(string roomId, string whiteBoard)
         {

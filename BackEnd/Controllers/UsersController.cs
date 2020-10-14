@@ -9,6 +9,8 @@ using BackEnd.Requests;
 using BackEnd.Ultilities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.StaticFiles;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace BackEnd.Controllers
 {
@@ -175,6 +177,35 @@ namespace BackEnd.Controllers
             return File(file, contentType);
         }
 
+        [HttpPost("privateMessage/add")]
+        public async Task<IActionResult> PrivateMessage()
+        {
+            var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
+            return await _userService.PrivateMessage(_mapper.Map<PrivateMessageRequest>(reqForm));
+        }
+
+        [HttpGet("privateMessage/get")]
+        public IActionResult GetPrivateMessage(string id1, string id2)
+        {
+            var pmList = _userService.GetPrivateMessage(id1, id2);
+            return Content(JsonConvert.SerializeObject(pmList, new JsonSerializerSettings
+            {
+                ContractResolver = new DefaultContractResolver
+                {
+                    NamingStrategy = new CamelCaseNamingStrategy()
+                },
+                Formatting = Formatting.Indented
+            }));
+        }
+        [HttpGet("privateMessage/getFile")]
+        public async Task<IActionResult> PMFile(string Id, string fileName, int type, string realName)
+        {
+            var file = _userService.GetPMFile(Id, fileName, type);
+            string contentType;
+            new FileExtensionContentTypeProvider().TryGetContentType(fileName, out contentType);
+            Response.Headers.Add("Content-Disposition", $"attachment; filename={realName}");
+            return File(file, contentType);
+        }
         //[AllowAnonymous]
         //[HttpGet("externalLoginServices")]
         //public async Task<IActionResult> GetExternalLoginServices()

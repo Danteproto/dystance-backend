@@ -19,11 +19,19 @@ using BackEnd.Stores;
 using System.IO;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace BackEnd.Services
 {
     public interface IUserService
     {
+        public enum MessageType
+        {
+            Text,
+            Image,
+            File
+        }
         public Task<IActionResult> Authenticate(AuthenticateRequest model);
         IActionResult RefreshToken(string token);
         bool RevokeToken(string token, string ipAddress);
@@ -40,7 +48,9 @@ namespace BackEnd.Services
         public Task<IActionResult> ResetPasswordUpdate(ResetPasswordUpdate model);
         public Task<IActionResult> UpdateProfile(UpdateProfileRequest model);
         public FileStream getAvatar(string realName, string userName, string fileName);
-
+        public Task<IActionResult> PrivateMessage(PrivateMessageRequest model);
+        public List<PrivateMessage> GetPrivateMessage(string id1, string id2);
+        public FileStream GetPMFile(string userId, string fileName, int type);
     }
 
     public class UserService : IUserService
@@ -56,6 +66,12 @@ namespace BackEnd.Services
         private readonly IUserAccessor _userAccessor;
         private readonly IUserStore _userStore;
         private readonly IWebHostEnvironment _env;
+        public enum MessageType
+        {
+            Text,
+            Image,
+            File
+        }
 
         public UserService(
             UserDbContext context,
@@ -603,6 +619,124 @@ namespace BackEnd.Services
 
             return file;
 
+        }
+
+        public async Task<IActionResult> PrivateMessage(PrivateMessageRequest model)
+        {
+            var type = (MessageType)Convert.ToInt32(model.Type);
+            try
+            {
+                switch (type)
+                {
+                    case MessageType.Text:
+                        {
+                            var pm = new PrivateMessage
+                            {
+                                SenderId = model.SenderId,
+                                ReceiverId = model.ReceiverId,
+                                Date = DateTime.Now,
+                                Content = model.Content,
+                                Type = (int)type
+                            };
+                            await _context.PrivateMessages.AddAsync(pm);
+                            break;
+                        }
+                    case MessageType.Image:
+                        {
+                            var img = model.File;
+                            var extension = Path.GetExtension(img.FileName);
+
+                            var imgName = Convert.ToBase64String(
+                                    System.Text.Encoding.UTF8.GetBytes(DateTime.Now.ToString())
+                                );
+                            var path = Path.Combine(_env.ContentRootPath, $"Files/Users/{model.SenderId}/PM/Images");
+                            if (!Directory.Exists(path))
+                            {
+                                Directory.CreateDirectory(path);
+                            }
+
+                            var imgPath = Path.Combine(path, imgName + extension);
+                            if (img.Length > 0)
+                            {
+                                using var fileStream = new FileStream(imgPath, FileMode.Create);
+                                img.CopyTo(fileStream);
+                            }
+                            var pm = new PrivateMessage
+                            {
+                                SenderId = model.SenderId,
+                                ReceiverId = model.ReceiverId,
+                                Date = DateTime.Now,
+                                Content = $"api/users/privateMessage/getFile?id={model.SenderId}&fileName={imgName+extension}&type={(int)type}&realName={Path.GetFileName(img.FileName)}",
+                                Type = (int)type,
+                                FileName = Path.GetFileName(img.FileName)
+                            };
+                            await _context.PrivateMessages.AddAsync(pm);
+                            break;
+                        }
+                    case MessageType.File:
+                        {
+                            var file = model.File;
+                            var extension = Path.GetExtension(file.FileName);
+                            var fileName = Convert.ToBase64String(
+                                    System.Text.Encoding.UTF8.GetBytes(DateTime.Now.ToString())
+                                );
+                            var path = Path.Combine(_env.ContentRootPath, $"Files/Users/{model.SenderId}/PM/Files");
+                            if (!Directory.Exists(path))
+                            {
+                                Directory.CreateDirectory(path);
+                            }
+                            var filePath = Path.Combine(path, fileName + extension);
+                            if (file.Length > 0)
+                            {
+                                using var fileStream = new FileStream(filePath, FileMode.Create);
+                                file.CopyTo(fileStream);
+                            }
+                            var pm = new PrivateMessage
+                            {
+                                SenderId = model.SenderId,
+                                ReceiverId = model.ReceiverId,
+                                Date = DateTime.Now,
+                                Content = $"api/users/privateMessage/getFile?id={model.SenderId}&fileName={fileName + extension}&type={(int)type}&realName={Path.GetFileName(file.FileName)}",
+                                Type = (int)type,
+                                FileName = Path.GetFileName(file.FileName)
+                            };
+                            await _context.PrivateMessages.AddAsync(pm);
+                            break;
+                        }
+                }
+                _context.SaveChanges();
+                return new OkObjectResult(new { message = "successful"});
+            }catch(Exception e)
+            {
+                return new ObjectResult(new { message = "add message fail" })
+                {
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public  List<PrivateMessage> GetPrivateMessage(string id1, string id2)
+        {
+            return _context.PrivateMessages
+                .Where(pm => (pm.SenderId == id1 && pm.ReceiverId == id2) || (pm.SenderId == id2 && pm.ReceiverId == id1))
+                .ToList();
+            
+        }
+
+        public FileStream GetPMFile(string userId, string fileName, int type)
+        {
+            var rootPath = _env.ContentRootPath;
+            string path = "";
+            if (type == (int)MessageType.Image)
+            {
+                path = Path.Combine(rootPath, $"Files/Users/{userId}/PM/Images");
+            }
+            else if (type == (int)MessageType.File)
+            {
+                path = Path.Combine(rootPath, $"Files/Users/{userId}/PM/Files");
+            }
+            var filePath = Path.Combine(path, fileName);
+            return System.IO.File.OpenRead(filePath);
         }
     }
 
