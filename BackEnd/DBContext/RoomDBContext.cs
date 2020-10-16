@@ -16,5 +16,6 @@ namespace BackEnd.DBContext
         public DbSet<Room> Room { get; set; }
         public DbSet<RoomChat> RoomChat { get; set; }
         public DbSet<RoomUserLink> RoomUserLink { get; set; }
+        public DbSet<Deadline> Deadline { get; set; }
     }
 }
