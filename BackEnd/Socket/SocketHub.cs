@@ -17,6 +17,14 @@ namespace BackEnd.Socket
         private static Dictionary<string, List<SocketUser>> _currentUsers = new Dictionary<string, List<SocketUser>>();
         public static Dictionary<string, List<Whiteboard>[]> _whiteBoards
             = new Dictionary<string, List<Whiteboard>[]>();
+
+        private static Dictionary<string, SocketUser> _pmLists = new Dictionary<string, SocketUser>();
+        public enum ChatType
+        {
+            Connect,
+            Disconnect
+        }
+
         public enum RoomType
         {
             Join,
@@ -40,7 +48,7 @@ namespace BackEnd.Socket
 
                         if (_currentUsers[roomId].Any(user => user.UserId == userId))
                         {
-                            _currentUsers[roomId].First(user => user.UserId == userId).connectionId = Context.ConnectionId;
+                            _currentUsers[roomId].First(user => user.UserId == userId).ConnectionId = Context.ConnectionId;
                         }
 
                         if (!_currentUsers[roomId].Any(user => user.UserId == userId))
@@ -48,7 +56,7 @@ namespace BackEnd.Socket
                             _currentUsers[roomId].Add(new SocketUser
                             {
                                 UserId = userId,
-                                connectionId = Context.ConnectionId
+                                ConnectionId = Context.ConnectionId
                             });
                         }
 
@@ -86,7 +94,7 @@ namespace BackEnd.Socket
                 default:
                     {
                         await Clients.Client(
-                            _currentUsers[roomId].Where(user => user.UserId == userId).Select(user => user.connectionId).FirstOrDefault())
+                            _currentUsers[roomId].Where(user => user.UserId == userId).Select(user => user.ConnectionId).FirstOrDefault())
                             .SendAsync("RoomAction",
                             JsonConvert.SerializeObject(JObject.FromObject(new
                             {
@@ -97,38 +105,52 @@ namespace BackEnd.Socket
                     }
             }
         }
-        public async Task JoinRoom(string roomId, string userId)
+
+        public async Task ConnectionState(int t, string userId)
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, roomId);
-            if (!_currentUsers.ContainsKey(roomId))
+            var type = (ChatType)t;
+            switch (type)
             {
-                _currentUsers.Add(roomId, new List<SocketUser>());
+                case ChatType.Connect:
+                    {
+                        if (_pmLists.ContainsKey(userId))
+                        {
+                            _pmLists[userId].ConnectionId = Context.ConnectionId;
+                        }
+                        else
+                        {
+                            _pmLists[userId] = new SocketUser
+                            {
+                                UserId = userId,
+                                ConnectionId = Context.ConnectionId
+                            };
+                        }
+                        break;
+                    }
+                case ChatType.Disconnect:
+                    {
+                        if (_pmLists.ContainsKey(userId))
+                        {
+                            _pmLists.Remove(userId);
+                        }
+                        break;
+                    }
             }
-            if (!_currentUsers[roomId].Any(users => users.UserId == userId))
+        }
+        public async Task RemoteControlSignal(int type, string userId, string data)
+        {
+            if (_pmLists.ContainsKey(userId))
             {
-                _currentUsers[roomId].Add(new SocketUser
-                {
-                    UserId = userId,
-                    connectionId = Context.ConnectionId
-                });
+                await Clients.Client(_pmLists[userId].ConnectionId)
+                    .SendAsync("RemoteControlSignal",
+                    JsonConvert.SerializeObject(JObject.FromObject(new
+                    {
+                        type,
+                        payload = data
+                    })));
             }
-
-            await Clients.Group(roomId).SendAsync("UserListChange", JsonConvert.SerializeObject(_currentUsers[roomId].Select(x => x.UserId).ToList()));
         }
-
-        public async Task LeaveRoom(string roomId, string userId)
-        {
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomId);
-            _currentUsers[roomId].Remove(_currentUsers[roomId].Where(x => x.UserId == userId).FirstOrDefault());
-
-            await Clients.Group(roomId).SendAsync("UserListChange", JsonConvert.SerializeObject(_currentUsers[roomId].Select(x => x.UserId).ToList()));
-        }
-
-        public async Task NewChat(string roomId)
-        {
-            await Clients.Group(roomId).SendAsync("NewChat", $"{Context.ConnectionId} add new chat");
-
-        }
+        
 
         public async Task DrawToWhiteboard(string roomId, string whiteBoard)
         {
