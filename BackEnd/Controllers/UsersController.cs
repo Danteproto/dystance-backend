@@ -177,14 +177,14 @@ namespace BackEnd.Controllers
             return File(file, contentType);
         }
 
-        [HttpPost("privateMessage/add")]
+        [HttpPost("chat/add")]
         public async Task<IActionResult> PrivateMessage()
         {
             var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
             return await _userService.PrivateMessage(_mapper.Map<PrivateMessageRequest>(reqForm));
         }
 
-        [HttpGet("privateMessage/get")]
+        [HttpGet("chat/get")]
         public IActionResult GetPrivateMessage(string id1, string id2)
         {
             var pmList = _userService.GetPrivateMessage(id1, id2);
@@ -197,7 +197,22 @@ namespace BackEnd.Controllers
                 Formatting = Formatting.Indented
             }));
         }
-        [HttpGet("privateMessage/getFile")]
+
+        [HttpGet("chat/preview")]
+        public IActionResult GetPreview(string id)
+        {
+            var previews = _userService.GetPreview(id);
+            return Content(JsonConvert.SerializeObject(previews, new JsonSerializerSettings
+            {
+                ContractResolver = new DefaultContractResolver
+                {
+                    NamingStrategy = new CamelCaseNamingStrategy()
+                },
+                Formatting = Formatting.Indented
+            }));
+        }
+
+        [HttpGet("chat/getFile")]
         public async Task<IActionResult> PMFile(string Id, string fileName, int type, string realName)
         {
             var file = _userService.GetPMFile(Id, fileName, type);

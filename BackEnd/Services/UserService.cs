@@ -50,6 +50,7 @@ namespace BackEnd.Services
         public FileStream getAvatar(string realName, string userName, string fileName);
         public Task<IActionResult> PrivateMessage(PrivateMessageRequest model);
         public List<PrivateMessage> GetPrivateMessage(string id1, string id2);
+        public List<PrivateMessage> GetPreview(string id);
         public FileStream GetPMFile(string userId, string fileName, int type);
     }
 
@@ -666,7 +667,7 @@ namespace BackEnd.Services
                                 SenderId = model.SenderId,
                                 ReceiverId = model.ReceiverId,
                                 Date = DateTime.Now,
-                                Content = $"api/users/privateMessage/getFile?id={model.SenderId}&fileName={imgName+extension}&type={(int)type}&realName={Path.GetFileName(img.FileName)}",
+                                Content = $"api/users/chat/getFile?id={model.SenderId}&fileName={imgName+extension}&type={(int)type}&realName={Path.GetFileName(img.FileName)}",
                                 Type = (int)type,
                                 FileName = Path.GetFileName(img.FileName)
                             };
@@ -696,7 +697,7 @@ namespace BackEnd.Services
                                 SenderId = model.SenderId,
                                 ReceiverId = model.ReceiverId,
                                 Date = DateTime.Now,
-                                Content = $"api/users/privateMessage/getFile?id={model.SenderId}&fileName={fileName + extension}&type={(int)type}&realName={Path.GetFileName(file.FileName)}",
+                                Content = $"api/users/chat/getFile?id={model.SenderId}&fileName={fileName + extension}&type={(int)type}&realName={Path.GetFileName(file.FileName)}",
                                 Type = (int)type,
                                 FileName = Path.GetFileName(file.FileName)
                             };
@@ -715,10 +716,19 @@ namespace BackEnd.Services
             }
         }
 
-        public  List<PrivateMessage> GetPrivateMessage(string id1, string id2)
+        public List<PrivateMessage> GetPreview(string id)
+        {
+            List<string> recIds = _context.PrivateMessages.Where(pm => pm.SenderId == id).Select(pm => pm.ReceiverId).ToList();
+            List<string> senIds = _context.PrivateMessages.Where(pm => pm.ReceiverId == id).Select(pm => pm.SenderId).ToList();
+            List<string> ids = recIds.Concat(senIds).Distinct().ToList();
+            return ids.Select(item => GetPrivateMessage(item, id).Last()).ToList();
+        }
+
+        public List<PrivateMessage> GetPrivateMessage(string id1, string id2)
         {
             return _context.PrivateMessages
                 .Where(pm => (pm.SenderId == id1 && pm.ReceiverId == id2) || (pm.SenderId == id2 && pm.ReceiverId == id1))
+                .OrderBy(pm => pm.Date)
                 .ToList();
             
         }
