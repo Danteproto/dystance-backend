@@ -197,6 +197,19 @@ namespace BackEnd.Controllers
                 Formatting = Formatting.Indented
             }));
         }
+        [HttpGet("chat/getLast")]
+        public IActionResult GetLastPm(string id1, string id2)
+        {
+            var lastPm = _userService.GetLastPm(id1, id2);
+            return Content(JsonConvert.SerializeObject(lastPm, new JsonSerializerSettings
+            {
+                ContractResolver = new DefaultContractResolver
+                {
+                    NamingStrategy = new CamelCaseNamingStrategy()
+                },
+                Formatting = Formatting.Indented
+            }));
+        }
 
         [HttpGet("chat/preview")]
         public IActionResult GetPreview(string id)

@@ -51,6 +51,7 @@ namespace BackEnd.Services
         public Task<IActionResult> PrivateMessage(PrivateMessageRequest model);
         public List<PrivateMessage> GetPrivateMessage(string id1, string id2);
         public List<PrivateMessage> GetPreview(string id);
+        public PrivateMessage GetLastPm(string id1, string id2);
         public FileStream GetPMFile(string userId, string fileName, int type);
     }
 
@@ -747,6 +748,14 @@ namespace BackEnd.Services
             }
             var filePath = Path.Combine(path, fileName);
             return System.IO.File.OpenRead(filePath);
+        }
+
+        public PrivateMessage GetLastPm(string id1, string id2)
+        {
+            return _context.PrivateMessages
+                .Where(pm => (pm.SenderId == id1 && pm.ReceiverId == id2) || (pm.SenderId == id2 && pm.ReceiverId == id1))
+                .OrderBy(pm => pm.Date)
+                .Last();
         }
     }
 

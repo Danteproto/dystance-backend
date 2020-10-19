@@ -149,39 +149,6 @@ namespace BackEnd.Socket
                     })));
             }
         }
-        
-
-        public async Task ConnectionState(int t, string userId)
-        {
-            var type = (ChatType)t;
-            switch (type)
-            {
-                case ChatType.Connect:
-                    {
-                        if (_pmLists.ContainsKey(userId))
-                        {
-                            _pmLists[userId].ConnectionId = Context.ConnectionId;
-                        }
-                        else
-                        {
-                            _pmLists[userId] = new SocketUser
-                            {
-                                UserId = userId,
-                                ConnectionId = Context.ConnectionId
-                            };
-                        }
-                        break;
-                    }
-                case ChatType.Disconnect:
-                    {
-                        if (_pmLists.ContainsKey(userId))
-                        {
-                            _pmLists.Remove(userId);
-                        }
-                        break;
-                    }
-            }
-        }
 
         public async Task PrivateMessage(string senderId, string receiverId)
         {
@@ -189,7 +156,10 @@ namespace BackEnd.Socket
             {
                 await Clients
                     .Client(_pmLists[receiverId].ConnectionId)
-                    .SendAsync("PrivateMessage", "new private message");
+                    .SendAsync("PrivateMessage", JsonConvert.SerializeObject(JObject.FromObject(new
+                    {
+                        senderId = senderId
+                    })));
             }
         }
 
