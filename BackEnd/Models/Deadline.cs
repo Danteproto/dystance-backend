@@ -10,6 +10,7 @@ namespace BackEnd.Models
     {
         [Key]
         public int DeadlineId { get; set; }
+        public string Title { get; set; }
         public TimeSpan DeadlineTime { get; set; }
         public DateTime DeadlineDate { get; set; }
         public string Description { get; set; }

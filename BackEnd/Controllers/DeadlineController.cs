@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace BackEnd.Controllers
 {
-    [Route("api")]
+    [Route("api/rooms")]
     [ApiController]
     [Authorize]
     public class DeadlineController : ControllerBase
