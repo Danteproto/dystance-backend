@@ -46,6 +46,7 @@ namespace BackEnd.Services
             var deadline = new Deadline
             {
                 CreatorId = _userAccessor.GetCurrentUserId(),
+                Title = deadlineRequest.Title,
                 DeadlineTime = TimeSpan.Parse(deadlineRequest.DeadlineTime),
                 DeadlineDate = DateTime.Parse(deadlineRequest.DeadlineDate),
                 Description = deadlineRequest.Description,
@@ -88,6 +89,7 @@ namespace BackEnd.Services
                     var remaining = new DateTime(deadline.DeadlineDate.Year, deadline.DeadlineDate.Month, deadline.DeadlineDate.Day, deadline.DeadlineTime.Hours, deadline.DeadlineTime.Minutes, deadline.DeadlineTime.Seconds) - DateTime.Now;
                     listResult.Add(new DeadlineResponse 
                     {
+                        Title = deadline.Title,
                         DeadlineTime = deadline.DeadlineTime.ToString(),
                         DeadlineDate = deadline.DeadlineDate.ToShortDateString(),
                         Description = deadline.Description,
@@ -99,10 +101,6 @@ namespace BackEnd.Services
 
             return new OkObjectResult(listResult);
         }
-
-
-
-
 
     }
 }

@@ -7,6 +7,7 @@ namespace BackEnd.Responses
 {
     public class DeadlineResponse
     {
+        public string Title { get; set; }
         public string DeadlineTime { get; set; }
         public string DeadlineDate { get; set; }
         public string Description { get; set; }
