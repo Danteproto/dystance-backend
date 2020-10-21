@@ -3,6 +3,8 @@ using BackEnd.DBContext;
 using BackEnd.Interfaces;
 using BackEnd.Models;
 using BackEnd.Requests;
+using BackEnd.Responses;
+using BackEnd.Ultilities;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing.Patterns;
@@ -40,7 +42,8 @@ namespace BackEnd.Services
                             where userRooms.UserId == appUser.Id
                             select userRooms.RoomId).ToList();
 
-            var list = new List<Room>();
+            //Toàn bộ room người dùng này tham gia vào
+            var rooms = new List<Room>();
 
             foreach (var roomId in userLinks)
             {
@@ -49,9 +52,46 @@ namespace BackEnd.Services
                 && r.StartDate >= model.StartDate
                 && r.EndDate <= model.EndDate);
 
-                list.Add(room);
+                rooms.Add(room);
             }
-            return new OkObjectResult(list);
+
+            var resultList = new List<TimetableResponse>();
+            foreach (var room in rooms)
+            {
+                var repeatOccurence = int.Parse(room.RepeatOccurence);
+                var repeatDays = room.RepeatDays.Split(",");
+
+                for(int i = 0; i<repeatDays.Length; i++)
+                {
+                    repeatDays[i] = repeatDays[i].Replace("\"", "");
+                }
+
+                int x = 0;
+                DateTime startDate = room.StartDate;
+                //repeat week
+                while(x < repeatOccurence)
+                {
+                    foreach(DateTime day in DateTimeUtil.EachDay(startDate, startDate.AddDays(7))){
+                        if (repeatDays.Contains(day.DayOfWeek.ToString().ToLower()))
+                        {
+                            var roomResult = new TimetableResponse
+                            {
+                                RoomId = room.RoomId.ToString(),
+                                EventType = 0,
+                                Title = room.RoomName,
+                                CreatorId = room.CreatorId,
+                                Description = room.Description,
+                                StartDate = day.ToShortDateString() + "T" + room.StartHour,
+                                EndDate = day.ToShortDateString() + "T" + room.EndHour
+                            };
+                            resultList.Add(roomResult);
+                        }
+                    }
+                    x++;
+                    startDate = startDate.AddDays(7);
+                }
+            }
+            return new OkObjectResult(resultList);
         }
     }
 }

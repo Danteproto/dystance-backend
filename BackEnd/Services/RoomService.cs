@@ -34,7 +34,9 @@ namespace BackEnd.Services
                 StartDate = Convert.ToDateTime(request.Form["startDate"]),
                 EndDate = Convert.ToDateTime(request.Form["endDate"]),
                 StartHour = TimeSpan.Parse(request.Form["startHour"]),
-                EndHour = TimeSpan.Parse(request.Form["endHour"])
+                EndHour = TimeSpan.Parse(request.Form["endHour"]),
+                RepeatOccurence = request.Form["repeatOccurrence"],
+                RepeatDays = request.Form["repeatDays"]
             };
 
             var result = await RoomDAO.Create(context, room);
