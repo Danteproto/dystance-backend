@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace BackEnd.Controllers
 {
-    [Route("api/rooms")]
+    [Route("api/rooms/deadline")]
     [ApiController]
     [Authorize]
     public class DeadlineController : ControllerBase
@@ -26,7 +26,7 @@ namespace BackEnd.Controllers
 
         }
         //createDeadline
-        [HttpPost("createDeadline")]
+        [HttpPost("create")]
         public async Task<IActionResult> CreateDeadLine()
         {
             var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
@@ -34,7 +34,7 @@ namespace BackEnd.Controllers
         }
 
         //Get List Deadline By RoomId
-        [HttpGet("getDeadline")]
+        [HttpGet("get")]
         public async Task<IActionResult> GetDeadlineForRoom(string roomId)
         {
             return await _deadlineService.GetDeadlineForRoom(roomId);
