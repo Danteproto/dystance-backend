@@ -66,7 +66,7 @@ namespace BackEnd.Services
                 {
                     DeadlineId = deadline.DeadlineId,
                     Title = deadline.Title,
-                    EndDate = deadline.DeadlineDate.ToShortDateString() + "T" + deadline.DeadlineTime,
+                    EndDate = deadline.DeadlineDate.ToString("yyyy-MM-dd") + "T" + deadline.DeadlineTime,
                     Description = deadline.Description,
                     CreatorId = deadline.CreatorId,
                     RoomId = deadline.RoomId.ToString(),
@@ -103,7 +103,7 @@ namespace BackEnd.Services
                     {
                         DeadlineId = deadline.DeadlineId,
                         Title = deadline.Title,
-                        EndDate = deadline.DeadlineDate.ToShortDateString()+"T"+ deadline.DeadlineTime,
+                        EndDate = deadline.DeadlineDate.ToString("yyyy-MM-dd") + "T" + deadline.DeadlineTime,
                         Description = deadline.Description,
                         RoomId = deadline.RoomId.ToString(),
                         //RemainingTime = String.Format("{0} days {1} hours {2} minutes {3} seconds", remaining.Days, remaining.Hours, remaining.Minutes, remaining.Seconds),
