@@ -48,7 +48,7 @@ namespace BackEnd.Services
         public Task<IActionResult> ResetPasswordUpdate(ResetPasswordUpdate model);
         public Task<IActionResult> UpdateProfile(UpdateProfileRequest model);
         public FileStream getAvatar(string realName, string userName, string fileName);
-        public Task<IActionResult> PrivateMessage(PrivateMessageRequest model);
+        public Task<IActionResult> PrivateMessage(HttpRequest request);
         public List<PrivateMessage> GetPrivateMessage(string id1, string id2);
         public List<PrivateMessage> GetPreview(string id);
         public PrivateMessage GetLastPm(string id1, string id2);
@@ -623,9 +623,9 @@ namespace BackEnd.Services
 
         }
 
-        public async Task<IActionResult> PrivateMessage(PrivateMessageRequest model)
+        public async Task<IActionResult> PrivateMessage(HttpRequest request)
         {
-            var type = (MessageType)Convert.ToInt32(model.Type);
+            var type = (MessageType)Convert.ToInt32(request.Form["chatType"]);
             try
             {
                 switch (type)
@@ -634,10 +634,10 @@ namespace BackEnd.Services
                         {
                             var pm = new PrivateMessage
                             {
-                                SenderId = model.SenderId,
-                                ReceiverId = model.ReceiverId,
+                                SenderId = request.Form["senderId"],
+                                ReceiverId = request.Form["receiverId"],
                                 Date = DateTime.Now,
-                                Content = model.Content,
+                                Content = request.Form["content"],
                                 Type = (int)type
                             };
                             await _context.PrivateMessages.AddAsync(pm);
@@ -645,13 +645,13 @@ namespace BackEnd.Services
                         }
                     case MessageType.Image:
                         {
-                            var img = model.File;
+                            var img = request.Form.Files[0];
                             var extension = Path.GetExtension(img.FileName);
 
                             var imgName = Convert.ToBase64String(
                                     System.Text.Encoding.UTF8.GetBytes(DateTime.Now.ToString())
                                 );
-                            var path = Path.Combine(_env.ContentRootPath, $"Files/Users/{model.SenderId}/PM/Images");
+                            var path = Path.Combine(_env.ContentRootPath, $"Files/Users/{request.Form["senderId"]}/PM/Images");
                             if (!Directory.Exists(path))
                             {
                                 Directory.CreateDirectory(path);
@@ -665,10 +665,10 @@ namespace BackEnd.Services
                             }
                             var pm = new PrivateMessage
                             {
-                                SenderId = model.SenderId,
-                                ReceiverId = model.ReceiverId,
+                                SenderId = request.Form["senderId"],
+                                ReceiverId = request.Form["receiverId"],
                                 Date = DateTime.Now,
-                                Content = $"api/users/chat/getFile?id={model.SenderId}&fileName={imgName+extension}&type={(int)type}&realName={Path.GetFileName(img.FileName)}",
+                                Content = $"api/users/chat/getFile?id={request.Form["senderId"]}&fileName={imgName+extension}&type={(int)type}&realName={Path.GetFileName(img.FileName)}",
                                 Type = (int)type,
                                 FileName = Path.GetFileName(img.FileName)
                             };
@@ -677,12 +677,12 @@ namespace BackEnd.Services
                         }
                     case MessageType.File:
                         {
-                            var file = model.File;
+                            var file = request.Form.Files[0];
                             var extension = Path.GetExtension(file.FileName);
                             var fileName = Convert.ToBase64String(
                                     System.Text.Encoding.UTF8.GetBytes(DateTime.Now.ToString())
                                 );
-                            var path = Path.Combine(_env.ContentRootPath, $"Files/Users/{model.SenderId}/PM/Files");
+                            var path = Path.Combine(_env.ContentRootPath, $"Files/Users/{request.Form["senderId"]}/PM/Files");
                             if (!Directory.Exists(path))
                             {
                                 Directory.CreateDirectory(path);
@@ -695,10 +695,10 @@ namespace BackEnd.Services
                             }
                             var pm = new PrivateMessage
                             {
-                                SenderId = model.SenderId,
-                                ReceiverId = model.ReceiverId,
+                                SenderId = request.Form["senderId"],
+                                ReceiverId = request.Form["receiverId"],
                                 Date = DateTime.Now,
-                                Content = $"api/users/chat/getFile?id={model.SenderId}&fileName={fileName + extension}&type={(int)type}&realName={Path.GetFileName(file.FileName)}",
+                                Content = $"api/users/chat/getFile?id={request.Form["senderId"]}&fileName={fileName + extension}&type={(int)type}&realName={Path.GetFileName(file.FileName)}",
                                 Type = (int)type,
                                 FileName = Path.GetFileName(file.FileName)
                             };

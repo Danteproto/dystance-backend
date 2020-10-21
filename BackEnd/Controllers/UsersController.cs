@@ -180,8 +180,7 @@ namespace BackEnd.Controllers
         [HttpPost("chat/add")]
         public async Task<IActionResult> PrivateMessage()
         {
-            var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
-            return await _userService.PrivateMessage(_mapper.Map<PrivateMessageRequest>(reqForm));
+            return await _userService.PrivateMessage(Request);
         }
 
         [HttpGet("chat/get")]
@@ -224,7 +223,7 @@ namespace BackEnd.Controllers
                 Formatting = Formatting.Indented
             }));
         }
-
+        [AllowAnonymous]
         [HttpGet("chat/getFile")]
         public async Task<IActionResult> PMFile(string Id, string fileName, int type, string realName)
         {
