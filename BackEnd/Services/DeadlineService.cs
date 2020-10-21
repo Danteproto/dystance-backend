@@ -42,6 +42,10 @@ namespace BackEnd.Services
             {
                 return new BadRequestObjectResult(new { type = 1, message = "Deadline date has exceeded room's end date !" });
             }
+            if (DateTime.Compare(DateTime.Parse(deadlineRequest.DeadlineDate), room.StartDate) < 0)
+            {
+                return new BadRequestObjectResult(new { type = 1, message = "Deadline date has exceeded room's start date!!" });
+            }
 
             var deadline = new Deadline
             {
@@ -58,7 +62,15 @@ namespace BackEnd.Services
 
             if (result > 0)
             {
-                return new OkObjectResult(deadline);
+                return new OkObjectResult(new 
+                {
+                    DeadlineId = deadline.DeadlineId,
+                    Title = deadline.Title,
+                    EndDate = deadline.DeadlineDate.ToShortDateString() + "T" + deadline.DeadlineTime,
+                    Description = deadline.Description,
+                    CreatorId = deadline.CreatorId,
+                    RoomId = deadline.RoomId.ToString(),
+                });
             }
             else
             {
@@ -89,12 +101,12 @@ namespace BackEnd.Services
                     var remaining = new DateTime(deadline.DeadlineDate.Year, deadline.DeadlineDate.Month, deadline.DeadlineDate.Day, deadline.DeadlineTime.Hours, deadline.DeadlineTime.Minutes, deadline.DeadlineTime.Seconds) - DateTime.Now;
                     listResult.Add(new DeadlineResponse 
                     {
+                        DeadlineId = deadline.DeadlineId,
                         Title = deadline.Title,
-                        DeadlineTime = deadline.DeadlineTime.ToString(),
-                        DeadlineDate = deadline.DeadlineDate.ToShortDateString(),
+                        EndDate = deadline.DeadlineDate.ToShortDateString()+"T"+ deadline.DeadlineTime,
                         Description = deadline.Description,
                         RoomId = deadline.RoomId.ToString(),
-                        RemainingTime = String.Format("{0} days {1} hours {2} minutes {3} seconds", remaining.Days, remaining.Hours, remaining.Minutes, remaining.Seconds),
+                        //RemainingTime = String.Format("{0} days {1} hours {2} minutes {3} seconds", remaining.Days, remaining.Hours, remaining.Minutes, remaining.Seconds),
                     });
                 }
             }
