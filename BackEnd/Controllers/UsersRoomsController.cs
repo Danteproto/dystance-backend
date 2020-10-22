@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace BackEnd.Controllers
 {
     [Authorize]
-    [Route("api")]
+    [Route("api/users")]
     [ApiController]
     public class UsersRoomsController : ControllerBase
     {
