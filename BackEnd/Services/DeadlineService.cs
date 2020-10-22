@@ -17,6 +17,8 @@ namespace BackEnd.Services
     {
         public Task<IActionResult> CreateDeadline(DeadlineRequest deadlineRequest);
         public Task<IActionResult> GetDeadlineForRoom(string roomid);
+        public Task<IActionResult> UpdateDeadLineById(UpdateDeadlineRequest deadlineRequest);
+        public Task<IActionResult> DeleteDeadLine(int id);
     }
     public class DeadlineService : IDeadlineService
     {
@@ -62,7 +64,7 @@ namespace BackEnd.Services
 
             if (result > 0)
             {
-                return new OkObjectResult(new 
+                return new OkObjectResult(new
                 {
                     DeadlineId = deadline.DeadlineId,
                     Title = deadline.Title,
@@ -85,7 +87,7 @@ namespace BackEnd.Services
         public async Task<IActionResult> GetDeadlineForRoom(string roomId)
         {
             //get current room by roomId
-            var room = await  _roomDBContext.Room.FirstOrDefaultAsync(r => r.RoomId.ToString() == roomId);
+            var room = await _roomDBContext.Room.FirstOrDefaultAsync(r => r.RoomId.ToString() == roomId);
             if (room == null)
             {
                 return new BadRequestObjectResult(new { type = 0, message = "Room not found !" });
@@ -99,7 +101,7 @@ namespace BackEnd.Services
                 if (deadline.RoomId == room.RoomId)
                 {
                     var remaining = new DateTime(deadline.DeadlineDate.Year, deadline.DeadlineDate.Month, deadline.DeadlineDate.Day, deadline.DeadlineTime.Hours, deadline.DeadlineTime.Minutes, deadline.DeadlineTime.Seconds) - DateTime.Now;
-                    listResult.Add(new DeadlineResponse 
+                    listResult.Add(new DeadlineResponse
                     {
                         DeadlineId = deadline.DeadlineId,
                         Title = deadline.Title,
@@ -112,6 +114,78 @@ namespace BackEnd.Services
             }
 
             return new OkObjectResult(listResult);
+        }
+
+        public async Task<IActionResult> UpdateDeadLineById(UpdateDeadlineRequest deadlineRequest)
+        {
+            //get current room by roomId
+            var room = _roomDBContext.Room.FirstOrDefault(r => r.RoomId.ToString() == deadlineRequest.RoomId);
+            if (room == null)
+            {
+                return new BadRequestObjectResult(new { type = 0, message = "Room not found !" });
+            }
+
+            //check trong khoang startdate end date
+            if (DateTime.Compare(DateTime.Parse(deadlineRequest.DeadlineDate), room.EndDate) > 0)
+            {
+                return new BadRequestObjectResult(new { type = 1, message = "Deadline date has exceeded room's end date !" });
+            }
+            if (DateTime.Compare(DateTime.Parse(deadlineRequest.DeadlineDate), room.StartDate) < 0)
+            {
+                return new BadRequestObjectResult(new { type = 1, message = "Deadline date has exceeded room's start date!!" });
+            }
+
+            var deadline = new Deadline
+            {
+                DeadlineId = Convert.ToInt32(deadlineRequest.Id),
+                CreatorId = _userAccessor.GetCurrentUserId(),
+                Title = deadlineRequest.Title,
+                DeadlineTime = TimeSpan.Parse(deadlineRequest.DeadlineTime),
+                DeadlineDate = DateTime.Parse(deadlineRequest.DeadlineDate),
+                Description = deadlineRequest.Description,
+                RoomId = room.RoomId
+            };
+
+            _roomDBContext.Deadline.Update(deadline);
+            var result = await _roomDBContext.SaveChangesAsync();
+
+            if (result > 0)
+            {
+                return new OkObjectResult(new
+                {
+                    DeadlineId = deadline.DeadlineId,
+                    Title = deadline.Title,
+                    EndDate = deadline.DeadlineDate.ToString("yyyy-MM-dd") + "T" + deadline.DeadlineTime,
+                    Description = deadline.Description,
+                    CreatorId = deadline.CreatorId,
+                    RoomId = deadline.RoomId.ToString(),
+                });
+            }
+            else
+            {
+                return new ObjectResult("Error Updating deadline object")
+                {
+                    StatusCode = 500
+                };
+            }
+        }
+
+        public async Task<IActionResult> DeleteDeadLine(int id)
+        {
+            try
+            {
+                var deadline = _roomDBContext.Deadline.Where(deadline => deadline.DeadlineId == id).FirstOrDefault();
+                _roomDBContext.Deadline.Remove(deadline);
+                await _roomDBContext.SaveChangesAsync();
+                return new OkObjectResult("Delete successful");
+            }
+            catch (Exception e)
+            {
+                return new ObjectResult("Error deleting deadline object")
+                {
+                    StatusCode = 500
+                };
+            }
         }
 
     }

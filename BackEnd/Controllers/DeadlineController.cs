@@ -39,5 +39,18 @@ namespace BackEnd.Controllers
         {
             return await _deadlineService.GetDeadlineForRoom(roomId);
         }
+
+        [HttpPost("update")]
+        public async Task<IActionResult> UpdateDeadlineById()
+        {
+            var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
+            return await _deadlineService.UpdateDeadLineById(_mapper.Map<UpdateDeadlineRequest>(reqForm));
+        }
+
+        [HttpDelete]
+        public async Task<IActionResult> Delete(int id)
+        {
+            return await _deadlineService.DeleteDeadLine(id);
+        }
     }
 }
