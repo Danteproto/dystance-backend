@@ -58,18 +58,19 @@ namespace BackEnd.Services
             var resultList = new List<TimetableResponse>();
             foreach (var room in rooms)
             {
-                var repeatOccurence = int.Parse(room.RepeatOccurence);
+                var repeatOccurence = int.Parse(room.RepeatOccurrence);
                 var repeatDays = room.RepeatDays.Split(",");
 
                 for (int i = 0; i < repeatDays.Length; i++)
                 {
-                    repeatDays[i] = repeatDays[i].Replace("\"", "").Trim();
+                    repeatDays[i] = repeatDays[i].Replace("\"", "");
+                    repeatDays[i] = repeatDays[i].Replace("[", "").Trim();
+                    repeatDays[i] = repeatDays[i].Replace("]", "").Trim();
                 }
 
-                int x = 0;
                 DateTime startDate = room.StartDate;
                 //repeat week
-                while (x < repeatOccurence)
+                while (startDate < room.EndDate)
                 {
                     foreach (DateTime day in DateTimeUtil.EachDay(startDate, startDate.AddDays(7)))
                     {
@@ -90,9 +91,19 @@ namespace BackEnd.Services
                                 resultList.Add(roomResult);
                             }
                         }
+                        if (day.DayOfWeek == DayOfWeek.Sunday)
+                        {
+                            //indicates weekend, jump skip weeks
+                            startDate = startDate.AddDays(7 * repeatOccurence);
+
+                            //if not start of a week (monday), decrease days to monday
+                            while(startDate.DayOfWeek != DayOfWeek.Monday)
+                            {
+                                startDate = startDate.AddDays(-1);
+                            }
+                            break;
+                        }
                     }
-                    x++;
-                    startDate = startDate.AddDays(7);
                 }
             }
             return new OkObjectResult(resultList);

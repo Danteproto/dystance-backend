@@ -27,7 +27,7 @@ namespace BackEnd.Models
         [Required]
         [DataType(dataType: DataType.Time)]
         public TimeSpan EndHour { get; set; }
-        public string RepeatOccurence { get; set; }
+        public string RepeatOccurrence { get; set; }
         public string RepeatDays { get; set; }
     }
 }

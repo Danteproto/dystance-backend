@@ -35,7 +35,7 @@ namespace BackEnd.Services
                 EndDate = Convert.ToDateTime(request.Form["endDate"]),
                 StartHour = TimeSpan.Parse(request.Form["startHour"]),
                 EndHour = TimeSpan.Parse(request.Form["endHour"]),
-                RepeatOccurence = request.Form["repeatOccurrence"],
+                RepeatOccurrence= request.Form["repeatOccurrence"],
                 RepeatDays = request.Form["repeatDays"]
             };
 
