@@ -9,6 +9,7 @@ using BackEnd.Requests;
 using BackEnd.Ultilities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.StaticFiles;
+using System.Linq;
 
 namespace BackEnd.Controllers
 {
@@ -61,12 +62,15 @@ namespace BackEnd.Controllers
         //    return Ok(new { message = "Token revoked" });
         //}
 
-        //[HttpGet]
-        //public IActionResult GetAll()
-        //{
-        //    var users = _userService.GetAll();
-        //    return Ok(users);
-        //}
+        [HttpGet]
+        [HttpGet("getAll")]
+        public IActionResult GetAll()
+        {
+            var users = _userService.GetAll();
+
+            
+            return Ok(users);
+        }
 
         [HttpGet("info")]
         public IActionResult GetUserInfoById(string id)
@@ -163,6 +167,7 @@ namespace BackEnd.Controllers
             var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
             return await _userService.UpdateProfile(_mapper.Map<UpdateProfileRequest>(reqForm));
         }
+        
         [AllowAnonymous]
         [HttpGet("getAvatar")]
         public async Task<IActionResult> GetAvatar(string userName, string fileName, string realName)
@@ -174,6 +179,13 @@ namespace BackEnd.Controllers
             Response.Headers.Add("Content-Disposition", $"attachment; filename={realName}");
             return File(file, contentType);
         }
+
+        //[AllowAnonymous]
+        //[HttpGet("autoComplete")]
+        //public async Task<IActionResult> Autocomplete(string userName)
+        //{
+        //    return await _userService.AutoComplete(userName);
+        //}
 
         //[AllowAnonymous]
         //[HttpGet("externalLoginServices")]

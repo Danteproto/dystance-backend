@@ -19,6 +19,7 @@ using BackEnd.Stores;
 using System.IO;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 
 namespace BackEnd.Services
 {
@@ -27,9 +28,8 @@ namespace BackEnd.Services
         public Task<IActionResult> Authenticate(AuthenticateRequest model);
         IActionResult RefreshToken(string token);
         bool RevokeToken(string token, string ipAddress);
-        IEnumerable<User> GetAll();
+        IEnumerable<UserInfoResponse> GetAll();
         IActionResult GetById(string id);
-
         public Task<IActionResult> Register(RegisterRequest model);
         public Task<IActionResult> ResendEmail(ResendEmailRequest req);
         public Task<string> ConfirmEmail(string token, string email);
@@ -40,7 +40,7 @@ namespace BackEnd.Services
         public Task<IActionResult> ResetPasswordUpdate(ResetPasswordUpdate model);
         public Task<IActionResult> UpdateProfile(UpdateProfileRequest model);
         public FileStream getAvatar(string realName, string userName, string fileName);
-
+        public Task<IActionResult> AutoComplete(string username);
     }
 
     public class UserService : IUserService
@@ -202,10 +202,24 @@ namespace BackEnd.Services
             return true;
         }
 
-        public IEnumerable<User> GetAll()
-        {
-            return _mapper.Map<List<AppUser>, List<User>>(_context.Users.ToList());
 
+        public IEnumerable<UserInfoResponse> GetAll()
+        {
+            //return _context.Users;
+            var users = _userManager.Users;
+
+            var returnList = from user in users
+                             select new UserInfoResponse
+                             {
+                                 Id = user.Id,
+                                 RealName = user.RealName,
+                                 UserName = user.UserName,
+                                 Avatar = user.Avatar,
+                                 Dob  = user.DOB,
+                                 Email = user.Email
+                             };
+
+            return returnList;
         }
 
         public IActionResult GetById(string id)
@@ -466,8 +480,6 @@ namespace BackEnd.Services
                 }
             }
             return new BadRequestObjectResult(new { type = 1, message = "Token not verified or generated" });
-
-
         }
 
         public async Task<IActionResult> UpdateProfile(UpdateProfileRequest model)
@@ -604,6 +616,32 @@ namespace BackEnd.Services
             return file;
 
         }
-    }
 
+        public async Task<IActionResult> AutoComplete(string username)
+        {
+            var user = await _userManager.FindByNameAsync(username);
+            if (user == null)
+            {
+                return new BadRequestObjectResult(new { type = 0, message = "User does not exist" });
+            }
+
+            var userLists = (from users in _userManager.Users
+                             where users.RealName.Contains(username)
+                             select users.RealName).ToList();
+
+            var list = new List<AppUser>();
+
+
+            foreach (var users in userLists)
+            {
+                //get users
+                var resultUser = await _userManager.Users.FirstOrDefaultAsync(r => r.RealName == username);
+
+                list.Add(resultUser);
+            }
+            return new OkObjectResult(list);
+        }
+
+
+    }
 }
