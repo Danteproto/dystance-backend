@@ -25,6 +25,14 @@ namespace BackEnd.Controllers
             _mapper = mapper;
 
         }
+
+        [AllowAnonymous]
+        [HttpOptions]
+        public IActionResult Options()
+        {
+            return new OkObjectResult(new { message = "success" });
+        }
+
         //createDeadline
         [HttpPost("create")]
         public async Task<IActionResult> CreateDeadLine()
