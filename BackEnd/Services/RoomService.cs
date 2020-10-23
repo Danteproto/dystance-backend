@@ -14,6 +14,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using BackEnd.Ultilities;
+using Newtonsoft.Json.Schema;
 
 namespace BackEnd.Services
 {
@@ -26,8 +28,9 @@ namespace BackEnd.Services
             File
         }
 
-        public async static Task<IActionResult> CreateRoom(RoomDBContext context, HttpRequest request)
+        public async static Task<IActionResult> CreateRoom(RoomDBContext context, HttpRequest request, IWebHostEnvironment _env)
         {
+
             Room room = new Room
             {
                 RoomName = request.Form["name"],
@@ -39,6 +42,7 @@ namespace BackEnd.Services
                 EndHour = TimeSpan.Parse(request.Form["endHour"])
             };
 
+
             var result = await RoomDAO.Create(context, room);
             var lastRoom = RoomDAO.GetLastRoom(context);
             var roomUserLink = new RoomUserLink
@@ -47,7 +51,45 @@ namespace BackEnd.Services
                 RoomId = lastRoom.RoomId,
             };
 
+            string imgPath;
+            string imgName = "";
+            string extension = "";
+            IFormFile img = null;
+            //if avatar is empty, use default
+
+            if (request.Form.Files.Any())
+            {
+                img = request.Form.Files[0];
+                extension = Path.GetExtension(img.FileName);
+
+                imgName = Convert.ToBase64String(
+                        System.Text.Encoding.UTF8.GetBytes(DateTime.Now.ToString())
+                    );
+                var path = Path.Combine(_env.ContentRootPath, $"Files/{lastRoom.RoomId}/Images");
+                if (!Directory.Exists(path))
+                {
+                    Directory.CreateDirectory(path);
+                }
+
+                imgPath = Path.Combine(path, imgName + extension);
+                if (img.Length > 0)
+                {
+                    using var fileStream = new FileStream(imgPath, FileMode.Create);
+                    img.CopyTo(fileStream);
+                }
+            }
+            else
+            {
+                imgName = "default";
+                extension = ".png";
+                img = Ultilities.Extensions.GetRoomDefaultAvatar(_env);
+            }
+
+            lastRoom.Image = $"/api/rooms/getImage?roomId={lastRoom.RoomId}&imgName={imgName + extension}";
+
+            RoomDAO.UpdateRoom(context, lastRoom);
             await RoomUserLinkDAO.Create(context, roomUserLink);
+
             return result;
         }
         public async static Task<IActionResult> DeleteRoom(RoomDBContext context, int roomId, IWebHostEnvironment env)
@@ -221,6 +263,57 @@ namespace BackEnd.Services
             {
                 imageUrl = $"api/rooms/whiteboard/img?id={roomId}&imgName={imgName}"
             }));
+        }
+
+        public async static Task<IActionResult> UpdateRoom(RoomDBContext context, HttpRequest request, IWebHostEnvironment _env)
+        {
+            var room = RoomDAO.Get(context, Convert.ToInt32(request.Form["roomId"]));
+            if (room == null)
+            {
+                return new BadRequestObjectResult(new { type = 0, message = "Not found room" });
+            }
+            string imgPath;
+            string imgName = "";
+            string extension = "";
+            IFormFile img = null;
+            //if avatar is empty, use default
+
+            if (request.Form.Files.Any())
+            {
+                img = request.Form.Files[0];
+                extension = Path.GetExtension(img.FileName);
+
+                imgName = Convert.ToBase64String(
+                        System.Text.Encoding.UTF8.GetBytes(DateTime.Now.ToString())
+                    );
+                var path = Path.Combine(_env.ContentRootPath, $"Files/{room.RoomId}/Images");
+                if (!Directory.Exists(path))
+                {
+                    Directory.CreateDirectory(path);
+                }
+
+                imgPath = Path.Combine(path, imgName + extension);
+                if (img.Length > 0)
+                {
+                    using var fileStream = new FileStream(imgPath, FileMode.Create);
+                    img.CopyTo(fileStream);
+                }
+                room.Image = $"/api/rooms/getImage?roomId={room.RoomId}&imgName={imgName + extension}";
+            }
+
+            room.RoomName = !request.Form["name"].Any() ? request.Form["name"].ToString() : room.RoomName;
+            room.CreatorId = !request.Form["creatorId"].Any() ? request.Form["creatorId"].ToString() : room.CreatorId;
+            room.Description = !request.Form["description"].Any() ? request.Form["description"].ToString() : room.Description;
+            room.StartDate = !request.Form["startDate"].Any() ? Convert.ToDateTime(request.Form["startDate"]) : room.StartDate;
+            room.EndDate = !request.Form["endDate"].Any() ? Convert.ToDateTime(request.Form["endDate"]) : room.EndDate;
+            room.StartHour = !request.Form["startHour"].Any() ? TimeSpan.Parse(request.Form["startDate"]) : room.StartHour;
+            room.EndHour = !request.Form["endHour"].Any() ? TimeSpan.Parse(request.Form["startDate"]) : room.EndHour; ;
+            room.RepeatOccurrence = !request.Form["repeatOccurrence"].Any() ? request.Form["repeatOccurrence"].ToString() : room.RepeatOccurrence;
+            room.RepeatDays = !request.Form["repeatDays"].Any() ? request.Form["repeatDays"].ToString() : room.RepeatDays;
+
+            var result = RoomDAO.UpdateRoom(context, room);
+
+            return result;
         }
 
     }
