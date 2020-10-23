@@ -55,35 +55,11 @@ namespace BackEnd.Services
             string imgName = "";
             string extension = "";
             IFormFile img = null;
-            //if avatar is empty, use default
 
-            if (request.Form.Files.Any())
-            {
-                img = request.Form.Files[0];
-                extension = Path.GetExtension(img.FileName);
+            imgName = "default";
+            extension = ".png";
+            img = Ultilities.Extensions.GetRoomDefaultAvatar(_env);
 
-                imgName = Convert.ToBase64String(
-                        System.Text.Encoding.UTF8.GetBytes(DateTime.Now.ToString())
-                    );
-                var path = Path.Combine(_env.ContentRootPath, $"Files/{lastRoom.RoomId}/Images");
-                if (!Directory.Exists(path))
-                {
-                    Directory.CreateDirectory(path);
-                }
-
-                imgPath = Path.Combine(path, imgName + extension);
-                if (img.Length > 0)
-                {
-                    using var fileStream = new FileStream(imgPath, FileMode.Create);
-                    img.CopyTo(fileStream);
-                }
-            }
-            else
-            {
-                imgName = "default";
-                extension = ".png";
-                img = Ultilities.Extensions.GetRoomDefaultAvatar(_env);
-            }
 
             lastRoom.Image = $"/api/rooms/getImage?roomId={lastRoom.RoomId}&imgName={imgName + extension}";
 
