@@ -88,7 +88,7 @@ namespace BackEnd.Controllers
             var imgPath = "";
             FileStream image;
 
-            if (imgName == "default")
+            if (imgName == "default.png")
             {
                 image = System.IO.File.OpenRead($"Files/Images/default.png");
             }
