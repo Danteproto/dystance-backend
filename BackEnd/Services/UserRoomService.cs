@@ -70,7 +70,7 @@ namespace BackEnd.Services
 
                 DateTime startDate = room.StartDate;
                 //repeat week
-                while (startDate < room.EndDate)
+                while (startDate <= room.EndDate)
                 {
                     foreach (DateTime day in DateTimeUtil.EachDay(startDate, startDate.AddDays(7)))
                     {
