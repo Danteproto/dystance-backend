@@ -277,15 +277,15 @@ namespace BackEnd.Services
                 room.Image = $"/api/rooms/getImage?roomId={room.RoomId}&imgName={imgName + extension}";
             }
 
-            room.RoomName = !request.Form["name"].Any() ? request.Form["name"].ToString() : room.RoomName;
-            room.CreatorId = !request.Form["creatorId"].Any() ? request.Form["creatorId"].ToString() : room.CreatorId;
-            room.Description = !request.Form["description"].Any() ? request.Form["description"].ToString() : room.Description;
-            room.StartDate = !request.Form["startDate"].Any() ? Convert.ToDateTime(request.Form["startDate"]) : room.StartDate;
-            room.EndDate = !request.Form["endDate"].Any() ? Convert.ToDateTime(request.Form["endDate"]) : room.EndDate;
-            room.StartHour = !request.Form["startHour"].Any() ? TimeSpan.Parse(request.Form["startDate"]) : room.StartHour;
-            room.EndHour = !request.Form["endHour"].Any() ? TimeSpan.Parse(request.Form["startDate"]) : room.EndHour; ;
-            room.RepeatOccurrence = !request.Form["repeatOccurrence"].Any() ? request.Form["repeatOccurrence"].ToString() : room.RepeatOccurrence;
-            room.RepeatDays = !request.Form["repeatDays"].Any() ? request.Form["repeatDays"].ToString() : room.RepeatDays;
+            room.RoomName = request.Form["name"].Any() ? request.Form["name"].ToString() : room.RoomName;
+            room.CreatorId = request.Form["creatorId"].Any() ? request.Form["creatorId"].ToString() : room.CreatorId;
+            room.Description = request.Form["description"].Any() ? request.Form["description"].ToString() : room.Description;
+            room.StartDate = request.Form["startDate"].Any() ? Convert.ToDateTime(request.Form["startDate"]) : room.StartDate;
+            room.EndDate = request.Form["endDate"].Any() ? Convert.ToDateTime(request.Form["endDate"]) : room.EndDate;
+            room.StartHour = request.Form["startHour"].Any() ? TimeSpan.Parse(request.Form["startHour"]) : room.StartHour;
+            room.EndHour = request.Form["endHour"].Any() ? TimeSpan.Parse(request.Form["endHour"]) : room.EndHour; ;
+            room.RepeatOccurrence = request.Form["repeatOccurrence"].Any() ? request.Form["repeatOccurrence"].ToString() : room.RepeatOccurrence;
+            room.RepeatDays = request.Form["repeatDays"].Any() ? request.Form["repeatDays"].ToString() : room.RepeatDays;
 
             var result = RoomDAO.UpdateRoom(context, room);
 
