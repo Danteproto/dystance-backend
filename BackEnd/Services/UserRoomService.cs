@@ -76,7 +76,7 @@ namespace BackEnd.Services
                     {
                         if (repeatDays.Contains(day.DayOfWeek.ToString().ToLower()))
                         {
-                            if (day.Date <= model.EndDate && day.Date >= model.StartDate)
+                            if (day.Date <= room.EndDate && day.Date >= room.StartDate)
                             {
                                 var roomResult = new TimetableResponse
                                 {
