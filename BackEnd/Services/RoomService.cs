@@ -61,7 +61,7 @@ namespace BackEnd.Services
             img = Ultilities.Extensions.GetRoomDefaultAvatar(_env);
 
 
-            lastRoom.Image = $"/api/rooms/getImage?roomId={lastRoom.RoomId}&imgName={imgName + extension}";
+            lastRoom.Image = $"api/rooms/getImage?roomId={lastRoom.RoomId}&imgName={imgName + extension}";
 
             RoomDAO.UpdateRoom(context, lastRoom);
             await RoomUserLinkDAO.Create(context, roomUserLink);
@@ -274,7 +274,7 @@ namespace BackEnd.Services
                     using var fileStream = new FileStream(imgPath, FileMode.Create);
                     img.CopyTo(fileStream);
                 }
-                room.Image = $"/api/rooms/getImage?roomId={room.RoomId}&imgName={imgName + extension}";
+                room.Image = $"api/rooms/getImage?roomId={room.RoomId}&imgName={imgName + extension}";
             }
 
             room.RoomName = request.Form["name"].Any() ? request.Form["name"].ToString() : room.RoomName;
