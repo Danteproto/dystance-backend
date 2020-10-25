@@ -214,7 +214,7 @@ namespace BackEnd.Services
                                  Id = user.Id,
                                  RealName = user.RealName,
                                  UserName = user.UserName,
-                                 Avatar = user.Avatar,
+                                 Avatar = $"api/users/getAvatar?fileName={user.Avatar}&realName=&userName={user.UserName}",
                                  Dob  = user.DOB,
                                  Email = user.Email
                              };
