@@ -65,10 +65,26 @@ namespace BackEnd.DAO
                 .Where(x => roomIds.Contains(x.RoomId))
                 .ToList();
         }
-        public static void UpdateRoom(RoomDBContext context, Room room)
+        public static IActionResult UpdateRoom(RoomDBContext context, Room room)
         {
-            context.Room.Update(room);
-            context.SaveChanges();
+            try
+            {
+                context.Room.Update(room);
+                context.SaveChanges();
+                return new ObjectResult(new { message = "Successful" })
+                {
+                    StatusCode = 200,
+                };
+            }
+            catch (Exception e)
+            {
+                return new ObjectResult(new { message = e.Message })
+                {
+                    StatusCode = 500,
+                };
+            }
         }
+
     }
 }
+

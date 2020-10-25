@@ -66,18 +66,48 @@ namespace BackEnd.Context
 
             if (Directory.Exists(path))
             {
-                using (WebClient webClient = new WebClient())
+                if (!Directory.Exists(path + "/default.png"))
                 {
-                    byte[] data = webClient.DownloadData("https://huyhoanhotel.com/wp-content/uploads/2016/05/765-default-avatar.png");
-
-                    using (MemoryStream mem = new MemoryStream(data))
+                    using (WebClient webClient = new WebClient())
                     {
-                        using (var yourImage = Image.FromStream(mem))
-                        {
-                            yourImage.Save(Path.Combine(path, "default.png"), ImageFormat.Png);
-                        }
-                    }
+                        byte[] data = webClient.DownloadData("https://huyhoanhotel.com/wp-content/uploads/2016/05/765-default-avatar.png");
 
+                        using (MemoryStream mem = new MemoryStream(data))
+                        {
+                            using (var yourImage = Image.FromStream(mem))
+                            {
+                                yourImage.Save(Path.Combine(path, "default.png"), ImageFormat.Png);
+                            }
+                        }
+
+                    }
+                }
+            }
+
+            //upload default avatar to server
+            string roomPath = $"Files/Images";
+            if (!Directory.Exists(roomPath))
+            {
+                Directory.CreateDirectory(roomPath);
+            }
+
+            if (Directory.Exists(roomPath))
+            {
+                if (!Directory.Exists(roomPath + "/default.png"))
+                {
+                    using (WebClient webClient = new WebClient())
+                    {
+                        byte[] data = webClient.DownloadData("https://image.freepik.com/free-vector/empty-classroom-interior-school-college-class_107791-631.jpg");
+
+                        using (MemoryStream mem = new MemoryStream(data))
+                        {
+                            using (var yourImage = Image.FromStream(mem))
+                            {
+                                yourImage.Save(Path.Combine(roomPath, "default.png"), ImageFormat.Png);
+                            }
+                        }
+
+                    }
                 }
             }
 

@@ -44,7 +44,7 @@ namespace BackEnd.Controllers
         [HttpPost("create")]
         public async Task<IActionResult> CreateRoom()
         {
-            return await RoomService.CreateRoom(_roomContext, Request);
+            return await RoomService.CreateRoom(_roomContext, Request, _env);
         }
         [AllowAnonymous]
         [HttpOptions]
@@ -85,8 +85,18 @@ namespace BackEnd.Controllers
         {
             var rootPath = _env.ContentRootPath;
             var path = Path.Combine(rootPath, $"Files/{roomId}/Images");
-            var imgPath = Path.Combine(path, imgName);
-            var image = System.IO.File.OpenRead(imgPath);
+            var imgPath = "";
+            FileStream image;
+
+            if (imgName == "default.png")
+            {
+                image = System.IO.File.OpenRead($"Files/Images/default.png");
+            }
+            else
+            {
+                imgPath = Path.Combine(path, imgName);
+                image = System.IO.File.OpenRead(imgPath);
+            }
             return File(image, "image/jpeg");
         }
         [HttpPost("chat/add")]
@@ -169,6 +179,12 @@ namespace BackEnd.Controllers
             var imgPath = Path.Combine(path, imgName);
             var image = System.IO.File.OpenRead(imgPath);
             return File(image, "image/png");
+        }
+
+        [HttpPost("update")]
+        public async Task<IActionResult> UpdateRoom()
+        {
+            return await RoomService.UpdateRoom(_roomContext, Request, _env);
         }
     }
 }
