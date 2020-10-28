@@ -16,6 +16,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using BackEnd.Ultilities;
 using Newtonsoft.Json.Schema;
+using BackEnd.Responses;
 
 namespace BackEnd.Services
 {
@@ -38,15 +39,17 @@ namespace BackEnd.Services
                 Description = request.Form["description"],
                 StartDate = Convert.ToDateTime(request.Form["startDate"]),
                 EndDate = Convert.ToDateTime(request.Form["endDate"]),
-                StartHour = TimeSpan.Parse(request.Form["startHour"]),
-                EndHour = TimeSpan.Parse(request.Form["endHour"]),
-                RepeatOccurrence= request.Form["repeatOccurrence"],
-                RepeatDays = request.Form["repeatDays"]
+                RepeatOccurrence = request.Form["repeatOccurrence"],
             };
 
 
             var result = await RoomDAO.Create(context, room);
             var lastRoom = RoomDAO.GetLastRoom(context);
+
+            var timetables = JsonConvert.DeserializeObject<List<Timetable>>(request.Form["roomTimes"]);
+            timetables.ForEach(timetable => timetable.RoomId = lastRoom.RoomId);
+            result = await TimetableDAO.Create(context, timetables);
+
             var roomUserLink = new RoomUserLink
             {
                 UserId = request.Form["CreatorId"],
@@ -75,13 +78,21 @@ namespace BackEnd.Services
             var room = RoomDAO.Get(context, roomId);
             var roomUserLinks = RoomUserLinkDAO.GetRoomLink(context, roomId);
             var roomChats = RoomChatDAO.GetChatByRoomId(context, roomId);
+            var roomDeadlines = context.Deadline.Where(dl => dl.RoomId == roomId).ToList();
+            var roomTimetables = TimetableDAO.GetByRoomId(context, roomId);
+
             var result = await RoomUserLinkDAO.Delete(context, roomUserLinks);
             result = await RoomChatDAO.DeleteRoomChat(context, roomChats);
+            result = await TimetableDAO.DeleteTimeTable(context, roomTimetables);
+            context.Deadline.RemoveRange(roomDeadlines);
+            context.SaveChanges();
+
             var path = Path.Combine(env.ContentRootPath, $"Files/{roomId}");
             if (Directory.Exists(path))
             {
                 Directory.Delete(path, true);
             }
+
             result = await RoomDAO.Delete(context, room);
             return result;
         }
@@ -176,9 +187,26 @@ namespace BackEnd.Services
 
         }
 
-        public static List<Room> GetRoomByUserId(RoomDBContext context, string userId)
+        public static List<RoomResponse> GetRoomByUserId(RoomDBContext context, string userId)
         {
-            return RoomDAO.GetRoomsByUserId(context, userId);
+            var rooms = RoomDAO.GetRoomsByUserId(context, userId);
+            var response = new List<RoomResponse>();
+            foreach(var room in rooms)
+            {
+                response.Add(new RoomResponse {
+                    RoomId = room.RoomId,
+                    RoomName = room.RoomName,
+                    CreatorId = room.CreatorId,
+                    Image = room.Image,
+                    Description = room.Description,
+                    StartDate = room.StartDate,
+                    EndDate = room.EndDate,
+                    RepeatOccurrence = room.RepeatOccurrence,
+                    RoomTimes = JsonConvert.SerializeObject(TimetableDAO.GetByRoomId(context, room.RoomId)
+                                .Select(item => new {item.DayOfWeek ,item.StartTime, item.EndTime }))
+                });
+            }
+            return response;
         }
         public static List<RoomChat> GetChatByRoomId(RoomDBContext context, int roomId)
         {
@@ -284,12 +312,17 @@ namespace BackEnd.Services
             room.Description = request.Form["description"].Any() ? request.Form["description"].ToString() : room.Description;
             room.StartDate = request.Form["startDate"].Any() ? Convert.ToDateTime(request.Form["startDate"]) : room.StartDate;
             room.EndDate = request.Form["endDate"].Any() ? Convert.ToDateTime(request.Form["endDate"]) : room.EndDate;
-            room.StartHour = request.Form["startHour"].Any() ? TimeSpan.Parse(request.Form["startHour"]) : room.StartHour;
-            room.EndHour = request.Form["endHour"].Any() ? TimeSpan.Parse(request.Form["endHour"]) : room.EndHour; ;
             room.RepeatOccurrence = request.Form["repeatOccurrence"].Any() ? request.Form["repeatOccurrence"].ToString() : room.RepeatOccurrence;
-            room.RepeatDays = request.Form["repeatDays"].Any() ? request.Form["repeatDays"].ToString() : room.RepeatDays;
-
             var result = RoomDAO.UpdateRoom(context, room);
+
+            if (request.Form["roomTimes"].Any())
+            {
+                var timetables = TimetableDAO.GetByRoomId(context, room.RoomId);
+                await TimetableDAO.DeleteTimeTable(context, timetables);
+                timetables = JsonConvert.DeserializeObject<List<Timetable>>(request.Form["roomTimes"]);
+                timetables.ForEach(timetable => timetable.RoomId = room.RoomId);
+                result = await TimetableDAO.Create(context, timetables);
+            }
 
             return result;
         }

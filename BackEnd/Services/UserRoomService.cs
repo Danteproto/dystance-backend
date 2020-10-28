@@ -1,4 +1,5 @@
 ﻿using BackEnd.Context;
+using BackEnd.DAO;
 using BackEnd.DBContext;
 using BackEnd.Interfaces;
 using BackEnd.Models;
@@ -35,6 +36,7 @@ namespace BackEnd.Services
             _userAccessor = userAccessor;
             _userManager = userManager;
         }
+
         public async Task<IActionResult> GetTimeTable(TimetableRequest model)
         {
             var appUser = await _userManager.FindByIdAsync(_userAccessor.GetCurrentUserId());
@@ -56,17 +58,32 @@ namespace BackEnd.Services
 
 
             var resultList = new List<TimetableResponse>();
+
             foreach (var room in rooms)
             {
-                var repeatOccurence = int.Parse(room.RepeatOccurrence);
-                var repeatDays = room.RepeatDays.Split(",");
+                var deadlines = _roomDbContext.Deadline
+                    .Where(dl => dl.DeadlineDate >= model.StartDate 
+                                && dl.DeadlineDate <= model.EndDate 
+                                && dl.RoomId == room.RoomId)
+                    .ToList();
 
-                for (int i = 0; i < repeatDays.Length; i++)
+                foreach (var deadline in deadlines)
                 {
-                    repeatDays[i] = repeatDays[i].Replace("\"", "");
-                    repeatDays[i] = repeatDays[i].Replace("[", "").Trim();
-                    repeatDays[i] = repeatDays[i].Replace("]", "").Trim();
+                    var deadlineResult = new TimetableResponse
+                    {
+                        RoomId = room.RoomId.ToString(),
+                        EventType = 1,
+                        Title = deadline.Title,
+                        CreatorId = deadline.CreatorId,
+                        Description = deadline.Description,
+                        StartDate = deadline.DeadlineDate.ToString("yyyy-MM-dd") + "T" + deadline.DeadlineTime,
+                        EndDate = deadline.DeadlineDate.ToString("yyyy-MM-dd") + "T" + deadline.DeadlineTime,
+                    };
+                    resultList.Add(deadlineResult);
                 }
+
+                var repeatOccurence = int.Parse(room.RepeatOccurrence);
+                var roomTimetables = TimetableDAO.GetByRoomId(_roomDbContext, room.RoomId);
 
                 DateTime startDate = room.StartDate;
                 //repeat week
@@ -74,10 +91,11 @@ namespace BackEnd.Services
                 {
                     foreach (DateTime day in DateTimeUtil.EachDay(startDate, startDate.AddDays(7)))
                     {
-                        if (repeatDays.Contains(day.DayOfWeek.ToString().ToLower()))
+                        if (roomTimetables.Any(item => item.DayOfWeek == day.DayOfWeek.ToString().ToLower()))
                         {
                             if (day.Date <= room.EndDate && day.Date >= room.StartDate)
                             {
+                                var timetable = roomTimetables.Where(item => item.DayOfWeek == day.DayOfWeek.ToString().ToLower()).First();
                                 var roomResult = new TimetableResponse
                                 {
                                     RoomId = room.RoomId.ToString(),
@@ -85,8 +103,8 @@ namespace BackEnd.Services
                                     Title = room.RoomName,
                                     CreatorId = room.CreatorId,
                                     Description = room.Description,
-                                    StartDate = day.ToString("yyyy-MM-dd") + "T" + room.StartHour,
-                                    EndDate = day.ToString("yyyy-MM-dd") + "T" + room.EndHour
+                                    StartDate = day.ToString("yyyy-MM-dd") + "T" + timetable.StartTime,
+                                    EndDate = day.ToString("yyyy-MM-dd") + "T" + timetable.EndTime,
                                 };
                                 resultList.Add(roomResult);
                             }
@@ -97,7 +115,7 @@ namespace BackEnd.Services
                             startDate = startDate.AddDays(7 * repeatOccurence);
 
                             //if not start of a week (monday), decrease days to monday
-                            while(startDate.DayOfWeek != DayOfWeek.Monday)
+                            while (startDate.DayOfWeek != DayOfWeek.Monday)
                             {
                                 startDate = startDate.AddDays(-1);
                             }

@@ -32,7 +32,7 @@ namespace BackEnd.Socket
             Kick,
             Mute,
         }
-        public async Task RoomAction(string roomId, int t, string userId)
+        public async Task RoomAction(string roomId, int t, string payload)
         {
             var type = (RoomType)t;
             switch (type)
@@ -45,16 +45,16 @@ namespace BackEnd.Socket
                             _currentUsers.Add(roomId, new List<SocketUser>());
                         }
 
-                        if (_currentUsers[roomId].Any(user => user.UserId == userId))
+                        if (_currentUsers[roomId].Any(user => user.UserId == payload))
                         {
-                            _currentUsers[roomId].First(user => user.UserId == userId).ConnectionId = Context.ConnectionId;
+                            _currentUsers[roomId].First(user => user.UserId == payload).ConnectionId = Context.ConnectionId;
                         }
 
-                        if (!_currentUsers[roomId].Any(user => user.UserId == userId))
+                        if (!_currentUsers[roomId].Any(user => user.UserId == payload))
                         {
                             _currentUsers[roomId].Add(new SocketUser
                             {
-                                UserId = userId,
+                                UserId = payload,
                                 ConnectionId = Context.ConnectionId
                             });
                         }
@@ -70,7 +70,7 @@ namespace BackEnd.Socket
                 case RoomType.Leave:
                     {
                         await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomId);
-                        _currentUsers[roomId].Remove(_currentUsers[roomId].Where(x => x.UserId == userId).FirstOrDefault());
+                        _currentUsers[roomId].Remove(_currentUsers[roomId].Where(x => x.UserId == payload).FirstOrDefault());
 
                         await Clients.Group(roomId).SendAsync("RoomAction",
                             JsonConvert.SerializeObject(JObject.FromObject(new
@@ -86,19 +86,19 @@ namespace BackEnd.Socket
                             JsonConvert.SerializeObject(JObject.FromObject(new
                             {
                                 type = t,
-                                payload = _currentUsers[roomId].Select(x => x.UserId).ToList()
+                                payload = payload
                             })));
                         break;
                     }
                 default:
                     {
                         await Clients.Client(
-                            _currentUsers[roomId].Where(user => user.UserId == userId).Select(user => user.ConnectionId).FirstOrDefault())
+                            _currentUsers[roomId].Where(user => user.UserId == payload).Select(user => user.ConnectionId).FirstOrDefault())
                             .SendAsync("RoomAction",
                             JsonConvert.SerializeObject(JObject.FromObject(new
                             {
                                 type = t,
-                                payload = userId
+                                payload = payload
                             })));
                         break;
                     }

@@ -1,26 +1,21 @@
-﻿using System;
+﻿using BackEnd.Models;
+using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace BackEnd.Models
+namespace BackEnd.Responses
 {
-    public class Room
+    public class RoomResponse
     {
-        [Key]
         public int RoomId { get; set; }
-        [Required]
         public string RoomName { get; set; }
-        [Required]
         public string CreatorId { get; set; }
         public string Image { get; set; }
-        [Required]
         public string Description { get; set; }
-        [Required]
         public DateTime StartDate { get; set; }
-        [Required]
         public DateTime EndDate { get; set; }
         public string RepeatOccurrence { get; set; }
+        public string RoomTimes { get; set; }
     }
 }
