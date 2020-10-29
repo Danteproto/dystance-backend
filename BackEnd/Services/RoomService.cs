@@ -17,6 +17,7 @@ using System.Threading.Tasks;
 using BackEnd.Ultilities;
 using Newtonsoft.Json.Schema;
 using BackEnd.Responses;
+using Newtonsoft.Json.Serialization;
 
 namespace BackEnd.Services
 {
@@ -40,6 +41,7 @@ namespace BackEnd.Services
                 StartDate = Convert.ToDateTime(request.Form["startDate"]),
                 EndDate = Convert.ToDateTime(request.Form["endDate"]),
                 RepeatOccurrence = request.Form["repeatOccurrence"],
+                Group = false
             };
 
 
@@ -191,9 +193,10 @@ namespace BackEnd.Services
         {
             var rooms = RoomDAO.GetRoomsByUserId(context, userId);
             var response = new List<RoomResponse>();
-            foreach(var room in rooms)
+            foreach (var room in rooms)
             {
-                response.Add(new RoomResponse {
+                response.Add(new RoomResponse
+                {
                     RoomId = room.RoomId,
                     RoomName = room.RoomName,
                     CreatorId = room.CreatorId,
@@ -203,7 +206,14 @@ namespace BackEnd.Services
                     EndDate = room.EndDate,
                     RepeatOccurrence = room.RepeatOccurrence,
                     RoomTimes = JsonConvert.SerializeObject(TimetableDAO.GetByRoomId(context, room.RoomId)
-                                .Select(item => new {item.DayOfWeek ,item.StartTime, item.EndTime }))
+                                .Select(item => new { item.DayOfWeek, item.StartTime, item.EndTime }), new JsonSerializerSettings
+                                {
+                                    ContractResolver = new DefaultContractResolver
+                                    {
+                                        NamingStrategy = new CamelCaseNamingStrategy()
+                                    },
+                                    Formatting = Formatting.Indented
+                                })
                 });
             }
             return response;
@@ -327,5 +337,103 @@ namespace BackEnd.Services
             return result;
         }
 
+        public static GroupResponse CreateGroup(RoomDBContext context, HttpRequest request)
+        {
+            Room room = new Room
+            {
+                RoomName = request.Form["name"],
+                CreatorId = request.Form["creatorId"],
+                MainRoomId = Convert.ToInt32(request.Form["roomId"]),
+                Group = true,
+                StartDate = DateTime.Now,
+                EndDate = DateTime.Now
+            };
+
+            var result = RoomDAO.Create(context, room);
+            var group = RoomDAO.GetLastRoom(context);
+
+            var listUserIds = JsonConvert.DeserializeObject<List<string>>(request.Form["userIds"]);
+            var roomUserLinks = listUserIds.Select(userId => new RoomUserLink
+            {
+                RoomId = group.RoomId,
+                UserId = userId
+            }).ToList();
+            var existLink = context.RoomUserLink.Where(link => link.RoomId == group.RoomId).ToList();
+            if (existLink.Count != 0)
+            {
+                roomUserLinks = roomUserLinks.Where(link => !existLink.Any(x => x.UserId == link.UserId)).ToList();
+            }
+            result = RoomUserLinkDAO.Create(context, roomUserLinks);
+
+            return new GroupResponse
+            {
+                GroupId = group.RoomId,
+                Name = group.RoomName,
+                userIds = JsonConvert.SerializeObject(RoomUserLinkDAO.GetRoomLink(context, group.RoomId).Select(item => item.UserId))
+            };
+
+        }
+
+        public static GroupResponse GroupUpdate(RoomDBContext context, HttpRequest request)
+        {
+            var groupId = Convert.ToInt32(request.Form["groupId"]);
+            var listUserIds = (IEnumerable<string>)JsonConvert.DeserializeObject<List<string>>(request.Form["userIds"]);
+            var existLinks = (IEnumerable<string>)context.RoomUserLink.Where(link => link.RoomId == groupId).Select(link => link.UserId).ToList();
+
+            var group = RoomDAO.Get(context, groupId);
+            var deleteUserIds = existLinks.Except(listUserIds).ToList();
+            var addUserIds = listUserIds.Except(existLinks).ToList();
+
+            var deleteLinks = deleteUserIds.Select(item => RoomUserLinkDAO.GetRoomUserLink(context, groupId, item)).ToList();
+
+            var addLinks = addUserIds.Select(item => new RoomUserLink
+            {
+                UserId = item,
+                RoomId = group.RoomId
+            }).ToList();
+
+            var result = RoomUserLinkDAO.Create(context, addLinks);
+            result = RoomUserLinkDAO.Delete(context, deleteLinks);
+
+            return new GroupResponse
+            {
+                GroupId = group.RoomId,
+                Name = group.RoomName,
+                userIds = JsonConvert.SerializeObject(RoomUserLinkDAO.GetRoomLink(context, group.RoomId).Select(item => item.UserId))
+            };
+        }
+        public static List<GroupResponse> GetGroupByRoomId(RoomDBContext context, int roomId)
+        {
+            var groups = RoomDAO.GetGroupByRoom(context, roomId);
+            var responses = new List<GroupResponse>();
+            foreach (var group in groups)
+            {
+                var response = new GroupResponse
+                {
+                    GroupId = group.RoomId,
+                    Name = group.RoomName,
+                    userIds = JsonConvert.SerializeObject(RoomUserLinkDAO.GetRoomLink(context, group.RoomId).Select(item => item.UserId))
+                };
+                responses.Add(response);
+            }
+            return responses;
+        }
+
+        public async static Task<IActionResult> ResetGroup(RoomDBContext context, int groupId, IWebHostEnvironment env)
+        {
+            var roomUserLinks = RoomUserLinkDAO.GetRoomLink(context, groupId);
+            var roomChats = RoomChatDAO.GetChatByRoomId(context, groupId);
+
+            var result = await RoomUserLinkDAO.Delete(context, roomUserLinks);
+            result = await RoomChatDAO.DeleteRoomChat(context, roomChats);
+
+            var path = Path.Combine(env.ContentRootPath, $"Files/{groupId}");
+            if (Directory.Exists(path))
+            {
+                Directory.Delete(path, true);
+            }
+
+            return result;
+        }
     }
 }

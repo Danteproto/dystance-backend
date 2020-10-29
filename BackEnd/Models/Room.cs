@@ -15,12 +15,11 @@ namespace BackEnd.Models
         [Required]
         public string CreatorId { get; set; }
         public string Image { get; set; }
-        [Required]
         public string Description { get; set; }
-        [Required]
         public DateTime StartDate { get; set; }
-        [Required]
         public DateTime EndDate { get; set; }
-        public string RepeatOccurrence { get; set; }
+        public string? RepeatOccurrence { get; set; }
+        public bool Group { get; set; }
+        public int? MainRoomId { get; set; }
     }
 }

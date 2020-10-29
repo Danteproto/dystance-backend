@@ -62,7 +62,7 @@ namespace BackEnd.DAO
         {
             var roomIds = context.RoomUserLink.Where(x => x.UserId == userId).Select(x => x.RoomId).ToList();
             return context.Room
-                .Where(x => roomIds.Contains(x.RoomId))
+                .Where(x => roomIds.Contains(x.RoomId) && !x.Group)
                 .ToList();
         }
         public static IActionResult UpdateRoom(RoomDBContext context, Room room)
@@ -83,6 +83,11 @@ namespace BackEnd.DAO
                     StatusCode = 500,
                 };
             }
+        }
+
+        public static List<Room> GetGroupByRoom(RoomDBContext context, int Id)
+        {
+            return context.Room.Where(room => room.MainRoomId == Id && room.Group).ToList();
         }
 
     }

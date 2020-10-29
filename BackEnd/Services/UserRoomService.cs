@@ -51,9 +51,11 @@ namespace BackEnd.Services
             foreach (var roomId in userLinks)
             {
                 //get room
-                var room = await _roomDbContext.Room.FirstOrDefaultAsync(r => r.RoomId == roomId);
-
-                rooms.Add(room);
+                var room = await _roomDbContext.Room.Where(r => r.RoomId == roomId && !r.Group).FirstOrDefaultAsync();
+                if (room != null)
+                {
+                    rooms.Add(room);
+                }
             }
 
 

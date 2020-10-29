@@ -186,5 +186,41 @@ namespace BackEnd.Controllers
         {
             return await RoomService.UpdateRoom(_roomContext, Request, _env);
         }
+
+        [HttpPost("groups/create")]
+        public IActionResult CreateGroup()
+        {
+            var group = RoomService.CreateGroup(_roomContext, Request);
+            return Content(JsonConvert.SerializeObject(group, new JsonSerializerSettings
+            {
+                ContractResolver = _contractResolver,
+                Formatting = Formatting.Indented
+            }));
+        }
+        [HttpPost("groups/update")]
+        public IActionResult UpdateGroup()
+        {
+            var group = RoomService.GroupUpdate(_roomContext, Request);
+            return Content(JsonConvert.SerializeObject(group, new JsonSerializerSettings
+            {
+                ContractResolver = _contractResolver,
+                Formatting = Formatting.Indented
+            }));
+        }
+        [HttpGet("groups/get")]
+        public IActionResult GetGroup(int roomId)
+        {
+            var groups = RoomService.GetGroupByRoomId(_roomContext, roomId);
+            return Content(JsonConvert.SerializeObject(groups, new JsonSerializerSettings
+            {
+                ContractResolver = _contractResolver,
+                Formatting = Formatting.Indented
+            }));
+        }
+        [HttpGet("groups/reset")]
+        public async Task<IActionResult> ResetGroup(int groupId)
+        {
+            return await RoomService.ResetGroup(_roomContext, groupId, _env);
+        }
     }
 }

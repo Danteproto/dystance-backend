@@ -55,6 +55,10 @@ namespace BackEnd.DAO
         {
             return context.RoomUserLink.Where(link => link.RoomId == roomId).ToList();
         }
+        public static RoomUserLink GetRoomUserLink(RoomDBContext context, int roomId, string userId)
+        {
+            return context.RoomUserLink.Where(link => link.RoomId == roomId && link.UserId == userId).FirstOrDefault();
+        }
         public static async Task<IActionResult> Delete(RoomDBContext context, List<RoomUserLink> roomUserLinks)
         {
             try
