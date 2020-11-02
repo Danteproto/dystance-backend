@@ -31,6 +31,8 @@ namespace BackEnd.Socket
             Chat,
             Kick,
             Mute,
+            ToogleWhiteboard,
+            SplitGroup,
         }
         public async Task RoomAction(string roomId, int t, string payload)
         {
@@ -81,6 +83,16 @@ namespace BackEnd.Socket
                         break;
                     }
                 case RoomType.Chat:
+                    {
+                        await Clients.Group(roomId).SendAsync("RoomAction",
+                            JsonConvert.SerializeObject(JObject.FromObject(new
+                            {
+                                type = t,
+                                payload = payload
+                            })));
+                        break;
+                    }
+                case RoomType.SplitGroup:
                     {
                         await Clients.Group(roomId).SendAsync("RoomAction",
                             JsonConvert.SerializeObject(JObject.FromObject(new

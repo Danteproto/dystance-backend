@@ -222,5 +222,10 @@ namespace BackEnd.Controllers
         {
             return await RoomService.ResetGroup(_roomContext, groupId, _env);
         }
+        [HttpPost("groups/start")]
+        public async Task<IActionResult> SetGroupTime()
+        {
+            return await RoomService.SetGroupTime(_roomContext, Request);
+        }
     }
 }

@@ -9,6 +9,8 @@ namespace BackEnd.Responses
     {
         public int GroupId { get; set; }
         public string Name { get; set; }
-        public string userIds { get; set; }
+        public List<string> UserIds { get; set; }
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
     }
 }

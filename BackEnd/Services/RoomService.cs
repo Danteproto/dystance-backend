@@ -369,7 +369,9 @@ namespace BackEnd.Services
             {
                 GroupId = group.RoomId,
                 Name = group.RoomName,
-                userIds = JsonConvert.SerializeObject(RoomUserLinkDAO.GetRoomLink(context, group.RoomId).Select(item => item.UserId))
+                UserIds = RoomUserLinkDAO.GetRoomLink(context, group.RoomId).Select(item => item.UserId).ToList(),
+                StartTime = group.StartDate.ToUniversalTime(),
+                EndTime = group.EndDate.ToUniversalTime()
             };
 
         }
@@ -399,7 +401,9 @@ namespace BackEnd.Services
             {
                 GroupId = group.RoomId,
                 Name = group.RoomName,
-                userIds = JsonConvert.SerializeObject(RoomUserLinkDAO.GetRoomLink(context, group.RoomId).Select(item => item.UserId))
+                UserIds = RoomUserLinkDAO.GetRoomLink(context, group.RoomId).Select(item => item.UserId).ToList(),
+                StartTime = group.StartDate.ToUniversalTime(),
+                EndTime = group.EndDate.ToUniversalTime()
             };
         }
         public static List<GroupResponse> GetGroupByRoomId(RoomDBContext context, int roomId)
@@ -412,7 +416,9 @@ namespace BackEnd.Services
                 {
                     GroupId = group.RoomId,
                     Name = group.RoomName,
-                    userIds = JsonConvert.SerializeObject(RoomUserLinkDAO.GetRoomLink(context, group.RoomId).Select(item => item.UserId))
+                    UserIds = RoomUserLinkDAO.GetRoomLink(context, group.RoomId).Select(item => item.UserId).ToList(),
+                    StartTime = group.StartDate.ToUniversalTime(),
+                    EndTime = group.EndDate.ToUniversalTime()
                 };
                 responses.Add(response);
             }
@@ -434,6 +440,29 @@ namespace BackEnd.Services
             }
 
             return result;
+        }
+        public async static Task<IActionResult> SetGroupTime(RoomDBContext context, HttpRequest request)
+        {
+            try
+            {
+                var roomId = Convert.ToInt32(request.Form["roomId"]);
+                var groups = RoomDAO.GetGroupByRoom(context, roomId);
+                var duration = Convert.ToInt32(request.Form["duration"]);
+                foreach (var group in groups)
+                {
+                    group.StartDate = Convert.ToDateTime(request.Form["startTime"]);
+                    group.EndDate = Convert.ToDateTime(request.Form["startTime"]).AddMinutes(duration);
+                    RoomDAO.UpdateRoom(context, group);
+                }
+                return new OkObjectResult("successful");
+            }
+            catch (Exception e)
+            {
+                return new ObjectResult(new { message = e.Message })
+                {
+                    StatusCode = 500,
+                };
+            }
         }
     }
 }
