@@ -152,6 +152,13 @@ namespace BackEnd.Controllers
         {
             return await RoomService.Invite(_roomContext, _userContext, Request, _emailSender);
         }
+
+        [HttpGet("kick")]
+        public async Task<IActionResult> KickFromRoom(int roomId, string userId)
+        {
+            return await RoomService.KickFromRoom(_roomContext, roomId, userId);
+        }
+
         [HttpGet("whiteboard/load")]
         public IActionResult LoadWhiteBoard(int id)
         {
@@ -226,6 +233,16 @@ namespace BackEnd.Controllers
         public async Task<IActionResult> SetGroupTime()
         {
             return await RoomService.SetGroupTime(_roomContext, Request);
+        }
+        [HttpGet("getUsers")]
+        public IActionResult GetUsersByRoom(int id)
+        {
+            var listUsers = RoomService.GetUsersByRoom(_roomContext, id);
+            return Content(JsonConvert.SerializeObject(listUsers, new JsonSerializerSettings
+            {
+                ContractResolver = _contractResolver,
+                Formatting = Formatting.Indented
+            }));
         }
     }
 }

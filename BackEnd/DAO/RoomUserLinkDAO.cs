@@ -78,5 +78,31 @@ namespace BackEnd.DAO
                 };
             }
         }
+        public static async Task<IActionResult> Delete(RoomDBContext context, RoomUserLink roomUserLink)
+        {
+            try
+            {
+                context.RoomUserLink.Remove(roomUserLink);
+                context.SaveChanges();
+                return new ObjectResult(new { message = "success" })
+                {
+                    StatusCode = 200,
+                };
+            }
+            catch (Exception e)
+            {
+                return new ObjectResult(new { message = e.Message })
+                {
+                    StatusCode = 500,
+                };
+            }
+        }
+
+        public static List<string> GetUsersByRoom(RoomDBContext context, int roomId)
+        {
+            return context.RoomUserLink
+                .Where(link => link.RoomId == roomId)
+                .Select(link => link.UserId).ToList();
+        }
     }
 }

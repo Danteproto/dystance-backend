@@ -18,6 +18,8 @@ using BackEnd.Ultilities;
 using Newtonsoft.Json.Schema;
 using BackEnd.Responses;
 using Newtonsoft.Json.Serialization;
+using System.Security.Policy;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BackEnd.Services
 {
@@ -189,6 +191,11 @@ namespace BackEnd.Services
 
         }
 
+        public static List<string> GetUsersByRoom(RoomDBContext context, int roomId)
+        {
+            return RoomUserLinkDAO.GetUsersByRoom(context, roomId);
+        }
+
         public static List<RoomResponse> GetRoomByUserId(RoomDBContext context, string userId)
         {
             var rooms = RoomDAO.GetRoomsByUserId(context, userId);
@@ -260,6 +267,21 @@ namespace BackEnd.Services
             return result;
         }
 
+        public static async Task<IActionResult> KickFromRoom(RoomDBContext context, int roomId, string userId)
+        {
+            var roomUserLink = RoomUserLinkDAO.GetRoomUserLink(context, roomId, userId);
+            if(roomUserLink != null)
+            {
+                return await RoomUserLinkDAO.Delete(context, roomUserLink);
+            }
+            else
+            {
+                return new ObjectResult(new { type = 1, message = "user not in the room" })
+                {
+                    StatusCode = 200,
+                };
+            }
+        }
         public static IActionResult WhiteboardUploadImage(HttpRequest request, IWebHostEnvironment env)
         {
             Console.WriteLine(request.Form);
@@ -339,14 +361,16 @@ namespace BackEnd.Services
 
         public static GroupResponse CreateGroup(RoomDBContext context, HttpRequest request)
         {
+            var now = DateTime.Now;
+
             Room room = new Room
             {
                 RoomName = request.Form["name"],
                 CreatorId = request.Form["creatorId"],
                 MainRoomId = Convert.ToInt32(request.Form["roomId"]),
                 Group = true,
-                StartDate = DateTime.Now,
-                EndDate = DateTime.Now
+                StartDate = now,
+                EndDate = now
             };
 
             var result = RoomDAO.Create(context, room);
@@ -383,28 +407,32 @@ namespace BackEnd.Services
             var existLinks = (IEnumerable<string>)context.RoomUserLink.Where(link => link.RoomId == groupId).Select(link => link.UserId).ToList();
 
             var group = RoomDAO.Get(context, groupId);
-            var deleteUserIds = existLinks.Except(listUserIds).ToList();
-            var addUserIds = listUserIds.Except(existLinks).ToList();
-
-            var deleteLinks = deleteUserIds.Select(item => RoomUserLinkDAO.GetRoomUserLink(context, groupId, item)).ToList();
-
-            var addLinks = addUserIds.Select(item => new RoomUserLink
+            if (group != null)
             {
-                UserId = item,
-                RoomId = group.RoomId
-            }).ToList();
+                var deleteUserIds = existLinks.Except(listUserIds).ToList();
+                var addUserIds = listUserIds.Except(existLinks).ToList();
 
-            var result = RoomUserLinkDAO.Create(context, addLinks);
-            result = RoomUserLinkDAO.Delete(context, deleteLinks);
+                var deleteLinks = deleteUserIds.Select(item => RoomUserLinkDAO.GetRoomUserLink(context, groupId, item)).ToList();
 
-            return new GroupResponse
-            {
-                GroupId = group.RoomId,
-                Name = group.RoomName,
-                UserIds = RoomUserLinkDAO.GetRoomLink(context, group.RoomId).Select(item => item.UserId).ToList(),
-                StartTime = group.StartDate.ToUniversalTime(),
-                EndTime = group.EndDate.ToUniversalTime()
-            };
+                var addLinks = addUserIds.Select(item => new RoomUserLink
+                {
+                    UserId = item,
+                    RoomId = group.RoomId
+                }).ToList();
+
+                var result = RoomUserLinkDAO.Create(context, addLinks);
+                result = RoomUserLinkDAO.Delete(context, deleteLinks);
+
+                return new GroupResponse
+                {
+                    GroupId = group.RoomId,
+                    Name = group.RoomName,
+                    UserIds = RoomUserLinkDAO.GetRoomLink(context, group.RoomId).Select(item => item.UserId).ToList(),
+                    StartTime = group.StartDate.ToUniversalTime(),
+                    EndTime = group.EndDate.ToUniversalTime()
+                };
+            }
+            return null;
         }
         public static List<GroupResponse> GetGroupByRoomId(RoomDBContext context, int roomId)
         {
@@ -438,6 +466,11 @@ namespace BackEnd.Services
             {
                 Directory.Delete(path, true);
             }
+            var group = RoomDAO.Get(context, groupId);
+            var now = DateTime.Now;
+            group.EndDate = now;
+            group.StartDate = now;
+            RoomDAO.UpdateRoom(context,group);
 
             return result;
         }
