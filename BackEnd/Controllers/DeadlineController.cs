@@ -26,12 +26,6 @@ namespace BackEnd.Controllers
 
         }
 
-        [AllowAnonymous]
-        [HttpOptions]
-        public IActionResult Options()
-        {
-            return new OkObjectResult(new { message = "success" });
-        }
 
         //createDeadline
         [HttpPost("create")]

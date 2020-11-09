@@ -60,12 +60,8 @@ namespace BackEnd
 
             services.AddCors(options =>
             {
-                options.AddPolicy("CorsPolicy", policy =>
-                {
-                    policy.AllowAnyHeader().AllowAnyMethod().WithOrigins("http://localhost:44385");
-                });
                 options.AddPolicy("CorsPolicy", builder => builder
-                .WithOrigins("http://localhost:3000")
+                .SetIsOriginAllowed(origin => true)
                 .AllowAnyMethod()
                 .AllowAnyHeader()
                 .AllowCredentials());
@@ -227,7 +223,7 @@ namespace BackEnd
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             app.UseMiddleware<ErrorHandlingMiddleware>();
-
+            app.UseMiddleware<OptionsMiddleware>();
             if (env.IsDevelopment())
             {
                 //app.UseDeveloperExceptionPage();

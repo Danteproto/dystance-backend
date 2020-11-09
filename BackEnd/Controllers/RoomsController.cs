@@ -46,12 +46,7 @@ namespace BackEnd.Controllers
         {
             return await RoomService.CreateRoom(_roomContext, Request, _env);
         }
-        [AllowAnonymous]
-        [HttpOptions]
-        public IActionResult Options()
-        {
-            return new OkObjectResult(new { message = "success" });
-        }
+
         [HttpDelete]
         public async Task<IActionResult> Delete(int id)
         {

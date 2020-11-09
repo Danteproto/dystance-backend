@@ -1,5 +1,6 @@
 ﻿using BackEnd.Models;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.VisualBasic;
 using Nancy.Json.Simple;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -8,6 +9,7 @@ using Org.BouncyCastle.Math.EC.Rfc7748;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace BackEnd.Socket
@@ -33,6 +35,7 @@ namespace BackEnd.Socket
             Mute,
             ToogleWhiteboard,
             SplitGroup,
+            StopGroup
         }
         public async Task RoomAction(string roomId, int t, string payload)
         {
@@ -100,6 +103,20 @@ namespace BackEnd.Socket
                                 type = t,
                                 payload = payload
                             })));
+                        break;
+                    }
+                case RoomType.StopGroup:
+                    {
+                        var listGroups = JsonConvert.DeserializeObject<List<string>>(payload);
+                        foreach (var group in listGroups)
+                        {
+                            await Clients.Group(group).SendAsync("RoomAction",
+                            JsonConvert.SerializeObject(JObject.FromObject(new
+                            {
+                                type = t,
+                                payload = payload
+                            })));
+                        }
                         break;
                     }
                 default:
