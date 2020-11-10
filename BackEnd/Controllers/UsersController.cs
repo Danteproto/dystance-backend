@@ -228,6 +228,7 @@ namespace BackEnd.Controllers
                 Formatting = Formatting.Indented
             }));
         }
+        
         [AllowAnonymous]
         [HttpGet("chat/getFile")]
         public async Task<IActionResult> PMFile(string Id, string fileName, int type, string realName)
@@ -238,6 +239,15 @@ namespace BackEnd.Controllers
             Response.Headers.Add("Content-Disposition", $"attachment; filename={realName}");
             return File(file, contentType);
         }
+
+        [AllowAnonymous]
+        [HttpPost("log")]
+        public async Task<IActionResult> Log()
+        {
+            var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
+            return await _userService.Log(_mapper.Map<LogRequest>(reqForm));
+        }
+
         //[AllowAnonymous]
         //[HttpGet("autoComplete")]
         //public async Task<IActionResult> Autocomplete(string userName)

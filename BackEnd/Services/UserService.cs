@@ -22,6 +22,10 @@ using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
+using static BackEnd.Constant.Log;
+using BackEnd.DAO;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace BackEnd.Services
 {
@@ -33,6 +37,7 @@ namespace BackEnd.Services
             Image,
             File
         }
+
         public Task<IActionResult> Authenticate(AuthenticateRequest model);
         IActionResult RefreshToken(string token);
         bool RevokeToken(string token, string ipAddress);
@@ -54,6 +59,7 @@ namespace BackEnd.Services
         public PrivateMessage GetLastPm(string id1, string id2);
         public FileStream GetPMFile(string userId, string fileName, int type);
         public Task<IActionResult> AutoComplete(string username);
+        public Task<IActionResult> Log(LogRequest model);
     }
 
     public class UserService : IUserService
@@ -69,13 +75,14 @@ namespace BackEnd.Services
         private readonly IUserAccessor _userAccessor;
         private readonly IUserStore _userStore;
         private readonly IWebHostEnvironment _env;
+        private readonly ILogDAO _logDAO;
+
         public enum MessageType
         {
             Text,
             Image,
             File
         }
-
         public UserService(
             UserDbContext context,
             IMapper mapper,
@@ -87,7 +94,8 @@ namespace BackEnd.Services
             IJwtGenerator jwtGenerator,
             IUserAccessor userAccessor,
             IUserStore userStore,
-            IWebHostEnvironment env)
+            IWebHostEnvironment env,
+            ILogDAO logDAO)
         {
             _context = context;
             _mapper = mapper;
@@ -100,6 +108,7 @@ namespace BackEnd.Services
             _userAccessor = userAccessor;
             _userStore = userStore;
             _env = env;
+            _logDAO = logDAO;
         }
 
         public async Task<IActionResult> Authenticate(AuthenticateRequest model)
@@ -234,7 +243,7 @@ namespace BackEnd.Services
                                  RealName = user.RealName,
                                  UserName = user.UserName,
                                  Avatar = $"api/users/getAvatar?fileName={user.Avatar}&realName=&userName={user.UserName}",
-                                 Dob  = user.DOB,
+                                 Dob = user.DOB,
                                  Email = user.Email
                              };
 
@@ -682,7 +691,7 @@ namespace BackEnd.Services
                                 SenderId = request.Form["senderId"],
                                 ReceiverId = request.Form["receiverId"],
                                 Date = DateTime.Now,
-                                Content = $"api/users/chat/getFile?id={request.Form["senderId"]}&fileName={imgName+extension}&type={(int)type}&realName={Path.GetFileName(img.FileName)}",
+                                Content = $"api/users/chat/getFile?id={request.Form["senderId"]}&fileName={imgName + extension}&type={(int)type}&realName={Path.GetFileName(img.FileName)}",
                                 Type = (int)type,
                                 FileName = Path.GetFileName(img.FileName)
                             };
@@ -721,8 +730,9 @@ namespace BackEnd.Services
                         }
                 }
                 _context.SaveChanges();
-                return new OkObjectResult(new { message = "successful"});
-            }catch(Exception e)
+                return new OkObjectResult(new { message = "successful" });
+            }
+            catch (Exception e)
             {
                 return new ObjectResult(new { message = "add message fail" })
                 {
@@ -745,7 +755,7 @@ namespace BackEnd.Services
                 .Where(pm => (pm.SenderId == id1 && pm.ReceiverId == id2) || (pm.SenderId == id2 && pm.ReceiverId == id1))
                 .OrderBy(pm => pm.Date)
                 .ToList();
-            
+
         }
 
         public FileStream GetPMFile(string userId, string fileName, int type)
@@ -795,6 +805,195 @@ namespace BackEnd.Services
                 list.Add(resultUser);
             }
             return new OkObjectResult(list);
+        }
+
+        public async Task<IActionResult> Log(LogRequest model)
+        {
+            //var user = await _userManager.FindByIdAsync(model.UserId);
+            var result = new StringBuilder();
+            var file = model.Log;
+            using (var stream = file.OpenReadStream())
+            {
+                using (var reader = new StreamReader(stream))
+                {
+                    while (!reader.EndOfStream)
+                    {
+                        string line = await reader.ReadLineAsync();
+                        var words = new Regex("\\s+").Split(line);
+                        string logType = words[1].Trim();
+                        LogType type;
+                        if (Enum.TryParse(logType, out type))
+                            switch (type)
+                            {
+                                case LogType.ATTENDANCE_JOIN:
+                                    UsersLog attendanceJoin = new UsersLog
+                                    {
+                                        DateTime = words[0],
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "joined room"
+                                    };
+                                    result.Append(await _logDAO.CreateLog(attendanceJoin) + '\n');
+                                    break;
+                                case LogType.ATTENDANCE_LEAVE:
+                                    UsersLog attendanceLeave = new UsersLog
+                                    {
+                                        DateTime = words[0],
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "left room"
+                                    };
+                                    result.Append(await _logDAO.CreateLog(attendanceLeave) + '\n');
+                                    break;
+                                case LogType.ROOM_CHAT_TEXT:
+                                    UsersLog roomChatText = new UsersLog
+                                    {
+                                        DateTime = words[0],
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "sent message"
+                                    };
+                                    result.Append(await _logDAO.CreateLog(roomChatText) + '\n');
+                                    break;
+                                case LogType.ROOM_CHAT_IMAGE:
+                                    UsersLog roomChatImage = new UsersLog
+                                    {
+                                        DateTime = words[0],
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "sent message"
+                                    };
+                                    result.Append(await _logDAO.CreateLog(roomChatImage) + '\n');
+                                    break;
+                                case LogType.ROOM_CHAT_FILE:
+                                    UsersLog roomChatFile = new UsersLog
+                                    {
+                                        DateTime = words[0],
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "sent message"
+                                    };
+                                    result.Append(await _logDAO.CreateLog(roomChatFile) + '\n');
+                                    break;
+                                case LogType.DEADLINE_CREATE:
+                                    UsersLog roomChatCreate = new UsersLog
+                                    {
+                                        DateTime = words[0],
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "sent message"
+                                    };
+                                    result.Append(await _logDAO.CreateLog(roomChatCreate) + '\n');
+                                    break;
+                                case LogType.WHITEBOARD_ALLOW:
+                                    UsersLog whiteboardAllow = new UsersLog
+                                    {
+                                        DateTime = words[0],
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "sent message"
+                                    };
+                                    result.Append(await _logDAO.CreateLog(whiteboardAllow) + '\n');
+                                    break;
+                                case LogType.WHITEBOARD_DISABLE:
+                                    UsersLog whiteboardDisable = new UsersLog
+                                    {
+                                        DateTime = words[0],
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "sent message"
+                                    };
+                                    result.Append(await _logDAO.CreateLog(whiteboardDisable) + '\n');
+                                    break;
+                                case LogType.GROUP_CREATE:
+                                    UsersLog groupCreate = new UsersLog
+                                    {
+                                        DateTime = words[0],
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "sent message"
+                                    };
+                                    result.Append(await _logDAO.CreateLog(groupCreate) + '\n');
+                                    break;
+                                case LogType.GROUP_DELETE:
+                                    UsersLog groupDelete = new UsersLog
+                                    {
+                                        DateTime = words[0],
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "sent message"
+                                    };
+                                    result.Append(await _logDAO.CreateLog(groupDelete) + '\n');
+                                    break;
+                                case LogType.GROUP_START:
+                                    UsersLog groupStart = new UsersLog
+                                    {
+                                        DateTime = words[0],
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "sent message"
+                                    };
+                                    result.Append(await _logDAO.CreateLog(groupStart) + '\n');
+                                    break;
+                                case LogType.GROUP_STOP:
+                                    UsersLog groupStop = new UsersLog
+                                    {
+                                        DateTime = words[0],
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "sent message"
+                                    };
+                                    result.Append(await _logDAO.CreateLog(groupStop) + '\n');
+                                    break;
+                                case LogType.GOT_KICKED:
+                                    UsersLog gotKicked = new UsersLog
+                                    {
+                                        DateTime = words[0],
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "sent message"
+                                    };
+                                    result.Append(await _logDAO.CreateLog(gotKicked) + '\n');
+                                    break;
+                                case LogType.GOT_MUTED:
+                                    UsersLog gotMuted = new UsersLog
+                                    {
+                                        DateTime = words[0],
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "sent message"
+                                    };
+                                    result.Append(await _logDAO.CreateLog(gotMuted) + '\n');
+                                    break;
+                            }
+                    }
+                }
+            }
+
+            if (!result.ToString().Contains("Error"))
+            {
+                return new OkObjectResult(new { message = "Log Sent Successfully" });
+            }
+            else
+            {
+                return new BadRequestObjectResult(new { message = "Log sent successfully with some errors"});
+
+            }
+            
         }
 
 

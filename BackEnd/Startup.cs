@@ -31,6 +31,7 @@ using AspNetCore.IServiceCollection.AddIUrlHelper;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using BackEnd.Ultilities;
 using BackEnd.Stores;
+using BackEnd.DAO;
 
 namespace BackEnd
 {
@@ -167,6 +168,7 @@ namespace BackEnd
             services.AddSingleton<ITOTP, TOTPUtil>();
             services.AddScoped<IDeadlineService, DeadlineService>();
             services.AddScoped<IUserRoomService, UserRoomService>();
+            services.AddScoped<ILogDAO, LogDAO>();
 
             var emailConfig = Configuration
                 .GetSection("EmailConfiguration")
