@@ -240,12 +240,17 @@ namespace BackEnd.Controllers
             return File(file, contentType);
         }
 
-        [AllowAnonymous]
         [HttpPost("log")]
         public async Task<IActionResult> Log()
         {
             var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
             return await _userService.Log(_mapper.Map<LogRequest>(reqForm));
+        }
+
+        [HttpGet("logs/getByRoom")]
+        public async Task<IActionResult> GetLogByRoom(string roomId)
+        {
+            return await _userService.GetLogByRoom(roomId);
         }
 
         //[AllowAnonymous]

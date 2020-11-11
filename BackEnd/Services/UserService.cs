@@ -60,6 +60,7 @@ namespace BackEnd.Services
         public FileStream GetPMFile(string userId, string fileName, int type);
         public Task<IActionResult> AutoComplete(string username);
         public Task<IActionResult> Log(LogRequest model);
+        public Task<IActionResult> GetLogByRoom(string roomid);
     }
 
     public class UserService : IUserService
@@ -828,7 +829,7 @@ namespace BackEnd.Services
                                 case LogType.ATTENDANCE_JOIN:
                                     UsersLog attendanceJoin = new UsersLog
                                     {
-                                        DateTime = words[0],
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
@@ -839,7 +840,7 @@ namespace BackEnd.Services
                                 case LogType.ATTENDANCE_LEAVE:
                                     UsersLog attendanceLeave = new UsersLog
                                     {
-                                        DateTime = words[0],
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
@@ -850,7 +851,7 @@ namespace BackEnd.Services
                                 case LogType.ROOM_CHAT_TEXT:
                                     UsersLog roomChatText = new UsersLog
                                     {
-                                        DateTime = words[0],
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
@@ -861,123 +862,277 @@ namespace BackEnd.Services
                                 case LogType.ROOM_CHAT_IMAGE:
                                     UsersLog roomChatImage = new UsersLog
                                     {
-                                        DateTime = words[0],
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "sent message"
+                                        Description = "sent image " + words[words.Length - 1]
                                     };
                                     result.Append(await _logDAO.CreateLog(roomChatImage) + '\n');
                                     break;
                                 case LogType.ROOM_CHAT_FILE:
                                     UsersLog roomChatFile = new UsersLog
                                     {
-                                        DateTime = words[0],
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "sent message"
+                                        Description = "sent file " + words[words.Length - 1]
                                     };
                                     result.Append(await _logDAO.CreateLog(roomChatFile) + '\n');
                                     break;
                                 case LogType.DEADLINE_CREATE:
                                     UsersLog roomChatCreate = new UsersLog
                                     {
-                                        DateTime = words[0],
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "sent message"
+                                        Description = "created a new deadline"
                                     };
                                     result.Append(await _logDAO.CreateLog(roomChatCreate) + '\n');
                                     break;
                                 case LogType.WHITEBOARD_ALLOW:
                                     UsersLog whiteboardAllow = new UsersLog
                                     {
-                                        DateTime = words[0],
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "sent message"
+                                        Description = "gained whiteboard permissions"
                                     };
                                     result.Append(await _logDAO.CreateLog(whiteboardAllow) + '\n');
                                     break;
                                 case LogType.WHITEBOARD_DISABLE:
                                     UsersLog whiteboardDisable = new UsersLog
                                     {
-                                        DateTime = words[0],
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "sent message"
+                                        Description = "lost whiteboard permissions"
                                     };
                                     result.Append(await _logDAO.CreateLog(whiteboardDisable) + '\n');
                                     break;
                                 case LogType.GROUP_CREATE:
                                     UsersLog groupCreate = new UsersLog
                                     {
-                                        DateTime = words[0],
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "sent message"
+                                        Description = "created " + words[words.Length - 2] + " groups"
                                     };
                                     result.Append(await _logDAO.CreateLog(groupCreate) + '\n');
                                     break;
                                 case LogType.GROUP_DELETE:
                                     UsersLog groupDelete = new UsersLog
                                     {
-                                        DateTime = words[0],
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "sent message"
+                                        Description = "deleted " + words[words.Length - 2] + " groups"
                                     };
                                     result.Append(await _logDAO.CreateLog(groupDelete) + '\n');
                                     break;
                                 case LogType.GROUP_START:
                                     UsersLog groupStart = new UsersLog
                                     {
-                                        DateTime = words[0],
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "sent message"
+                                        Description = "started groups"
                                     };
                                     result.Append(await _logDAO.CreateLog(groupStart) + '\n');
                                     break;
                                 case LogType.GROUP_STOP:
                                     UsersLog groupStop = new UsersLog
                                     {
-                                        DateTime = words[0],
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "sent message"
+                                        Description = "stopped groups"
                                     };
                                     result.Append(await _logDAO.CreateLog(groupStop) + '\n');
                                     break;
                                 case LogType.GOT_KICKED:
                                     UsersLog gotKicked = new UsersLog
                                     {
-                                        DateTime = words[0],
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "sent message"
+                                        Description = "got kicked"
                                     };
                                     result.Append(await _logDAO.CreateLog(gotKicked) + '\n');
                                     break;
                                 case LogType.GOT_MUTED:
                                     UsersLog gotMuted = new UsersLog
                                     {
-                                        DateTime = words[0],
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "sent message"
+                                        Description = "got mute"
                                     };
                                     result.Append(await _logDAO.CreateLog(gotMuted) + '\n');
+                                    break;
+                                case LogType.KICK:
+                                    UsersLog kick = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "kicked user " + new Regex("(?<=user).*").Match(line).ToString().Trim()
+                                    };
+                                    result.Append(await _logDAO.CreateLog(kick) + '\n');
+                                    break;
+                                case LogType.MUTE:
+                                    UsersLog mute = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "muted user " + new Regex("(?<=user).*").Match(line).ToString().Trim()
+                                    };
+                                    result.Append(await _logDAO.CreateLog(mute) + '\n');
+                                    break;
+                                case LogType.TOGGLE_WHITEBOARD:
+                                    UsersLog toggleWhiteboard = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "toggled whiteboard usage for " + new Regex("(?<=for).*").Match(line).ToString().Trim()
+                                    };
+                                    result.Append(await _logDAO.CreateLog(toggleWhiteboard) + '\n');
+                                    break;
+                                case LogType.DEADLINE_UPDATE:
+                                    UsersLog deadlineUpdate = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "updated deadline " + new Regex("(?<=deadline).*").Match(line).ToString().Trim()
+                                    };
+                                    result.Append(await _logDAO.CreateLog(deadlineUpdate) + '\n');
+                                    break;
+                                case LogType.DEADLINE_DELETE:
+                                    UsersLog deadlineDelete = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "deleted deadline " + new Regex("(?<=deadline).*").Match(line).ToString().Trim()
+                                    };
+                                    result.Append(await _logDAO.CreateLog(deadlineDelete) + '\n');
+                                    break;
+                                case LogType.REMOTE_CONTROL_PERMISSION:
+                                    UsersLog remoteControlPermission = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "asked to remote control " + new Regex("(?<=control).*").Match(line).ToString().Trim()
+                                    };
+                                    result.Append(await _logDAO.CreateLog(remoteControlPermission) + '\n');
+                                    break;
+                                case LogType.REMOTE_CONTROL_ACCEPT:
+                                    UsersLog remoteControlAccept = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "accepted remote control request from " + new Regex("(?<=from).*").Match(line).ToString().Trim()
+                                    };
+                                    result.Append(await _logDAO.CreateLog(remoteControlAccept) + '\n');
+                                    break;
+                                case LogType.REMOTE_CONTROL_REJECT:
+                                    UsersLog remoteControlReject = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "rejected remote control request from " + new Regex("(?<=from).*").Match(line).ToString().Trim()
+                                    };
+                                    result.Append(await _logDAO.CreateLog(remoteControlReject) + '\n');
+                                    break;
+                                case LogType.REMOTE_CONTROL_STOP:
+                                    UsersLog remoteControlStop = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "stopped remote-controlling " + new Regex("(?<=controlling).*").Match(line).ToString().Trim()
+                                    };
+                                    result.Append(await _logDAO.CreateLog(remoteControlStop) + '\n');
+                                    break;
+                                case LogType.GROUP_JOIN:
+                                    UsersLog groupJoin = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "joined group " + new Regex("(?<=group).*").Match(line).ToString().Trim()
+                                    };
+                                    result.Append(await _logDAO.CreateLog(groupJoin) + '\n');
+                                    break;
+                                case LogType.GROUP_LEAVE:
+                                    UsersLog groupLeave = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "left group " + new Regex("(?<=group).*").Match(line).ToString().Trim()
+                                    };
+                                    result.Append(await _logDAO.CreateLog(groupLeave) + '\n');
+                                    break;
+                                case LogType.PRIVATE_CHAT_TEXT:
+                                    UsersLog privateChatText = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "sent message to " + new Regex("(?<=to).*").Match(line).ToString().Trim()
+                                    };
+                                    result.Append(await _logDAO.CreateLog(privateChatText) + '\n');
+                                    break;
+                                case LogType.PRIVATE_CHAT_IMAGE:
+                                    UsersLog privateChatImage = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "sent image " + new Regex("(?<=image).*").Match(line).ToString().Trim()
+                                    };
+                                    result.Append(await _logDAO.CreateLog(privateChatImage) + '\n');
+                                    break;
+                                case LogType.PRIVATE_CHAT_FILE:
+                                    UsersLog privateChatFile = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "sent file " + new Regex("(?<=file).*").Match(line).ToString().Trim()
+                                    };
+                                    result.Append(await _logDAO.CreateLog(privateChatFile) + '\n');
                                     break;
                             }
                     }
@@ -995,6 +1150,33 @@ namespace BackEnd.Services
             }
             
         }
+
+        public async Task<IActionResult> GetLogByRoom(string roomid)
+        {
+
+            var roomLists = await (from rooms in _context.UserLog
+                             where rooms.RoomId.Contains(roomid)
+                             select rooms).ToListAsync();
+
+            var list = new List<LogResponse>();
+
+
+            foreach (var rooms in roomLists)
+            {
+                list.Add(new LogResponse()
+                {
+                    DateTime = String.Format("{0:s}", rooms.DateTime),
+                    LogType = rooms.LogType,
+                    RoomId = rooms.RoomId,
+                    UserId = rooms.UserId,
+                    Description = rooms.Description
+            });
+            }
+
+
+            return new OkObjectResult(list);
+        }
+
 
 
     }

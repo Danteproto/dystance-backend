@@ -13,7 +13,7 @@ namespace BackEnd.Models
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int UsersLogId { get; set; }
-        public string DateTime { get; set; }
+        public DateTime DateTime { get; set; }
         public string LogType { get; set; }
         public string RoomId { get; set; }
         public string UserId { get; set; }

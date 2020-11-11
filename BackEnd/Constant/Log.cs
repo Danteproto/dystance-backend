@@ -36,7 +36,8 @@ namespace BackEnd.Constant
             GROUP_START,
             GROUP_STOP,
             GROUP_JOIN,
-            GROUP_LEAVE
+            GROUP_LEAVE,
+            PRIVATE_CHAT_TEXT,
         }
     }
 }

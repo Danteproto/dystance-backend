@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -121,5 +122,29 @@ namespace BackEnd.Ultilities
                 ms.Dispose();
             }
         }
+
+        public static DateTime ToDateTime(this string s,
+                string format = "ddMMyyyy", string cultureString = "en-US")
+        {
+            try
+            {
+                var r = DateTime.ParseExact(
+                    s: s,
+                    format: format,
+                    provider: CultureInfo.GetCultureInfo(cultureString));
+                return r;
+            }
+            catch (FormatException)
+            {
+                throw;
+            }
+            catch (CultureNotFoundException)
+            {
+                throw; // Given Culture is not supported culture
+            }
+        }
     }
+
+
+
 }
