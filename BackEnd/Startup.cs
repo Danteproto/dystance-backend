@@ -165,7 +165,6 @@ namespace BackEnd
             services.AddSingleton<IUserStore, UserStore>();
             services.AddScoped<IUserAccessor, UserAccessor>();
             services.AddSingleton<ITOTP, TOTPUtil>();
-            services.AddScoped<IDeadlineService, DeadlineService>();
             services.AddScoped<IUserRoomService, UserRoomService>();
             services.AddScoped<ISemesterService, SemesterService>();
 

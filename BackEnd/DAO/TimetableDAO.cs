@@ -29,6 +29,25 @@ namespace BackEnd.DAO
                 };
             }
         }
+        public static async Task<IActionResult> Create(RoomDBContext context, Timetable timetable)
+        {
+            try
+            {
+                await context.TimeTable.AddAsync(timetable);
+                context.SaveChanges();
+                return new ObjectResult(new { message = "Add success!" })
+                {
+                    StatusCode = 200,
+                };
+            }
+            catch (Exception e)
+            {
+                return new ObjectResult(new { message = e.Message })
+                {
+                    StatusCode = 500,
+                };
+            }
+        }
         public static List<Timetable> GetByRoomId(RoomDBContext context, int roomId)
         {
             return context.TimeTable.Where(timetable => timetable.RoomId == roomId).ToList();
@@ -54,10 +73,5 @@ namespace BackEnd.DAO
             }
         }
 
-        public static List<string> GetDayOfWeekByRoomId(RoomDBContext context, int roomId)
-        {
-            return context.TimeTable.Where(timetable => timetable.RoomId == roomId)
-                    .Select(timetable => timetable.DayOfWeek).ToList();
-        }
     }
 }

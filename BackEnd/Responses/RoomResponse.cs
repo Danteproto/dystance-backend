@@ -12,10 +12,8 @@ namespace BackEnd.Responses
         public string RoomName { get; set; }
         public string CreatorId { get; set; }
         public string Image { get; set; }
-        public string Description { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
-        public string RepeatOccurrence { get; set; }
         public string RoomTimes { get; set; }
     }
 }

@@ -32,5 +32,16 @@ namespace BackEnd.Controllers
         {
             return await _semesterService.AddSemester(Request);
         }
+
+        [HttpPost("update")]
+        public async Task<IActionResult> UpdateSemester()
+        {
+            return await _semesterService.UpdateSemester(Request);
+        }
+        [HttpPost("delete")]
+        public async Task<IActionResult> DeleteSemester([FromBody] List<string> ids)
+        {
+            return await _semesterService.DeleteSemester(ids);
+        }
     }
 }
