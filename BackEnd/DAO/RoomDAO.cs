@@ -97,6 +97,10 @@ namespace BackEnd.DAO
         {
             return context.Room.Where(room => room.SemesterId == semesterId).ToList();
         }
+        public static Room GetRoomByClassSubjectSemester(RoomDBContext context, string className, string subject, int semesterId)
+        {
+            return context.Room.Where(room => room.Subject == subject && room.ClassName == className && room.SemesterId == semesterId).FirstOrDefault();
+        }
     }
 }
 

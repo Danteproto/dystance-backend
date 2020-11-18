@@ -78,23 +78,31 @@ namespace BackEnd.Services
         public async static Task<IActionResult> DeleteRoom(RoomDBContext context, int roomId, IWebHostEnvironment env)
         {
             var room = RoomDAO.Get(context, roomId);
-            var roomUserLinks = RoomUserLinkDAO.GetRoomLink(context, roomId);
-            var roomChats = RoomChatDAO.GetChatByRoomId(context, roomId);
-            var roomTimetables = TimetableDAO.GetByRoomId(context, roomId);
-
-            var result = await RoomUserLinkDAO.Delete(context, roomUserLinks);
-            result = await RoomChatDAO.DeleteRoomChat(context, roomChats);
-            result = await TimetableDAO.DeleteTimeTable(context, roomTimetables);
-            context.SaveChanges();
-
-            var path = Path.Combine(env.ContentRootPath, $"Files/{roomId}");
-            if (Directory.Exists(path))
+            if (room != null)
             {
-                Directory.Delete(path, true);
-            }
+                var roomUserLinks = RoomUserLinkDAO.GetRoomLink(context, roomId);
+                var roomChats = RoomChatDAO.GetChatByRoomId(context, roomId);
+                var roomTimetables = TimetableDAO.GetByRoomId(context, roomId);
+                var groups = RoomDAO.GetGroupByRoom(context, roomId);
 
-            result = await RoomDAO.Delete(context, room);
-            return result;
+                var result = await RoomUserLinkDAO.Delete(context, roomUserLinks);
+                result = await RoomChatDAO.DeleteRoomChat(context, roomChats);
+                result = await TimetableDAO.DeleteTimeTable(context, roomTimetables);
+                foreach (var group in groups)
+                {
+                    result = await DeleteRoom(context, group.RoomId, env);
+                }
+
+                var path = Path.Combine(env.ContentRootPath, $"Files/{roomId}");
+                if (Directory.Exists(path))
+                {
+                    Directory.Delete(path, true);
+                }
+
+                result = await RoomDAO.Delete(context, room);
+                return result;
+            }
+            return new BadRequestObjectResult(new { message = "Class now exist!" });
         }
         public static Room GetRoomById(RoomDBContext context, int Id)
         {
@@ -255,7 +263,7 @@ namespace BackEnd.Services
         public static async Task<IActionResult> KickFromRoom(RoomDBContext context, int roomId, string userId)
         {
             var roomUserLink = RoomUserLinkDAO.GetRoomUserLink(context, roomId, userId);
-            if(roomUserLink != null)
+            if (roomUserLink != null)
             {
                 return await RoomUserLinkDAO.Delete(context, roomUserLink);
             }
@@ -453,7 +461,7 @@ namespace BackEnd.Services
             var now = DateTime.Now;
             group.EndDate = now;
             group.StartDate = now;
-            RoomDAO.UpdateRoom(context,group);
+            RoomDAO.UpdateRoom(context, group);
 
             return result;
         }

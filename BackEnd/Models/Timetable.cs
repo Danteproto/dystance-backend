@@ -23,6 +23,5 @@ namespace BackEnd.Models
         [DataType(dataType: DataType.Time)]
         [JsonProperty("endTime")]
         public TimeSpan EndTime { get; set; }
-        public int SemesterId { get; set; }
     }
 }

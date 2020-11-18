@@ -29,7 +29,10 @@ namespace BackEnd.DAO
                 };
             }
         }
-
+        public static List<Semester> GetAll(RoomDBContext context)
+        {
+            return context.Semester.ToList();
+        }
         public static Semester GetLast(RoomDBContext context)
         {
             return context.Semester.OrderByDescending(x => x.Id).FirstOrDefault();
@@ -43,6 +46,25 @@ namespace BackEnd.DAO
             try
             {
                 context.Semester.Update(semester);
+                context.SaveChanges();
+                return new ObjectResult(new { message = "success" })
+                {
+                    StatusCode = 200,
+                };
+            }
+            catch (Exception e)
+            {
+                return new ObjectResult(new { message = e.Message })
+                {
+                    StatusCode = 500,
+                };
+            }
+        }
+        public static async Task<IActionResult> Delete(RoomDBContext context, Semester semester)
+        {
+            try
+            {
+                context.Semester.Remove(semester);
                 context.SaveChanges();
                 return new ObjectResult(new { message = "success" })
                 {

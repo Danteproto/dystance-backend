@@ -52,14 +52,40 @@ namespace BackEnd.DAO
         {
             return context.TimeTable.Where(timetable => timetable.RoomId == roomId).ToList();
         }
-
+        public static Timetable GetById(RoomDBContext context, int id)
+        {
+            return context.TimeTable.Where(timetable => timetable.Id == id).FirstOrDefault();
+        }
+        public static Timetable GetLast(RoomDBContext context)
+        {
+            return context.TimeTable.OrderByDescending(x => x.Id).FirstOrDefault();
+        }
+        public static async Task<IActionResult> Update(RoomDBContext context, List<Timetable> timetables)
+        {
+            try
+            {
+                context.TimeTable.UpdateRange(timetables);
+                context.SaveChanges();
+                return new ObjectResult(new { message = "Add success!" })
+                {
+                    StatusCode = 200,
+                };
+            }
+            catch (Exception e)
+            {
+                return new ObjectResult(new { message = e.Message })
+                {
+                    StatusCode = 500,
+                };
+            }
+        }
         public static async Task<IActionResult> DeleteTimeTable(RoomDBContext context, List<Timetable> timetables)
         {
             try
             {
                 context.TimeTable.RemoveRange(timetables);
                 context.SaveChanges();
-                return new ObjectResult(new { message = "Add success!" })
+                return new ObjectResult(new { message = "delete success!" })
                 {
                     StatusCode = 200,
                 };
