@@ -67,7 +67,7 @@ namespace BackEnd
                 .AllowCredentials());
             });
 
-            //Configure for project to use Identity
+            ////Configure for project to use Identity
             var identityBuilder = services.AddIdentityCore<AppUser>(o =>
             {
                 // configure identity options
@@ -80,9 +80,11 @@ namespace BackEnd
                 o.User.RequireUniqueEmail = true;
                 o.SignIn.RequireConfirmedEmail = true;
 
-            }).AddEntityFrameworkStores<UserDbContext>()
+            }).AddRoles<AppRole>()
+                .AddEntityFrameworkStores<UserDbContext>()
                 .AddSignInManager<SignInManager<AppUser>>()
                 .AddUserManager<UserManager<AppUser>>()
+                .AddRoleManager<RoleManager<AppRole>>()
                 .AddDefaultTokenProviders();
 
 

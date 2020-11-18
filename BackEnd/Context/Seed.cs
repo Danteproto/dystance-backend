@@ -21,7 +21,7 @@ namespace BackEnd.Context
         {
             _env = env;
         }
-        public static async Task SeedData(UserDbContext context, UserManager<AppUser> userManager)
+        public static async Task SeedData(UserDbContext context, UserManager<AppUser> userManager, RoleManager<AppRole> roleManager)
         {
             if (!userManager.Users.Any())
             {
@@ -55,7 +55,29 @@ namespace BackEnd.Context
 
             }
 
-            context.SaveChanges();
+            if (!roleManager.Roles.Any())
+            {
+                var roles = new List<AppRole>
+                {
+                    new AppRole{
+                        Name="Admin"
+                    },
+                    new AppRole{
+                        Name="Academic Management"
+                    },
+                    new AppRole{
+                        Name="Student"
+                    },
+                    new AppRole{
+                        Name="Teacher"
+                    }
+                };
+                foreach (var role in roles)
+                {
+                    await roleManager.CreateAsync(role);
+                }
+            }
+
 
             //upload default avatar to server
             string path = $"Files/Users/Images";
