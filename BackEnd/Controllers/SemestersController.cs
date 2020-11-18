@@ -68,22 +68,22 @@ namespace BackEnd.Controllers
         {
             return await _semesterService.DeleteSchedule(models);
         }
-        [HttpGet("class/get")]
+        [HttpGet("classes/get")]
         public async Task<IActionResult> GetClassBySemester(int semesterId)
         {
             return await _semesterService.GetSemesterClass(semesterId);
         }
-        [HttpPost("class/add")]
+        [HttpPost("classes/add")]
         public async Task<IActionResult> AddClass(int semesterId, [FromBody] ClassRequest model)
         {
             return await _semesterService.AddClass(semesterId, model);
         }
-        [HttpPost("class/update")]
+        [HttpPost("classes/update")]
         public async Task<IActionResult> UpdateClass([FromBody] List<ClassRequest> models)
         {
             return await _semesterService.UpdateClass(models);
         }
-        [HttpPost("class/delete")]
+        [HttpPost("classes/delete")]
         public async Task<IActionResult> DeleteClass([FromBody] List<string> ids)
         {
             return await _semesterService.DeleteClass(ids);
