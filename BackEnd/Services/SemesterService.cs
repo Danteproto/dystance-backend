@@ -522,14 +522,17 @@ namespace BackEnd.Services
             @class = RoomDAO.GetLastRoom(_roomContext);
             @class.Image = $"api/rooms/getImage?roomId={@class.RoomId}&imgName=default.png";
             RoomDAO.UpdateRoom(_roomContext, @class);
-            foreach (var id in model.students)
+            if (model.students.Count != 0)
             {
-                var link = new RoomUserLink
+                foreach (var id in model.students)
                 {
-                    UserId = id,
-                    RoomId = @class.RoomId,
-                };
-                result = RoomUserLinkDAO.Create(_roomContext, link);
+                    var link = new RoomUserLink
+                    {
+                        UserId = id,
+                        RoomId = @class.RoomId,
+                    };
+                    result = RoomUserLinkDAO.Create(_roomContext, link);
+                }
             }
             var links = RoomUserLinkDAO.GetRoomLink(_roomContext, @class.RoomId);
             var students = links.Where(link => link.UserId != @class.CreatorId).Select(link => link.UserId).ToList();
