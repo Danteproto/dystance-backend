@@ -67,7 +67,7 @@ namespace BackEnd.Services
 
                 foreach(var timetable in roomTimetables)
                 {
-                    if(timetable.Date > model.StartDate && timetable.Date < model.EndDate)
+                    if(timetable.Date >= model.StartDate && timetable.Date <= model.EndDate)
                     resultList.Add(new TimetableResponse
                     {
                         RoomId = room.RoomId.ToString(),
