@@ -11,14 +11,12 @@ namespace BackEnd.Models
     public class UsersLog
     {
         [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int UsersLogId { get; set; }
         public DateTime DateTime { get; set; }
         public string LogType { get; set; }
         public string RoomId { get; set; }
         public string UserId { get; set; }
         public string Description { get; set; }
-        public IEnumerable<AppUser> Users { get; set; }
 
         public override string ToString()
         {
