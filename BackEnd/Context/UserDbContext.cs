@@ -6,7 +6,7 @@ using System;
 
 namespace BackEnd.Context
 {
-    public class UserDbContext : IdentityDbContext<AppUser>
+    public class UserDbContext : IdentityDbContext<AppUser, AppRole, string>
     {
         public UserDbContext(DbContextOptions<UserDbContext> options) : base (options)
         {
@@ -19,7 +19,7 @@ namespace BackEnd.Context
         {            base.OnModelCreating(builder);
 
             builder.Entity<AppUser>(entity => { entity.ToTable(name: "Users"); });
-            builder.Entity<IdentityRole>(entity => { entity.ToTable(name: "Roles"); });
+            builder.Entity<AppRole>(entity => { entity.ToTable(name: "Roles"); });
             builder.Entity<IdentityUserRole<string>>(entity => { entity.ToTable("UserRoles"); });
             builder.Entity<IdentityUserClaim<string>>(entity => { entity.ToTable("UserClaims"); });
             builder.Entity<IdentityUserLogin<string>>(entity => { entity.ToTable("UserLogins"); });

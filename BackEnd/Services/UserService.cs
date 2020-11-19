@@ -69,6 +69,8 @@ namespace BackEnd.Services
         private readonly IUserAccessor _userAccessor;
         private readonly IUserStore _userStore;
         private readonly IWebHostEnvironment _env;
+        private readonly RoleManager<AppRole> _roleManager;
+
         public enum MessageType
         {
             Text,
@@ -87,7 +89,8 @@ namespace BackEnd.Services
             IJwtGenerator jwtGenerator,
             IUserAccessor userAccessor,
             IUserStore userStore,
-            IWebHostEnvironment env)
+            IWebHostEnvironment env,
+            RoleManager<AppRole> roleManager)
         {
             _context = context;
             _mapper = mapper;
@@ -100,6 +103,7 @@ namespace BackEnd.Services
             _userAccessor = userAccessor;
             _userStore = userStore;
             _env = env;
+            _roleManager = roleManager;
         }
 
         public async Task<IActionResult> Authenticate(AuthenticateRequest model)
