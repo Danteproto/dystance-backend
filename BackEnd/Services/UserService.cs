@@ -22,6 +22,10 @@ using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
+using static BackEnd.Constant.Log;
+using BackEnd.DAO;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace BackEnd.Services
 {
@@ -33,6 +37,7 @@ namespace BackEnd.Services
             Image,
             File
         }
+
         public Task<IActionResult> Authenticate(AuthenticateRequest model);
         IActionResult RefreshToken(string token);
         bool RevokeToken(string token, string ipAddress);
@@ -54,6 +59,8 @@ namespace BackEnd.Services
         public PrivateMessage GetLastPm(string id1, string id2);
         public FileStream GetPMFile(string userId, string fileName, int type);
         public Task<IActionResult> AutoComplete(string username);
+        public Task<IActionResult> Log(LogRequest model);
+        public Task<IActionResult> GetLogByRoom(string roomid);
     }
 
     public class UserService : IUserService
@@ -69,13 +76,14 @@ namespace BackEnd.Services
         private readonly IUserAccessor _userAccessor;
         private readonly IUserStore _userStore;
         private readonly IWebHostEnvironment _env;
+        private readonly ILogDAO _logDAO;
+
         public enum MessageType
         {
             Text,
             Image,
             File
         }
-
         public UserService(
             UserDbContext context,
             IMapper mapper,
@@ -87,7 +95,8 @@ namespace BackEnd.Services
             IJwtGenerator jwtGenerator,
             IUserAccessor userAccessor,
             IUserStore userStore,
-            IWebHostEnvironment env)
+            IWebHostEnvironment env,
+            ILogDAO logDAO)
         {
             _context = context;
             _mapper = mapper;
@@ -100,6 +109,7 @@ namespace BackEnd.Services
             _userAccessor = userAccessor;
             _userStore = userStore;
             _env = env;
+            _logDAO = logDAO;
         }
 
         public async Task<IActionResult> Authenticate(AuthenticateRequest model)
@@ -234,7 +244,7 @@ namespace BackEnd.Services
                                  RealName = user.RealName,
                                  UserName = user.UserName,
                                  Avatar = $"api/users/getAvatar?fileName={user.Avatar}&realName=&userName={user.UserName}",
-                                 Dob  = user.DOB,
+                                 Dob = user.DOB,
                                  Email = user.Email
                              };
 
@@ -682,7 +692,7 @@ namespace BackEnd.Services
                                 SenderId = request.Form["senderId"],
                                 ReceiverId = request.Form["receiverId"],
                                 Date = DateTime.Now,
-                                Content = $"api/users/chat/getFile?id={request.Form["senderId"]}&fileName={imgName+extension}&type={(int)type}&realName={Path.GetFileName(img.FileName)}",
+                                Content = $"api/users/chat/getFile?id={request.Form["senderId"]}&fileName={imgName + extension}&type={(int)type}&realName={Path.GetFileName(img.FileName)}",
                                 Type = (int)type,
                                 FileName = Path.GetFileName(img.FileName)
                             };
@@ -721,8 +731,9 @@ namespace BackEnd.Services
                         }
                 }
                 _context.SaveChanges();
-                return new OkObjectResult(new { message = "successful"});
-            }catch(Exception e)
+                return new OkObjectResult(new { message = "successful" });
+            }
+            catch (Exception e)
             {
                 return new ObjectResult(new { message = "add message fail" })
                 {
@@ -745,7 +756,7 @@ namespace BackEnd.Services
                 .Where(pm => (pm.SenderId == id1 && pm.ReceiverId == id2) || (pm.SenderId == id2 && pm.ReceiverId == id1))
                 .OrderBy(pm => pm.Date)
                 .ToList();
-            
+
         }
 
         public FileStream GetPMFile(string userId, string fileName, int type)
@@ -796,6 +807,476 @@ namespace BackEnd.Services
             }
             return new OkObjectResult(list);
         }
+
+        public async Task<IActionResult> Log(LogRequest model)
+        {
+            //var user = await _userManager.FindByIdAsync(model.UserId);
+            var result = new StringBuilder();
+            var file = model.Log;
+            using (var stream = file.OpenReadStream())
+            {
+                using (var reader = new StreamReader(stream))
+                {
+                    while (!reader.EndOfStream)
+                    {
+                        string line = await reader.ReadLineAsync();
+                        var words = new Regex("\\s+").Split(line);
+                        string logType = words[1].Trim();
+                        LogType type;
+                        if (Enum.TryParse(logType, out type))
+                            switch (type)
+                            {
+                                case LogType.ATTENDANCE_JOIN:
+                                    UsersLog attendanceJoin = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "joined room"
+                                    };
+                                    if (CheckLogExist(attendanceJoin))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(attendanceJoin) + '\n');
+                                    }
+                                    break;
+                                case LogType.ATTENDANCE_LEAVE:
+                                    UsersLog attendanceLeave = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "left room"
+                                    };
+                                    if (CheckLogExist(attendanceLeave))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(attendanceLeave) + '\n');
+                                    }
+                                    break;
+                                case LogType.ROOM_CHAT_TEXT:
+                                    UsersLog roomChatText = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "sent message"
+                                    };
+                                    if (CheckLogExist(roomChatText))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(roomChatText) + '\n');
+                                    }
+                                    break;
+                                case LogType.ROOM_CHAT_IMAGE:
+                                    UsersLog roomChatImage = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "sent image " + words[words.Length - 1]
+                                    };
+                                    if (CheckLogExist(roomChatImage))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(roomChatImage) + '\n');
+                                    }
+                                    break;
+                                case LogType.ROOM_CHAT_FILE:
+                                    UsersLog roomChatFile = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "sent file " + words[words.Length - 1]
+                                    };
+                                    if (CheckLogExist(roomChatFile))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(roomChatFile) + '\n');
+                                    }
+                                    break;
+                                case LogType.DEADLINE_CREATE:
+                                    UsersLog roomChatCreate = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "created a new deadline"
+                                    };
+                                    if (CheckLogExist(roomChatCreate))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(roomChatCreate) + '\n');
+                                    }
+                                    break;
+                                case LogType.WHITEBOARD_ALLOW:
+                                    UsersLog whiteboardAllow = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "gained whiteboard permissions"
+                                    };
+                                    if (CheckLogExist(whiteboardAllow))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(whiteboardAllow) + '\n');
+                                    }
+                                    break;
+                                case LogType.WHITEBOARD_DISABLE:
+                                    UsersLog whiteboardDisable = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "lost whiteboard permissions"
+                                    };
+                                    if (CheckLogExist(whiteboardDisable))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(whiteboardDisable) + '\n');
+                                    }
+                                    break;
+                                case LogType.GROUP_CREATE:
+                                    UsersLog groupCreate = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "created " + words[words.Length - 2] + " groups"
+                                    };
+                                    if (CheckLogExist(groupCreate))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(groupCreate) + '\n');
+                                    }
+                                    break;
+                                case LogType.GROUP_DELETE:
+                                    UsersLog groupDelete = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "deleted " + words[words.Length - 2] + " groups"
+                                    };
+                                    if (CheckLogExist(groupDelete))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(groupDelete) + '\n');
+                                    }
+                                    break;
+                                case LogType.GROUP_START:
+                                    UsersLog groupStart = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "started groups"
+                                    };
+                                    if (CheckLogExist(groupStart))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(groupStart) + '\n');
+                                    }
+                                    break;
+                                case LogType.GROUP_STOP:
+                                    UsersLog groupStop = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "stopped groups"
+                                    };
+                                    if (CheckLogExist(groupStop))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(groupStop) + '\n');
+                                    }
+                                    break;
+                                case LogType.GOT_KICKED:
+                                    UsersLog gotKicked = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "got kicked"
+                                    };
+                                    if (CheckLogExist(gotKicked))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(gotKicked) + '\n');
+                                    }
+                                    break;
+                                case LogType.GOT_MUTED:
+                                    UsersLog gotMuted = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "got mute"
+                                    };
+                                    if (CheckLogExist(gotMuted))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(gotMuted) + '\n');
+                                    }
+                                    break;
+                                case LogType.KICK:
+                                    UsersLog kick = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "kicked user " + new Regex("(?<=user).*").Match(line).ToString().Trim()
+                                    };
+                                    if (CheckLogExist(kick))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(kick) + '\n');
+                                    }
+                                    break;
+                                case LogType.MUTE:
+                                    UsersLog mute = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "muted user " + new Regex("(?<=user).*").Match(line).ToString().Trim()
+                                    };
+                                    if (CheckLogExist(mute))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(mute) + '\n');
+                                    }
+                                    break;
+                                case LogType.TOGGLE_WHITEBOARD:
+                                    UsersLog toggleWhiteboard = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "toggled whiteboard usage for " + new Regex("(?<=for).*").Match(line).ToString().Trim()
+                                    };
+                                    if (CheckLogExist(toggleWhiteboard))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(toggleWhiteboard) + '\n');
+                                    }
+                                    break;
+                                case LogType.DEADLINE_UPDATE:
+                                    UsersLog deadlineUpdate = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "updated deadline " + new Regex("(?<=deadline).*").Match(line).ToString().Trim()
+                                    };
+                                    if (CheckLogExist(deadlineUpdate))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(deadlineUpdate) + '\n');
+                                    }
+                                    break;
+                                case LogType.DEADLINE_DELETE:
+                                    UsersLog deadlineDelete = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "deleted deadline " + new Regex("(?<=deadline).*").Match(line).ToString().Trim()
+                                    };
+                                    if (CheckLogExist(deadlineDelete))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(deadlineDelete) + '\n');
+                                    }
+                                    break;
+                                case LogType.REMOTE_CONTROL_PERMISSION:
+                                    UsersLog remoteControlPermission = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "asked to remote control " + new Regex("(?<=control).*").Match(line).ToString().Trim()
+                                    };
+                                    if (CheckLogExist(remoteControlPermission))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(remoteControlPermission) + '\n');
+                                    }
+                                    break;
+                                case LogType.REMOTE_CONTROL_ACCEPT:
+                                    UsersLog remoteControlAccept = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "accepted remote control request from " + new Regex("(?<=from).*").Match(line).ToString().Trim()
+                                    };
+                                    if (CheckLogExist(remoteControlAccept))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(remoteControlAccept) + '\n');
+                                    }
+                                    break;
+                                case LogType.REMOTE_CONTROL_REJECT:
+                                    UsersLog remoteControlReject = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "rejected remote control request from " + new Regex("(?<=from).*").Match(line).ToString().Trim()
+                                    };
+                                    if (CheckLogExist(remoteControlReject))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(remoteControlReject) + '\n');
+                                    }
+                                    break;
+                                case LogType.REMOTE_CONTROL_STOP:
+                                    UsersLog remoteControlStop = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "stopped remote-controlling " + new Regex("(?<=controlling).*").Match(line).ToString().Trim()
+                                    };
+                                    if (CheckLogExist(remoteControlStop))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(remoteControlStop) + '\n');
+                                    }
+                                    break;
+                                case LogType.GROUP_JOIN:
+                                    UsersLog groupJoin = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "joined group " + new Regex("(?<=group).*").Match(line).ToString().Trim()
+                                    };
+                                    if (CheckLogExist(groupJoin))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(groupJoin) + '\n');
+                                    }
+                                    break;
+                                case LogType.GROUP_LEAVE:
+                                    UsersLog groupLeave = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "left group " + new Regex("(?<=group).*").Match(line).ToString().Trim()
+                                    };
+                                    if (CheckLogExist(groupLeave))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(groupLeave) + '\n');
+                                    }
+                                    break;
+                                case LogType.PRIVATE_CHAT_TEXT:
+                                    UsersLog privateChatText = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "sent message to " + new Regex("(?<=to).*").Match(line).ToString().Trim()
+                                    };
+                                    if (CheckLogExist(privateChatText))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(privateChatText) + '\n');
+                                    }
+                                    break;
+                                case LogType.PRIVATE_CHAT_IMAGE:
+                                    UsersLog privateChatImage = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "sent image " + new Regex("(?<=image).*").Match(line).ToString().Trim()
+                                    };
+                                    if (CheckLogExist(privateChatImage))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(privateChatImage) + '\n');
+                                    }
+                                    break;
+                                case LogType.PRIVATE_CHAT_FILE:
+                                    UsersLog privateChatFile = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "sent file " + new Regex("(?<=file).*").Match(line).ToString().Trim()
+                                    };
+                                    if (CheckLogExist(privateChatFile))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(privateChatFile) + '\n');
+                                    }
+                                    break;
+                            }
+                    }
+                }
+            }
+
+            if (!result.ToString().Contains("Error"))
+            {
+                return new OkObjectResult(new { message = "Log Sent Successfully" });
+            }
+            else
+            {
+                return new BadRequestObjectResult(new { message = "Log sent successfully with some errors"});
+
+            }
+            
+        }
+
+        public async Task<IActionResult> GetLogByRoom(string roomid)
+        {
+
+            var roomLists = await (from rooms in _context.UserLog
+                             where rooms.RoomId.Contains(roomid)
+                             select rooms).ToListAsync();
+
+            var list = new List<LogResponse>();
+
+
+            foreach (var rooms in roomLists)
+            {
+                list.Add(new LogResponse()
+                {
+                    DateTime = String.Format("{0:s}", rooms.DateTime),
+                    LogType = rooms.LogType,
+                    RoomId = rooms.RoomId,
+                    UserId = rooms.UserId,
+                    Description = rooms.Description
+            });
+            }
+
+
+            return new OkObjectResult(list);
+        }
+
+        public bool CheckLogExist (UsersLog model)
+        {
+            var logLists = (from logs in _context.UserLog
+                            where logs.RoomId.Contains(model.RoomId) && logs.UserId.Contains(model.UserId) 
+                                  && logs.DateTime.CompareTo(model.DateTime) == 0 && logs.LogType.Contains(model.LogType)
+                                  && logs.Description.Contains(model.Description)
+                            select logs).ToList();
+
+            if(logLists.Count != 0)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
 
 
     }
