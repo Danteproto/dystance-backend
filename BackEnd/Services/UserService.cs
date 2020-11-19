@@ -895,21 +895,7 @@ namespace BackEnd.Services
                                     {
                                         result.Append(await _logDAO.CreateLog(roomChatFile) + '\n');
                                     }
-                                    break;
-                                case LogType.DEADLINE_CREATE:
-                                    UsersLog roomChatCreate = new UsersLog
-                                    {
-                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
-                                        LogType = words[1],
-                                        RoomId = words[2],
-                                        UserId = words[3],
-                                        Description = "Created a new deadline"
-                                    };
-                                    if (CheckLogExist(roomChatCreate))
-                                    {
-                                        result.Append(await _logDAO.CreateLog(roomChatCreate) + '\n');
-                                    }
-                                    break;
+                                    break;                                
                                 case LogType.WHITEBOARD_ALLOW:
                                     UsersLog whiteboardAllow = new UsersLog
                                     {
