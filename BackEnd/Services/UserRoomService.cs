@@ -63,67 +63,20 @@ namespace BackEnd.Services
 
             foreach (var room in rooms)
             {
-                var deadlines = _roomDbContext.Deadline
-                    .Where(dl => dl.DeadlineDate >= model.StartDate 
-                                && dl.DeadlineDate <= model.EndDate 
-                                && dl.RoomId == room.RoomId)
-                    .ToList();
-
-                foreach (var deadline in deadlines)
-                {
-                    var deadlineResult = new TimetableResponse
-                    {
-                        RoomId = room.RoomId.ToString(),
-                        EventType = 1,
-                        Title = deadline.Title,
-                        CreatorId = deadline.CreatorId,
-                        Description = deadline.Description,
-                        StartDate = deadline.DeadlineDate.ToString("yyyy-MM-dd") + "T" + deadline.DeadlineTime,
-                        EndDate = deadline.DeadlineDate.ToString("yyyy-MM-dd") + "T" + deadline.DeadlineTime,
-                    };
-                    resultList.Add(deadlineResult);
-                }
-
-                var repeatOccurence = int.Parse(room.RepeatOccurrence);
                 var roomTimetables = TimetableDAO.GetByRoomId(_roomDbContext, room.RoomId);
 
-                DateTime startDate = room.StartDate;
-                //repeat week
-                while (startDate <= room.EndDate)
+                foreach(var timetable in roomTimetables)
                 {
-                    foreach (DateTime day in DateTimeUtil.EachDay(startDate, startDate.AddDays(7)))
+                    if(timetable.Date >= model.StartDate && timetable.Date <= model.EndDate)
+                    resultList.Add(new TimetableResponse
                     {
-                        if (roomTimetables.Any(item => item.DayOfWeek == day.DayOfWeek.ToString().ToLower()))
-                        {
-                            if (day.Date <= room.EndDate && day.Date >= room.StartDate)
-                            {
-                                var timetable = roomTimetables.Where(item => item.DayOfWeek == day.DayOfWeek.ToString().ToLower()).First();
-                                var roomResult = new TimetableResponse
-                                {
-                                    RoomId = room.RoomId.ToString(),
-                                    EventType = 0,
-                                    Title = room.RoomName,
-                                    CreatorId = room.CreatorId,
-                                    Description = room.Description,
-                                    StartDate = day.ToString("yyyy-MM-dd") + "T" + timetable.StartTime,
-                                    EndDate = day.ToString("yyyy-MM-dd") + "T" + timetable.EndTime,
-                                };
-                                resultList.Add(roomResult);
-                            }
-                        }
-                        if (day.DayOfWeek == DayOfWeek.Sunday)
-                        {
-                            //indicates weekend, jump skip weeks
-                            startDate = startDate.AddDays(7 * repeatOccurence);
-
-                            //if not start of a week (monday), decrease days to monday
-                            while (startDate.DayOfWeek != DayOfWeek.Monday)
-                            {
-                                startDate = startDate.AddDays(-1);
-                            }
-                            break;
-                        }
-                    }
+                        RoomId = room.RoomId.ToString(),
+                        EventType = 0,
+                        Title = room.Subject +"-" +room.ClassName,
+                        CreatorId = room.CreatorId,
+                        StartDate = timetable.Date.ToString("yyyy-MM-dd") + "T" + timetable.StartTime,
+                        EndDate = timetable.Date.ToString("yyyy-MM-dd") + "T" + timetable.EndTime,
+                    });
                 }
             }
             return new OkObjectResult(resultList);

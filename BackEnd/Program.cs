@@ -31,8 +31,9 @@ namespace BackEnd
                     IdentityModelEventSource.ShowPII = true;
                     var context = services.GetRequiredService<UserDbContext>();
                     var userManager = services.GetRequiredService<UserManager<AppUser>>();
+                    var roleManager = services.GetRequiredService<RoleManager<AppRole>>();
                     context.Database.Migrate(); 
-                    Seed.SeedData(context, userManager).Wait();
+                    Seed.SeedData(context, userManager, roleManager).Wait();
                 }
                 catch (Exception ex)
                 {

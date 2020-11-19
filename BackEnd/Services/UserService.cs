@@ -77,6 +77,7 @@ namespace BackEnd.Services
         private readonly IUserStore _userStore;
         private readonly IWebHostEnvironment _env;
         private readonly ILogDAO _logDAO;
+        private readonly RoleManager<AppRole> _roleManager;
 
         public enum MessageType
         {
@@ -96,7 +97,8 @@ namespace BackEnd.Services
             IUserAccessor userAccessor,
             IUserStore userStore,
             IWebHostEnvironment env,
-            ILogDAO logDAO)
+            ILogDAO logDAO,
+            RoleManager<AppRole> roleManager)
         {
             _context = context;
             _mapper = mapper;
@@ -110,6 +112,7 @@ namespace BackEnd.Services
             _userStore = userStore;
             _env = env;
             _logDAO = logDAO;
+            _roleManager = roleManager;
         }
 
         public async Task<IActionResult> Authenticate(AuthenticateRequest model)

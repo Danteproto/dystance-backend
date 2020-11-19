@@ -13,8 +13,8 @@ namespace BackEnd.Models
         public int Id { get; set; }
         public int RoomId { get; set; }
         [Required]
-        [JsonProperty("dayOfWeek")]
-        public string DayOfWeek { get; set; }
+        [JsonProperty("date")]
+        public DateTime Date { get; set; }
         [Required]
         [DataType(dataType: DataType.Time)]
         [JsonProperty("startTime")]

@@ -37,12 +37,10 @@ namespace BackEnd.Services
 
             Room room = new Room
             {
-                RoomName = request.Form["name"],
+                Subject = request.Form["name"],
                 CreatorId = request.Form["creatorId"],
-                Description = request.Form["description"],
                 StartDate = Convert.ToDateTime(request.Form["startDate"]),
                 EndDate = Convert.ToDateTime(request.Form["endDate"]),
-                RepeatOccurrence = request.Form["repeatOccurrence"],
                 Group = false
             };
 
@@ -80,25 +78,31 @@ namespace BackEnd.Services
         public async static Task<IActionResult> DeleteRoom(RoomDBContext context, int roomId, IWebHostEnvironment env)
         {
             var room = RoomDAO.Get(context, roomId);
-            var roomUserLinks = RoomUserLinkDAO.GetRoomLink(context, roomId);
-            var roomChats = RoomChatDAO.GetChatByRoomId(context, roomId);
-            var roomDeadlines = context.Deadline.Where(dl => dl.RoomId == roomId).ToList();
-            var roomTimetables = TimetableDAO.GetByRoomId(context, roomId);
-
-            var result = await RoomUserLinkDAO.Delete(context, roomUserLinks);
-            result = await RoomChatDAO.DeleteRoomChat(context, roomChats);
-            result = await TimetableDAO.DeleteTimeTable(context, roomTimetables);
-            context.Deadline.RemoveRange(roomDeadlines);
-            context.SaveChanges();
-
-            var path = Path.Combine(env.ContentRootPath, $"Files/{roomId}");
-            if (Directory.Exists(path))
+            if (room != null)
             {
-                Directory.Delete(path, true);
-            }
+                var roomUserLinks = RoomUserLinkDAO.GetRoomLink(context, roomId);
+                var roomChats = RoomChatDAO.GetChatByRoomId(context, roomId);
+                var roomTimetables = TimetableDAO.GetByRoomId(context, roomId);
+                var groups = RoomDAO.GetGroupByRoom(context, roomId);
 
-            result = await RoomDAO.Delete(context, room);
-            return result;
+                var result = await RoomUserLinkDAO.Delete(context, roomUserLinks);
+                result = await RoomChatDAO.DeleteRoomChat(context, roomChats);
+                result = await TimetableDAO.DeleteTimeTable(context, roomTimetables);
+                foreach (var group in groups)
+                {
+                    result = await DeleteRoom(context, group.RoomId, env);
+                }
+
+                var path = Path.Combine(env.ContentRootPath, $"Files/{roomId}");
+                if (Directory.Exists(path))
+                {
+                    Directory.Delete(path, true);
+                }
+
+                result = await RoomDAO.Delete(context, room);
+                return result;
+            }
+            return new BadRequestObjectResult(new { message = "Class now exist!" });
         }
         public static Room GetRoomById(RoomDBContext context, int Id)
         {
@@ -205,22 +209,11 @@ namespace BackEnd.Services
                 response.Add(new RoomResponse
                 {
                     RoomId = room.RoomId,
-                    RoomName = room.RoomName,
+                    RoomName = room.Subject + "-" + room.ClassName,
                     CreatorId = room.CreatorId,
                     Image = room.Image,
-                    Description = room.Description,
                     StartDate = room.StartDate,
                     EndDate = room.EndDate,
-                    RepeatOccurrence = room.RepeatOccurrence,
-                    RoomTimes = JsonConvert.SerializeObject(TimetableDAO.GetByRoomId(context, room.RoomId)
-                                .Select(item => new { item.DayOfWeek, item.StartTime, item.EndTime }), new JsonSerializerSettings
-                                {
-                                    ContractResolver = new DefaultContractResolver
-                                    {
-                                        NamingStrategy = new CamelCaseNamingStrategy()
-                                    },
-                                    Formatting = Formatting.Indented
-                                })
                 });
             }
             return response;
@@ -260,7 +253,7 @@ namespace BackEnd.Services
             {
                 var email = userContext.Users.Where(user => user.Id == link.UserId).Select(user => user.Email).FirstOrDefault().ToString();
 
-                var mailMessage = new Message(new string[] { email }, "Invite To Class", message == "" ? $"You have been invite to class {room.RoomName}" : message, null);
+                var mailMessage = new Message(new string[] { email }, "Invite To Class", message == "" ? $"You have been invite to class {room.Subject}-{room.ClassName}" : message, null);
 
                 await emailSender.SendEmailAsync(mailMessage);
             });
@@ -270,7 +263,7 @@ namespace BackEnd.Services
         public static async Task<IActionResult> KickFromRoom(RoomDBContext context, int roomId, string userId)
         {
             var roomUserLink = RoomUserLinkDAO.GetRoomUserLink(context, roomId, userId);
-            if(roomUserLink != null)
+            if (roomUserLink != null)
             {
                 return await RoomUserLinkDAO.Delete(context, roomUserLink);
             }
@@ -339,12 +332,10 @@ namespace BackEnd.Services
                 room.Image = $"api/rooms/getImage?roomId={room.RoomId}&imgName={imgName + extension}";
             }
 
-            room.RoomName = request.Form["name"].Any() ? request.Form["name"].ToString() : room.RoomName;
+            room.Subject = request.Form["name"].Any() ? request.Form["name"].ToString() : room.Subject;
             room.CreatorId = request.Form["creatorId"].Any() ? request.Form["creatorId"].ToString() : room.CreatorId;
-            room.Description = request.Form["description"].Any() ? request.Form["description"].ToString() : room.Description;
             room.StartDate = request.Form["startDate"].Any() ? Convert.ToDateTime(request.Form["startDate"]) : room.StartDate;
             room.EndDate = request.Form["endDate"].Any() ? Convert.ToDateTime(request.Form["endDate"]) : room.EndDate;
-            room.RepeatOccurrence = request.Form["repeatOccurrence"].Any() ? request.Form["repeatOccurrence"].ToString() : room.RepeatOccurrence;
             var result = RoomDAO.UpdateRoom(context, room);
 
             if (request.Form["roomTimes"].Any())
@@ -365,7 +356,7 @@ namespace BackEnd.Services
 
             Room room = new Room
             {
-                RoomName = request.Form["name"],
+                Subject = request.Form["name"],
                 CreatorId = request.Form["creatorId"],
                 MainRoomId = Convert.ToInt32(request.Form["roomId"]),
                 Group = true,
@@ -392,7 +383,7 @@ namespace BackEnd.Services
             return new GroupResponse
             {
                 GroupId = group.RoomId,
-                Name = group.RoomName,
+                Name = group.Subject,
                 UserIds = RoomUserLinkDAO.GetRoomLink(context, group.RoomId).Select(item => item.UserId).ToList(),
                 StartTime = group.StartDate.ToUniversalTime(),
                 EndTime = group.EndDate.ToUniversalTime()
@@ -426,7 +417,7 @@ namespace BackEnd.Services
                 return new GroupResponse
                 {
                     GroupId = group.RoomId,
-                    Name = group.RoomName,
+                    Name = group.Subject,
                     UserIds = RoomUserLinkDAO.GetRoomLink(context, group.RoomId).Select(item => item.UserId).ToList(),
                     StartTime = group.StartDate.ToUniversalTime(),
                     EndTime = group.EndDate.ToUniversalTime()
@@ -443,7 +434,7 @@ namespace BackEnd.Services
                 var response = new GroupResponse
                 {
                     GroupId = group.RoomId,
-                    Name = group.RoomName,
+                    Name = group.Subject,
                     UserIds = RoomUserLinkDAO.GetRoomLink(context, group.RoomId).Select(item => item.UserId).ToList(),
                     StartTime = group.StartDate.ToUniversalTime(),
                     EndTime = group.EndDate.ToUniversalTime()
@@ -470,7 +461,7 @@ namespace BackEnd.Services
             var now = DateTime.Now;
             group.EndDate = now;
             group.StartDate = now;
-            RoomDAO.UpdateRoom(context,group);
+            RoomDAO.UpdateRoom(context, group);
 
             return result;
         }

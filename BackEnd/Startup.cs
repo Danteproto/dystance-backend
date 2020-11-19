@@ -68,7 +68,7 @@ namespace BackEnd
                 .AllowCredentials());
             });
 
-            //Configure for project to use Identity
+            ////Configure for project to use Identity
             var identityBuilder = services.AddIdentityCore<AppUser>(o =>
             {
                 // configure identity options
@@ -81,9 +81,11 @@ namespace BackEnd
                 o.User.RequireUniqueEmail = true;
                 o.SignIn.RequireConfirmedEmail = true;
 
-            }).AddEntityFrameworkStores<UserDbContext>()
+            }).AddRoles<AppRole>()
+                .AddEntityFrameworkStores<UserDbContext>()
                 .AddSignInManager<SignInManager<AppUser>>()
                 .AddUserManager<UserManager<AppUser>>()
+                .AddRoleManager<RoleManager<AppRole>>()
                 .AddDefaultTokenProviders();
 
 
@@ -166,9 +168,9 @@ namespace BackEnd
             services.AddSingleton<IUserStore, UserStore>();
             services.AddScoped<IUserAccessor, UserAccessor>();
             services.AddSingleton<ITOTP, TOTPUtil>();
-            services.AddScoped<IDeadlineService, DeadlineService>();
             services.AddScoped<IUserRoomService, UserRoomService>();
             services.AddScoped<ILogDAO, LogDAO>();
+            services.AddScoped<ISemesterService, SemesterService>();
 
             var emailConfig = Configuration
                 .GetSection("EmailConfiguration")
