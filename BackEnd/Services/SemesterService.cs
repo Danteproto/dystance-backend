@@ -409,7 +409,7 @@ namespace BackEnd.Services
                 {
                     results.Add(new ScheduleResponse
                     {
-                        id = schedule.Id,
+                        id = schedule.Id.ToString(),
                         date = schedule.Date.ToString("yyyy-MM-dd"),
                         startTime = schedule.StartTime.ToString(),
                         endTime = schedule.EndTime.ToString(),
@@ -437,7 +437,7 @@ namespace BackEnd.Services
                 schedule = TimetableDAO.GetLast(_roomContext);
                 return new OkObjectResult(new ScheduleResponse
                 {
-                    id = schedule.Id,
+                    id = schedule.Id.ToString(),
                     date = schedule.Date.ToString("yyyy-MM-dd"),
                     startTime = schedule.StartTime.ToString(),
                     endTime = schedule.EndTime.ToString(),
