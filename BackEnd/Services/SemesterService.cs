@@ -40,10 +40,12 @@ namespace BackEnd.Services
         private RoomDBContext _roomContext;
         private readonly IWebHostEnvironment _env;
 
+
         public SemesterService(UserManager<AppUser> userManager
             , UserDbContext userContext
             , RoomDBContext roomContext
-            , IWebHostEnvironment env)
+            , IWebHostEnvironment env
+            )
         {
             _userManager = userManager;
             _userContext = userContext;
@@ -88,11 +90,14 @@ namespace BackEnd.Services
                                     DOB = reader.GetValue(4).ToString()
                                 };
 
-                                //roleManager.AddUserToRole
-
+                                
                                 //Create user
                                 var result = await _userManager.CreateAsync(user, "123@123a");
 
+                                //roleManager.AddUserToRole
+                                await _userManager.AddToRoleAsync(user, "Student");
+
+                                //debug
                                 if (result != IdentityResult.Success)
                                 {
                                     appUsers.Add(user);
@@ -114,11 +119,13 @@ namespace BackEnd.Services
                                     DOB = reader.GetValue(4).ToString()
                                 };
 
-                                //roleManager.AddUserToRole
-
                                 //Create user
                                 var result = await _userManager.CreateAsync(user, "123@123a");
 
+                                //roleManager.AddUserToRole
+                                await _userManager.AddToRoleAsync(user, "Teacher");
+
+                                //debug
                                 if (result != IdentityResult.Success)
                                 {
                                     appUsers.Add(user);

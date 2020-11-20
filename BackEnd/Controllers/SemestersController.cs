@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
+using BackEnd.Models;
 using BackEnd.Requests;
 using BackEnd.Services;
 using BackEnd.Ultilities;
@@ -19,11 +20,15 @@ namespace BackEnd.Controllers
     {
         private readonly IMapper _mapper;
         private readonly ISemesterService _semesterService;
+        private readonly ITeacherService _teacherService;
+        private readonly IStudentService _studentService;
 
-        public SemestersController(IMapper mapper, ISemesterService semesterService)
+        public SemestersController(IMapper mapper, ISemesterService semesterService, ITeacherService teacherService, IStudentService studentService)
         {
             _mapper = mapper;
             _semesterService = semesterService;
+            _teacherService = teacherService;
+            _studentService = studentService;
         }
 
         [HttpGet]
@@ -87,6 +92,47 @@ namespace BackEnd.Controllers
         public async Task<IActionResult> DeleteClass([FromBody] List<string> ids)
         {
             return await _semesterService.DeleteClass(ids);
+        }
+        [HttpGet("teachers/get")]
+        public async Task<IActionResult> GetAllTeacher(string semesterId)
+        {
+            return await _teacherService.GetTeacherBySemesterId(semesterId);
+        }
+        
+        [HttpPost("teachers/add")]
+        public async Task<IActionResult> AddTeacher([FromBody] TeacherRequest model)
+        {
+            return await _teacherService.AddTeacher(model);
+        }
+        [HttpPost("teachers/update")]
+        public async Task<IActionResult> UpdateTeacher([FromBody] List<TeacherRequest> model)
+        {
+            return await _teacherService.UpdateTeacher(model);
+        }
+        [HttpDelete("teachers/delete")]
+        public async Task<IActionResult> DeleteTeacher([FromBody] List<string> model)
+        {
+            return await _teacherService.DeleteTeacher(model);
+        }
+        [HttpGet("students/get")]
+        public async Task<IActionResult> GetAllStudent(string semesterId)
+        {
+            return await _studentService.GetStudentBySemesterId(semesterId);
+        }
+        [HttpPost("students/add")]
+        public async Task<IActionResult> AddStudent([FromBody] TeacherRequest model)
+        {
+            return await _studentService.AddStudent(model);
+        }
+        [HttpPost("students/update")]
+        public async Task<IActionResult> UpdateStudent([FromBody] List<TeacherRequest> model)
+        {
+            return await _studentService.UpdateStudent(model);
+        }
+        [HttpDelete("students/delete")]
+        public async Task<IActionResult> DeleteStudent([FromBody] List<string> model)
+        {
+            return await _studentService.DeleteStudent(model);
         }
     }
 }
