@@ -41,8 +41,8 @@ namespace BackEnd.Services
         public Task<IActionResult> Authenticate(AuthenticateRequest model);
         IActionResult RefreshToken(string token);
         bool RevokeToken(string token, string ipAddress);
-        IEnumerable<UserInfoResponse> GetAll();
-        IActionResult GetById(string id);
+        Task<IEnumerable<UserInfoResponse>> GetAll();
+        Task<IActionResult> GetById(string id);
         public Task<IActionResult> Register(RegisterRequest model);
         public Task<IActionResult> ResendEmail(ResendEmailRequest req);
         public Task<string> ConfirmEmail(string token, string email);
@@ -235,32 +235,38 @@ namespace BackEnd.Services
         }
 
 
-        public IEnumerable<UserInfoResponse> GetAll()
+        public async Task<IEnumerable<UserInfoResponse>> GetAll()
         {
             //return _context.Users;
-            var users = _userManager.Users;
-
-            var returnList = from user in users
-                             select new UserInfoResponse
-                             {
-                                 Id = user.Id,
-                                 RealName = user.RealName,
-                                 UserName = user.UserName,
-                                 Avatar = $"api/users/getAvatar?fileName={user.Avatar}&realName=&userName={user.UserName}",
-                                 Dob = user.DOB,
-                                 Email = user.Email
-                             };
+            var users = _userManager.Users.ToList();
+            var returnList = new List<UserInfoResponse>();
+            foreach (var user in users)
+            {
+                var roles = await _userManager.GetRolesAsync(user);
+                returnList.Add(new UserInfoResponse
+                {
+                    Id = user.Id,
+                    RealName = user.RealName,
+                    UserName = user.UserName,
+                    Avatar = $"api/users/getAvatar?fileName={user.Avatar}&realName=&userName={user.UserName}",
+                    Dob = user.DOB,
+                    Email = user.Email,
+                    Roles = roles
+                });
+            }
 
             return returnList;
         }
 
-        public IActionResult GetById(string id)
+        public async Task<IActionResult> GetById(string id)
         {
-            var user = _context.Users.Find(id);
+            var user = await _context.Users.FindAsync(id);
             if (user == null)
             {
                 return new NotFoundObjectResult("");
             }
+
+            var roles = await _userManager.GetRolesAsync(user);
 
             var response = new UserInfoResponse
             {
@@ -269,7 +275,8 @@ namespace BackEnd.Services
                 Email = user.Email,
                 Dob = user.DOB,
                 Avatar = $"api/users/getAvatar?fileName={user.Avatar}&realName=&userName={user.UserName}",
-                UserName = user.UserName
+                UserName = user.UserName,
+                Roles = roles
             };
             return new OkObjectResult(response);
         }
@@ -415,15 +422,22 @@ namespace BackEnd.Services
         {
             var appUser = await _userManager.FindByIdAsync(_userAccessor.GetCurrentUserId());
 
+            var roles = await _userManager.GetRolesAsync(appUser);
+
             if (appUser != null)
             {
-                return new OkObjectResult(new
+                var response = new UserInfoResponse
                 {
-                    appUser.RealName,
-                    appUser.DOB,
-                    appUser.Email,
-                    appUser.UserName
-                });
+                    Id = appUser.Id,
+                    RealName = appUser.RealName,
+                    Email = appUser.Email,
+                    Dob = appUser.DOB,
+                    Avatar = $"api/users/getAvatar?fileName={appUser.Avatar}&realName=&userName={appUser.UserName}",
+                    UserName = appUser.UserName,
+                    Roles = roles
+                };
+
+                return new OkObjectResult(response);
             }
 
             return new NotFoundObjectResult("");
@@ -1232,18 +1246,18 @@ namespace BackEnd.Services
             }
             else
             {
-                return new BadRequestObjectResult(new { message = "Log sent successfully with some errors"});
+                return new BadRequestObjectResult(new { message = "Log sent successfully with some errors" });
 
             }
-            
+
         }
 
         public async Task<IActionResult> GetLogByRoom(string roomid)
         {
 
             var roomLists = await (from rooms in _context.UserLog
-                             where rooms.RoomId.Contains(roomid)
-                             select rooms).ToListAsync();
+                                   where rooms.RoomId.Contains(roomid)
+                                   select rooms).ToListAsync();
 
             var list = new List<LogResponse>();
 
@@ -1257,22 +1271,22 @@ namespace BackEnd.Services
                     RoomId = rooms.RoomId,
                     UserId = rooms.UserId,
                     Description = rooms.Description
-            });
+                });
             }
 
 
             return new OkObjectResult(list);
         }
 
-        public bool CheckLogExist (UsersLog model)
+        public bool CheckLogExist(UsersLog model)
         {
             var logLists = (from logs in _context.UserLog
-                            where logs.RoomId.Contains(model.RoomId) && logs.UserId.Contains(model.UserId) 
+                            where logs.RoomId.Contains(model.RoomId) && logs.UserId.Contains(model.UserId)
                                   && logs.DateTime.CompareTo(model.DateTime) == 0 && logs.LogType.Contains(model.LogType)
                                   && logs.Description.Contains(model.Description)
                             select logs).ToList();
 
-            if(logLists.Count != 0)
+            if (logLists.Count != 0)
             {
                 return false;
             }

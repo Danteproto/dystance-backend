@@ -66,18 +66,16 @@ namespace BackEnd.Controllers
 
         [HttpGet]
         [HttpGet("getAll")]
-        public IActionResult GetAll()
+        public async Task<IActionResult> GetAll()
         {
-            var users = _userService.GetAll();
-
-            
+            var users = await _userService.GetAll();
             return Ok(users);
         }
 
         [HttpGet("info")]
-        public IActionResult GetUserInfoById(string id)
+        public async Task<IActionResult> GetUserInfoById(string id)
         {
-            return _userService.GetById(id);
+            return await _userService.GetById(id);
         }
 
         //[HttpGet("{id}/refresh-tokens")]

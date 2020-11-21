@@ -15,8 +15,9 @@ namespace BackEnd.Responses
         public string Email { get; set; }
         public string Dob { get; set; }
         public string Avatar { get; set; }
+        public IEnumerable<string> Roles { get; set; }
 
-      
+
 
     }
 }
