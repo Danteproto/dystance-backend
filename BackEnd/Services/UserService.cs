@@ -836,7 +836,7 @@ namespace BackEnd.Services
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "joined room"
+                                        Description = "Joined room"
                                     };
                                     if (CheckLogExist(attendanceJoin))
                                     {
@@ -850,7 +850,7 @@ namespace BackEnd.Services
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "left room"
+                                        Description = "Left room"
                                     };
                                     if (CheckLogExist(attendanceLeave))
                                     {
@@ -864,7 +864,7 @@ namespace BackEnd.Services
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "sent message"
+                                        Description = "Sent message"
                                     };
                                     if (CheckLogExist(roomChatText))
                                     {
@@ -878,7 +878,7 @@ namespace BackEnd.Services
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "sent image " + words[words.Length - 1]
+                                        Description = "Sent image " + words[words.Length - 1]
                                     };
                                     if (CheckLogExist(roomChatImage))
                                     {
@@ -892,27 +892,13 @@ namespace BackEnd.Services
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "sent file " + words[words.Length - 1]
+                                        Description = "Sent file " + words[words.Length - 1]
                                     };
                                     if (CheckLogExist(roomChatFile))
                                     {
                                         result.Append(await _logDAO.CreateLog(roomChatFile) + '\n');
                                     }
-                                    break;
-                                case LogType.DEADLINE_CREATE:
-                                    UsersLog roomChatCreate = new UsersLog
-                                    {
-                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
-                                        LogType = words[1],
-                                        RoomId = words[2],
-                                        UserId = words[3],
-                                        Description = "created a new deadline"
-                                    };
-                                    if (CheckLogExist(roomChatCreate))
-                                    {
-                                        result.Append(await _logDAO.CreateLog(roomChatCreate) + '\n');
-                                    }
-                                    break;
+                                    break;                                
                                 case LogType.WHITEBOARD_ALLOW:
                                     UsersLog whiteboardAllow = new UsersLog
                                     {
@@ -920,7 +906,7 @@ namespace BackEnd.Services
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "gained whiteboard permissions"
+                                        Description = "Gained whiteboard permissions"
                                     };
                                     if (CheckLogExist(whiteboardAllow))
                                     {
@@ -934,7 +920,7 @@ namespace BackEnd.Services
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "lost whiteboard permissions"
+                                        Description = "Lost whiteboard permissions"
                                     };
                                     if (CheckLogExist(whiteboardDisable))
                                     {
@@ -948,7 +934,7 @@ namespace BackEnd.Services
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "created " + words[words.Length - 2] + " groups"
+                                        Description = "Created " + words[words.Length - 2] + " groups"
                                     };
                                     if (CheckLogExist(groupCreate))
                                     {
@@ -962,7 +948,7 @@ namespace BackEnd.Services
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "deleted " + words[words.Length - 2] + " groups"
+                                        Description = "Deleted " + words[words.Length - 2] + " groups"
                                     };
                                     if (CheckLogExist(groupDelete))
                                     {
@@ -976,7 +962,7 @@ namespace BackEnd.Services
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "started groups"
+                                        Description = "Started groups"
                                     };
                                     if (CheckLogExist(groupStart))
                                     {
@@ -990,7 +976,7 @@ namespace BackEnd.Services
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "stopped groups"
+                                        Description = "Stopped groups"
                                     };
                                     if (CheckLogExist(groupStop))
                                     {
@@ -1004,7 +990,7 @@ namespace BackEnd.Services
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "got kicked"
+                                        Description = "Got kicked"
                                     };
                                     if (CheckLogExist(gotKicked))
                                     {
@@ -1018,7 +1004,7 @@ namespace BackEnd.Services
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "got mute"
+                                        Description = "Got mute"
                                     };
                                     if (CheckLogExist(gotMuted))
                                     {
@@ -1032,7 +1018,7 @@ namespace BackEnd.Services
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "kicked user " + new Regex("(?<=user).*").Match(line).ToString().Trim()
+                                        Description = "Kicked user " + new Regex("(?<=user).*").Match(line).ToString().Trim()
                                     };
                                     if (CheckLogExist(kick))
                                     {
@@ -1046,7 +1032,7 @@ namespace BackEnd.Services
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "muted user " + new Regex("(?<=user).*").Match(line).ToString().Trim()
+                                        Description = "Muted user " + new Regex("(?<=user).*").Match(line).ToString().Trim()
                                     };
                                     if (CheckLogExist(mute))
                                     {
@@ -1060,39 +1046,11 @@ namespace BackEnd.Services
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "toggled whiteboard usage for " + new Regex("(?<=for).*").Match(line).ToString().Trim()
+                                        Description = "Toggled whiteboard usage for " + new Regex("(?<=for).*").Match(line).ToString().Trim()
                                     };
                                     if (CheckLogExist(toggleWhiteboard))
                                     {
                                         result.Append(await _logDAO.CreateLog(toggleWhiteboard) + '\n');
-                                    }
-                                    break;
-                                case LogType.DEADLINE_UPDATE:
-                                    UsersLog deadlineUpdate = new UsersLog
-                                    {
-                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
-                                        LogType = words[1],
-                                        RoomId = words[2],
-                                        UserId = words[3],
-                                        Description = "updated deadline " + new Regex("(?<=deadline).*").Match(line).ToString().Trim()
-                                    };
-                                    if (CheckLogExist(deadlineUpdate))
-                                    {
-                                        result.Append(await _logDAO.CreateLog(deadlineUpdate) + '\n');
-                                    }
-                                    break;
-                                case LogType.DEADLINE_DELETE:
-                                    UsersLog deadlineDelete = new UsersLog
-                                    {
-                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
-                                        LogType = words[1],
-                                        RoomId = words[2],
-                                        UserId = words[3],
-                                        Description = "deleted deadline " + new Regex("(?<=deadline).*").Match(line).ToString().Trim()
-                                    };
-                                    if (CheckLogExist(deadlineDelete))
-                                    {
-                                        result.Append(await _logDAO.CreateLog(deadlineDelete) + '\n');
                                     }
                                     break;
                                 case LogType.REMOTE_CONTROL_PERMISSION:
@@ -1102,7 +1060,7 @@ namespace BackEnd.Services
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "asked to remote control " + new Regex("(?<=control).*").Match(line).ToString().Trim()
+                                        Description = "Asked to remote control " + new Regex("(?<=control).*").Match(line).ToString().Trim()
                                     };
                                     if (CheckLogExist(remoteControlPermission))
                                     {
@@ -1116,7 +1074,7 @@ namespace BackEnd.Services
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "accepted remote control request from " + new Regex("(?<=from).*").Match(line).ToString().Trim()
+                                        Description = "Accepted remote control request from " + new Regex("(?<=from).*").Match(line).ToString().Trim()
                                     };
                                     if (CheckLogExist(remoteControlAccept))
                                     {
@@ -1130,7 +1088,7 @@ namespace BackEnd.Services
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "rejected remote control request from " + new Regex("(?<=from).*").Match(line).ToString().Trim()
+                                        Description = "Rejected remote control request from " + new Regex("(?<=from).*").Match(line).ToString().Trim()
                                     };
                                     if (CheckLogExist(remoteControlReject))
                                     {
@@ -1144,7 +1102,7 @@ namespace BackEnd.Services
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "stopped remote-controlling " + new Regex("(?<=controlling).*").Match(line).ToString().Trim()
+                                        Description = "Stopped remote-controlling " + new Regex("(?<=controlling).*").Match(line).ToString().Trim()
                                     };
                                     if (CheckLogExist(remoteControlStop))
                                     {
@@ -1158,7 +1116,7 @@ namespace BackEnd.Services
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "joined group " + new Regex("(?<=group).*").Match(line).ToString().Trim()
+                                        Description = "Joined group " + new Regex("(?<=group).*").Match(line).ToString().Trim()
                                     };
                                     if (CheckLogExist(groupJoin))
                                     {
@@ -1172,7 +1130,7 @@ namespace BackEnd.Services
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "left group " + new Regex("(?<=group).*").Match(line).ToString().Trim()
+                                        Description = "Left group " + new Regex("(?<=group).*").Match(line).ToString().Trim()
                                     };
                                     if (CheckLogExist(groupLeave))
                                     {
@@ -1186,7 +1144,7 @@ namespace BackEnd.Services
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "sent message to " + new Regex("(?<=to).*").Match(line).ToString().Trim()
+                                        Description = "Sent message to " + new Regex("(?<=to).*").Match(line).ToString().Trim()
                                     };
                                     if (CheckLogExist(privateChatText))
                                     {
@@ -1200,7 +1158,7 @@ namespace BackEnd.Services
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "sent image " + new Regex("(?<=image).*").Match(line).ToString().Trim()
+                                        Description = "Sent image " + new Regex("(?<=image).*").Match(line).ToString().Trim()
                                     };
                                     if (CheckLogExist(privateChatImage))
                                     {
@@ -1214,7 +1172,7 @@ namespace BackEnd.Services
                                         LogType = words[1],
                                         RoomId = words[2],
                                         UserId = words[3],
-                                        Description = "sent file " + new Regex("(?<=file).*").Match(line).ToString().Trim()
+                                        Description = "Sent file " + new Regex("(?<=file).*").Match(line).ToString().Trim()
                                     };
                                     if (CheckLogExist(privateChatFile))
                                     {
