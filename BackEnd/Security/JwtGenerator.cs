@@ -62,7 +62,7 @@ namespace BackEnd.Security
                 return new RefreshToken
                 {
                     Token = Convert.ToBase64String(randomBytes),
-                    Expires = DateTime.UtcNow.AddDays(7),
+                    Expires = DateTime.UtcNow.AddDays(52),
                     Created = DateTime.UtcNow
                     //CreatedByIp = ipAddress
                 };
