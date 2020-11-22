@@ -26,7 +26,7 @@ namespace BackEnd.Services
     {
         public Task<IActionResult> GetTeacherBySemesterId(string semesterId);
         public Task<IActionResult> AddTeacher(TeacherRequest model, string semesterId);
-        public Task<IActionResult> UpdateTeacher(List<TeacherRequest> model, string semesterId);
+        public Task<IActionResult> UpdateTeacher(List<TeacherRequest> model);
         public Task<IActionResult> DeleteTeacher(List<string> model);
     }
     public class TeacherService : ITeacherService
@@ -154,7 +154,7 @@ namespace BackEnd.Services
 
         }
 
-        public async Task<IActionResult> UpdateTeacher(List<TeacherRequest> teacherList, string semesterId)
+        public async Task<IActionResult> UpdateTeacher(List<TeacherRequest> teacherList)
         {
             var dict = new Dictionary<String, object>();
             var response = new List<TeacherInfoResponse>();
@@ -178,7 +178,7 @@ namespace BackEnd.Services
                                 errors.Add(new Error
                                 {
                                     Type = 1,
-                                    Message = "Email " + req.Code + " already exists",
+                                    Message = "Email " + req.Email + " already exists",
                                 });
                                 continue;
                             }
@@ -187,7 +187,7 @@ namespace BackEnd.Services
                                 errors.Add(new Error
                                 {
                                     Type = 2,
-                                    Message = "Employee Code " + req.Email + " already exists",
+                                    Message = "Employee Code " + req.Code + " already exists",
                                 });
                                 continue;
                             }
@@ -200,11 +200,6 @@ namespace BackEnd.Services
                        
 
                         var resultUpdate = await _userManager.UpdateAsync(user);
-                        await UserSemesterDAO.Update(_userContext, new UserSemesters
-                        {
-                            SemesterId = semesterId,
-                            UserId = user.Id
-                        });
                         if (resultUpdate.Succeeded)
                         {
                             response.Add(new TeacherInfoResponse
@@ -236,8 +231,8 @@ namespace BackEnd.Services
                 }
 
             }
-            dict.Add("Success", response);
-            dict.Add("Failed", errors);
+            dict.Add("success", response);
+            dict.Add("failed", errors);
 
             return new OkObjectResult(dict);
         }

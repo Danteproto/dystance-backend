@@ -36,8 +36,8 @@ namespace BackEnd.Services
         public StudentService(
             UserDbContext context,
             UserManager<AppUser> userManager,
-            RoleManager<AppRole> roleManager, 
-            RoomDBContext roomcontext, 
+            RoleManager<AppRole> roleManager,
+            RoomDBContext roomcontext,
             IWebHostEnvironment env)
         {
             _context = context;
@@ -70,8 +70,8 @@ namespace BackEnd.Services
 
             var listStudent = new List<TeacherInfoResponse>();
             var listUserId = await (from userSemester in _context.UserSemesters
-                              where userSemester.SemesterId == semesterId
-                              select userSemester.UserId).ToListAsync();
+                                    where userSemester.SemesterId == semesterId
+                                    select userSemester.UserId).ToListAsync();
 
 
             foreach (var userId in listUserId)
@@ -116,10 +116,6 @@ namespace BackEnd.Services
 
             string imgName = "default";
             string extension = ".png";
-            IFormFile img = null;
-
-            img = Extensions.GetDefaultAvatar(_env);
-
 
             var registerUser = new AppUser
             {
@@ -184,14 +180,14 @@ namespace BackEnd.Services
                     {
                         //Update Profile
 
-                        if(!(user.UserName == req.Code && user.RealName == req.RealName && user.Email == req.Email && user.DOB == req.Dob))
+                        if (!(user.UserName == req.Code && user.RealName == req.RealName && user.Email == req.Email && user.DOB == req.Dob))
                         {
                             if (await _userManager.FindByEmailAsync(req.Email) != null && user.Email != req.Email)
                             {
                                 errors.Add(new Error
                                 {
                                     Type = 1,
-                                    Message = "Email " + req.Code + " already exists",
+                                    Message = "Email " + req.Email + " already exists",
                                 });
                                 continue;
                             }
@@ -200,7 +196,7 @@ namespace BackEnd.Services
                                 errors.Add(new Error
                                 {
                                     Type = 2,
-                                    Message = "Student Code " + req.Email + " already exists",
+                                    Message = "Student Code " + req.Code + " already exists",
                                 });
                                 continue;
                             }
@@ -209,35 +205,28 @@ namespace BackEnd.Services
                             user.RealName = req.RealName;
                             user.DOB = req.Dob;
                             user.Email = req.Email;
-                        }
-                        var resultUpdate = await _userManager.UpdateAsync(user);
 
-                        await UserSemesterDAO.Update(_context, new UserSemesters
-                        {
-                            SemesterId = semesterId,
-                            UserId = user.Id
-                        });
-
-                        if (resultUpdate.Succeeded)
-                        {
-                            response.Add(new TeacherInfoResponse
+                            var resultUpdate = await _userManager.UpdateAsync(user);
+                            if (resultUpdate.Succeeded)
                             {
-                                Id = user.Id,
-                                Code = user.UserName,
-                                RealName = user.RealName,
-                                Email = user.Email,
-                                Dob = user.DOB
-                            });
-                        }
-                        else
-                        {
-
-                            return new ObjectResult(new { type = 3, code = resultUpdate.Errors.ToList()[0].Code, description = resultUpdate.Errors.ToList()[0].Description })
+                                response.Add(new TeacherInfoResponse
+                                {
+                                    Id = user.Id,
+                                    Code = user.UserName,
+                                    RealName = user.RealName,
+                                    Email = user.Email,
+                                    Dob = user.DOB
+                                });
+                            }
+                            else
                             {
-                                StatusCode = 500
-                            };
-                        }
 
+                                return new ObjectResult(new { type = 3, code = resultUpdate.Errors.ToList()[0].Code, description = resultUpdate.Errors.ToList()[0].Description })
+                                {
+                                    StatusCode = 500
+                                };
+                            }
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -249,8 +238,8 @@ namespace BackEnd.Services
                 }
 
             }
-            dict.Add("Success", response);
-            dict.Add("Failed", errors);
+            dict.Add("success", response);
+            dict.Add("failed", errors);
 
             return new OkObjectResult(dict);
         }
