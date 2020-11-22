@@ -18,14 +18,15 @@ using Microsoft.AspNetCore.Mvc.Infrastructure;
 using EmailService;
 using BackEnd.Requests;
 using Newtonsoft.Json;
+using BackEnd.DAO;
 
 namespace BackEnd.Services
 {
     public interface ITeacherService
     {
         public Task<IActionResult> GetTeacherBySemesterId(string semesterId);
-        public Task<IActionResult> AddTeacher(TeacherRequest model);
-        public Task<IActionResult> UpdateTeacher(List<TeacherRequest> model);
+        public Task<IActionResult> AddTeacher(TeacherRequest model, string semesterId);
+        public Task<IActionResult> UpdateTeacher(List<TeacherRequest> model, string semesterId);
         public Task<IActionResult> DeleteTeacher(List<string> model);
     }
     public class TeacherService : ITeacherService
@@ -61,23 +62,9 @@ namespace BackEnd.Services
 
         public async Task<IActionResult> GetTeacherBySemesterId(string semesterId)
         {
-            var roomLists = await (from rooms in _roomContext.Room
-                                   where rooms.SemesterId.ToString().Contains(semesterId)
-                                   select rooms.RoomId).ToListAsync();
-
-            var listUserId = new List<string>();
-
-            foreach (var roomId in roomLists)
-            {
-                var result = await _roomContext.RoomUserLink.FirstOrDefaultAsync(r => r.RoomId == roomId);
-                if (result != null)
-                {
-                    if (listUserId.FirstOrDefault(x => x == result.UserId) == null)
-                    {
-                        listUserId.Add(result.UserId);
-                    }
-                }
-            }
+            var listUserId = await (from userSemester in _userContext.UserSemesters
+                                    where userSemester.SemesterId == semesterId
+                                    select userSemester.UserId).ToListAsync();
 
             var listTeacher = new List<TeacherInfoResponse>();
 
@@ -106,7 +93,7 @@ namespace BackEnd.Services
             return new OkObjectResult(listTeacher);
         }
 
-        public async Task<IActionResult> AddTeacher(TeacherRequest model)
+        public async Task<IActionResult> AddTeacher(TeacherRequest model, string semesterId)
         {
 
             var appUser = await _userManager.FindByNameAsync(model.Code);
@@ -123,10 +110,6 @@ namespace BackEnd.Services
 
             string imgName = "default";
             string extension = ".png";
-            IFormFile img = null;
-
-            img = Extensions.GetDefaultAvatar(_env);
-
 
             var registerUser = new AppUser
             {
@@ -149,8 +132,16 @@ namespace BackEnd.Services
 
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(registerUser);
             await _userManager.ConfirmEmailAsync(registerUser, token);
-
             await _userManager.AddToRoleAsync(registerUser, "Teacher");
+
+            var user = await _userManager.FindByEmailAsync(model.Email);
+
+            //adding link between teacher & semester
+            await UserSemesterDAO.Create(_userContext, new UserSemesters
+            {
+                SemesterId = semesterId,
+                UserId = user.Id
+            });
 
             return new OkObjectResult(new TeacherInfoResponse
             {
@@ -163,7 +154,7 @@ namespace BackEnd.Services
 
         }
 
-        public async Task<IActionResult> UpdateTeacher(List<TeacherRequest> teacherList)
+        public async Task<IActionResult> UpdateTeacher(List<TeacherRequest> teacherList, string semesterId)
         {
             var dict = new Dictionary<String, object>();
             var response = new List<TeacherInfoResponse>();
@@ -177,35 +168,43 @@ namespace BackEnd.Services
                 }
                 try
                 {
-                    if (await _userManager.IsInRoleAsync(user, "Teacher") && !(user.UserName == req.Code && user.RealName == req.RealName && user.Email == req.Email && user.DOB == req.Dob))
+                    if (await _userManager.IsInRoleAsync(user, "Teacher"))
                     {
-                        //Update Profile
-                        if (await _userManager.FindByEmailAsync(req.Email) != null && user.Email != req.Email)
+                        if(!(user.UserName == req.Code && user.RealName == req.RealName && user.Email == req.Email && user.DOB == req.Dob))
                         {
-                            errors.Add(new Error 
+                            //Update Profile
+                            if (await _userManager.FindByEmailAsync(req.Email) != null && user.Email != req.Email)
                             {
-                                Type = 1,
-                                Message = "Email " + req.Code + " already exists",
-                            });
-                            continue;
-                        }
-                        if (await _userManager.FindByNameAsync(req.Code) != null && user.UserName != req.Code)
-                        {
-                            errors.Add(new Error
+                                errors.Add(new Error
+                                {
+                                    Type = 1,
+                                    Message = "Email " + req.Code + " already exists",
+                                });
+                                continue;
+                            }
+                            if (await _userManager.FindByNameAsync(req.Code) != null && user.UserName != req.Code)
                             {
-                                Type = 2,
-                                Message = "Employee Code " + req.Email +" already exists",
-                            });
-                            continue;
+                                errors.Add(new Error
+                                {
+                                    Type = 2,
+                                    Message = "Employee Code " + req.Email + " already exists",
+                                });
+                                continue;
+                            }
+
+                            user.UserName = req.Code;
+                            user.RealName = req.RealName;
+                            user.DOB = req.Dob;
+                            user.Email = req.Email;
                         }
-                        
-                        user.UserName = req.Code;
-                        user.RealName = req.RealName;
-                        user.DOB = req.Dob;
-                        user.Email = req.Email;
+                       
 
                         var resultUpdate = await _userManager.UpdateAsync(user);
-
+                        await UserSemesterDAO.Update(_userContext, new UserSemesters
+                        {
+                            SemesterId = semesterId,
+                            UserId = user.Id
+                        });
                         if (resultUpdate.Succeeded)
                         {
                             response.Add(new TeacherInfoResponse

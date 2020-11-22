@@ -251,7 +251,7 @@ namespace BackEnd.Services
                     Avatar = $"api/users/getAvatar?fileName={user.Avatar}&realName=&userName={user.UserName}",
                     Dob = user.DOB,
                     Email = user.Email,
-                    Roles = roles
+                    Role = roles.Any()? roles[0]:""
                 });
             }
 
@@ -276,7 +276,7 @@ namespace BackEnd.Services
                 Dob = user.DOB,
                 Avatar = $"api/users/getAvatar?fileName={user.Avatar}&realName=&userName={user.UserName}",
                 UserName = user.UserName,
-                Roles = roles
+                Role = roles[0]
             };
             return new OkObjectResult(response);
         }
@@ -434,7 +434,7 @@ namespace BackEnd.Services
                     Dob = appUser.DOB,
                     Avatar = $"api/users/getAvatar?fileName={appUser.Avatar}&realName=&userName={appUser.UserName}",
                     UserName = appUser.UserName,
-                    Roles = roles
+                    Role = roles[0]
                 };
 
                 return new OkObjectResult(response);

@@ -100,14 +100,14 @@ namespace BackEnd.Controllers
         }
         
         [HttpPost("teachers/add")]
-        public async Task<IActionResult> AddTeacher([FromBody] TeacherRequest model)
+        public async Task<IActionResult> AddTeacher([FromBody] TeacherRequest model, string semesterId)
         {
-            return await _teacherService.AddTeacher(model);
+            return await _teacherService.AddTeacher(model, semesterId);
         }
         [HttpPost("teachers/update")]
-        public async Task<IActionResult> UpdateTeacher([FromBody] List<TeacherRequest> model)
+        public async Task<IActionResult> UpdateTeacher([FromBody] List<TeacherRequest> model, string semesterId)
         {
-            return await _teacherService.UpdateTeacher(model);
+            return await _teacherService.UpdateTeacher(model, semesterId);
         }
         [HttpDelete("teachers/delete")]
         public async Task<IActionResult> DeleteTeacher([FromBody] List<string> model)
@@ -120,14 +120,14 @@ namespace BackEnd.Controllers
             return await _studentService.GetStudentBySemesterId(semesterId);
         }
         [HttpPost("students/add")]
-        public async Task<IActionResult> AddStudent([FromBody] TeacherRequest model)
+        public async Task<IActionResult> AddStudent([FromBody] TeacherRequest model, string semesterId)
         {
-            return await _studentService.AddStudent(model);
+            return await _studentService.AddStudent(model, semesterId);
         }
         [HttpPost("students/update")]
-        public async Task<IActionResult> UpdateStudent([FromBody] List<TeacherRequest> model)
+        public async Task<IActionResult> UpdateStudent([FromBody] List<TeacherRequest> model, string semesterId)
         {
-            return await _studentService.UpdateStudent(model);
+            return await _studentService.UpdateStudent(model, semesterId);
         }
         [HttpDelete("students/delete")]
         public async Task<IActionResult> DeleteStudent([FromBody] List<string> model)

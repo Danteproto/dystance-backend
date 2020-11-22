@@ -13,14 +13,15 @@ using System.Linq;
 using System.Threading.Tasks;
 using BackEnd.Ultilities;
 using Microsoft.AspNetCore.Hosting;
+using BackEnd.DAO;
 
 namespace BackEnd.Services
 {
     public interface IStudentService
     {
         public Task<IActionResult> GetStudentBySemesterId(string semesterId);
-        public Task<IActionResult> AddStudent(TeacherRequest model);
-        public Task<IActionResult> UpdateStudent(List<TeacherRequest> model);
+        public Task<IActionResult> AddStudent(TeacherRequest model, string semesterId);
+        public Task<IActionResult> UpdateStudent(List<TeacherRequest> model, string semesterId);
         public Task<IActionResult> DeleteStudent(List<string> model);
     }
     public class StudentService : IStudentService
@@ -49,25 +50,28 @@ namespace BackEnd.Services
 
         public async Task<IActionResult> GetStudentBySemesterId(string semesterId)
         {
-            var roomLists = await (from rooms in _roomContext.Room
-                                   where rooms.SemesterId.ToString().Contains(semesterId)
-                                   select rooms.RoomId).ToListAsync();
+            //var roomLists = await (from rooms in _roomContext.Room
+            //                       where rooms.SemesterId.ToString().Contains(semesterId)
+            //                       select rooms.RoomId).ToListAsync();
 
-            var listUserId = new List<string>();
+            //var listUserId = new List<string>();
 
-            foreach (var roomId in roomLists)
-            {
-                var result = await _roomContext.RoomUserLink.FirstOrDefaultAsync(r => r.RoomId == roomId);
-                if (result != null)
-                {
-                    if (listUserId.FirstOrDefault(x => x == result.UserId) == null)
-                    {
-                        listUserId.Add(result.UserId);
-                    }
-                }
-            }
+            //foreach (var roomId in roomLists)
+            //{
+            //    var result = await _roomContext.RoomUserLink.FirstOrDefaultAsync(r => r.RoomId == roomId);
+            //    if (result != null)
+            //    {
+            //        if (listUserId.FirstOrDefault(x => x == result.UserId) == null)
+            //        {
+            //            listUserId.Add(result.UserId);
+            //        }
+            //    }
+            //}
 
             var listStudent = new List<TeacherInfoResponse>();
+            var listUserId = await (from userSemester in _context.UserSemesters
+                              where userSemester.SemesterId == semesterId
+                              select userSemester.UserId).ToListAsync();
 
 
             foreach (var userId in listUserId)
@@ -95,7 +99,7 @@ namespace BackEnd.Services
         }
 
 
-        public async Task<IActionResult> AddStudent(TeacherRequest model)
+        public async Task<IActionResult> AddStudent(TeacherRequest model, string semesterId)
         {
 
             var appUser = await _userManager.FindByNameAsync(model.Code);
@@ -138,8 +142,17 @@ namespace BackEnd.Services
 
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(registerUser);
             await _userManager.ConfirmEmailAsync(registerUser, token);
-
             await _userManager.AddToRoleAsync(registerUser, "Student");
+
+            var user = await _userManager.FindByEmailAsync(model.Email);
+
+            //adding link between student & semester
+            await UserSemesterDAO.Create(_context, new UserSemesters
+            {
+                SemesterId = semesterId,
+                UserId = user.Id
+            });
+
 
             return new OkObjectResult(new TeacherInfoResponse
             {
@@ -147,12 +160,12 @@ namespace BackEnd.Services
                 Code = registerUser.UserName,
                 Email = registerUser.Email,
                 RealName = registerUser.RealName,
-                Dob = registerUser.DOB,
+                Dob = registerUser.DOB
             });
 
         }
 
-        public async Task<IActionResult> UpdateStudent(List<TeacherRequest> teacherList)
+        public async Task<IActionResult> UpdateStudent(List<TeacherRequest> teacherList, string semesterId)
         {
             var dict = new Dictionary<String, object>();
             var response = new List<TeacherInfoResponse>();
@@ -166,34 +179,44 @@ namespace BackEnd.Services
                 }
                 try
                 {
-                    if (await _userManager.IsInRoleAsync(user, "Student") && !(user.UserName == req.Code && user.RealName == req.RealName && user.Email == req.Email && user.DOB == req.Dob))
+                    //Update thong tin user
+                    if (await _userManager.IsInRoleAsync(user, "Student"))
                     {
                         //Update Profile
-                        if (await _userManager.FindByEmailAsync(req.Email) != null && user.Email != req.Email)
-                        {
-                            errors.Add(new Error
-                            {
-                                Type = 1,
-                                Message = "Email " + req.Code + " already exists",
-                            });
-                            continue;
-                        }
-                        if (await _userManager.FindByNameAsync(req.Code) != null && user.UserName != req.Code)
-                        {
-                            errors.Add(new Error
-                            {
-                                Type = 2,
-                                Message = "Student Code " + req.Email + " already exists",
-                            });
-                            continue;
-                        }
 
-                        user.UserName = req.Code;
-                        user.RealName = req.RealName;
-                        user.DOB = req.Dob;
-                        user.Email = req.Email;
+                        if(!(user.UserName == req.Code && user.RealName == req.RealName && user.Email == req.Email && user.DOB == req.Dob))
+                        {
+                            if (await _userManager.FindByEmailAsync(req.Email) != null && user.Email != req.Email)
+                            {
+                                errors.Add(new Error
+                                {
+                                    Type = 1,
+                                    Message = "Email " + req.Code + " already exists",
+                                });
+                                continue;
+                            }
+                            if (await _userManager.FindByNameAsync(req.Code) != null && user.UserName != req.Code)
+                            {
+                                errors.Add(new Error
+                                {
+                                    Type = 2,
+                                    Message = "Student Code " + req.Email + " already exists",
+                                });
+                                continue;
+                            }
 
+                            user.UserName = req.Code;
+                            user.RealName = req.RealName;
+                            user.DOB = req.Dob;
+                            user.Email = req.Email;
+                        }
                         var resultUpdate = await _userManager.UpdateAsync(user);
+
+                        await UserSemesterDAO.Update(_context, new UserSemesters
+                        {
+                            SemesterId = semesterId,
+                            UserId = user.Id
+                        });
 
                         if (resultUpdate.Succeeded)
                         {
