@@ -21,7 +21,7 @@ namespace BackEnd.Services
     {
         public Task<IActionResult> GetStudentBySemesterId(string semesterId);
         public Task<IActionResult> AddStudent(TeacherRequest model, string semesterId);
-        public Task<IActionResult> UpdateStudent(List<TeacherRequest> model, string semesterId);
+        public Task<IActionResult> UpdateStudent(List<TeacherRequest> model);
         public Task<IActionResult> DeleteStudent(List<string> model);
     }
     public class StudentService : IStudentService
@@ -161,7 +161,7 @@ namespace BackEnd.Services
 
         }
 
-        public async Task<IActionResult> UpdateStudent(List<TeacherRequest> teacherList, string semesterId)
+        public async Task<IActionResult> UpdateStudent(List<TeacherRequest> teacherList)
         {
             var dict = new Dictionary<String, object>();
             var response = new List<TeacherInfoResponse>();
