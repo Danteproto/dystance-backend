@@ -156,9 +156,9 @@ namespace BackEnd.Services
 
         public async Task<IActionResult> UpdateTeacher(List<TeacherRequest> teacherList, string semesterId)
         {
-            //var dict = new Dictionary<String, object>();
+            var dict = new Dictionary<String, object>();
             var response = new List<TeacherInfoResponse>();
-            //var errors = new List<Error>();
+            var errors = new List<Error>();
             foreach (var req in teacherList)
             {
                 var user = await _userManager.FindByIdAsync(req.Id);
@@ -175,20 +175,20 @@ namespace BackEnd.Services
                             //Update Profile
                             if (await _userManager.FindByEmailAsync(req.Email) != null && user.Email != req.Email)
                             {
-                                //errors.Add(new Error
-                                //{
-                                //    Type = 1,
-                                //    Message = "Email " + req.Code + " already exists",
-                                //});
+                                errors.Add(new Error
+                                {
+                                    Type = 1,
+                                    Message = "Email " + req.Code + " already exists",
+                                });
                                 continue;
                             }
                             if (await _userManager.FindByNameAsync(req.Code) != null && user.UserName != req.Code)
                             {
-                                //errors.Add(new Error
-                                //{
-                                //    Type = 2,
-                                //    Message = "Employee Code " + req.Email + " already exists",
-                                //});
+                                errors.Add(new Error
+                                {
+                                    Type = 2,
+                                    Message = "Employee Code " + req.Email + " already exists",
+                                });
                                 continue;
                             }
 
@@ -236,10 +236,10 @@ namespace BackEnd.Services
                 }
 
             }
-            //dict.Add("Success", response);
-            //dict.Add("Failed", errors);
+            dict.Add("Success", response);
+            dict.Add("Failed", errors);
 
-            return new OkObjectResult(response);
+            return new OkObjectResult(dict);
         }
 
         public async Task<IActionResult> DeleteTeacher(List<string> teacherIdList)
