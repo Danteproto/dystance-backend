@@ -75,64 +75,7 @@ namespace BackEnd.Services
                     {
                         while (reader.Read()) //Each row of the file
                         {
-                            if (reader.Name == "Students") // "STUDENTS" SHEET
-                            {
-                                if (reader.GetValue(0).ToString() == "No")
-                                {
-                                    continue;
-                                }
-
-                                var user = new AppUser
-                                {
-                                    UserName = reader.GetValue(1).ToString(),
-                                    RealName = reader.GetValue(2).ToString(),
-                                    Email = reader.GetValue(3).ToString(),
-                                    DOB = reader.GetValue(4).ToString()
-                                };
-
-                                
-                                //Create user
-                                var result = await _userManager.CreateAsync(user, "123@123a");
-
-                                //roleManager.AddUserToRole
-                                await _userManager.AddToRoleAsync(user, "Student");
-
-                                //debug
-                                if (result != IdentityResult.Success)
-                                {
-                                    appUsers.Add(user);
-                                }
-                            }
-
-                            if (reader.Name == "Teachers") // "TEACHERS" SHEET
-                            {
-                                if (reader.GetValue(0).ToString() == "No")
-                                {
-                                    continue;
-                                }
-
-                                var user = new AppUser
-                                {
-                                    UserName = reader.GetValue(1).ToString(),
-                                    RealName = reader.GetValue(2).ToString(),
-                                    Email = reader.GetValue(3).ToString(),
-                                    DOB = reader.GetValue(4).ToString()
-                                };
-
-                                //Create user
-                                var result = await _userManager.CreateAsync(user, "123@123a");
-
-                                //roleManager.AddUserToRole
-                                await _userManager.AddToRoleAsync(user, "Teacher");
-
-                                //debug
-                                if (result != IdentityResult.Success)
-                                {
-                                    appUsers.Add(user);
-                                }
-                            }
-
-
+                            
                             if (reader.Name == "Classes") // "CLASSES" SHEET
                             {
                                 var room = new Room();

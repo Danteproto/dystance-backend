@@ -60,16 +60,19 @@ namespace BackEnd.Context
                 var roles = new List<AppRole>
                 {
                     new AppRole{
-                        Name="Admin"
+                        Name="admin"
                     },
                     new AppRole{
-                        Name="Academic Management"
+                        Name="academic management"
                     },
                     new AppRole{
-                        Name="Student"
+                        Name="student"
                     },
                     new AppRole{
-                        Name="Teacher"
+                        Name="teacher"
+                    },
+                    new AppRole{
+                        Name="quality assurance"
                     }
                 };
                 foreach (var role in roles)
