@@ -26,6 +26,7 @@ using static BackEnd.Constant.Log;
 using BackEnd.DAO;
 using System.Text;
 using System.Text.RegularExpressions;
+using ExcelDataReader;
 
 namespace BackEnd.Services
 {
@@ -58,9 +59,9 @@ namespace BackEnd.Services
         public List<PrivateMessage> GetPreview(string id);
         public PrivateMessage GetLastPm(string id1, string id2);
         public FileStream GetPMFile(string userId, string fileName, int type);
-        public Task<IActionResult> AutoComplete(string username);
         public Task<IActionResult> Log(LogRequest model);
         public Task<IActionResult> GetLogByRoom(string roomid);
+        public Task<IActionResult> AddAccount(HttpRequest request);
     }
 
     public class UserService : IUserService
@@ -251,7 +252,7 @@ namespace BackEnd.Services
                     Avatar = $"api/users/getAvatar?fileName={user.Avatar}&realName=&userName={user.UserName}",
                     Dob = user.DOB,
                     Email = user.Email,
-                    Role = roles.Any()? roles[0]:""
+                    Role = roles.Any() ? roles[0] : ""
                 });
             }
 
@@ -800,31 +801,6 @@ namespace BackEnd.Services
                 .Last();
         }
 
-        public async Task<IActionResult> AutoComplete(string username)
-        {
-            var user = await _userManager.FindByNameAsync(username);
-            if (user == null)
-            {
-                return new BadRequestObjectResult(new { type = 0, message = "User does not exist" });
-            }
-
-            var userLists = (from users in _userManager.Users
-                             where users.RealName.Contains(username)
-                             select users.RealName).ToList();
-
-            var list = new List<AppUser>();
-
-
-            foreach (var users in userLists)
-            {
-                //get users
-                var resultUser = await _userManager.Users.FirstOrDefaultAsync(r => r.RealName == username);
-
-                list.Add(resultUser);
-            }
-            return new OkObjectResult(list);
-        }
-
         public async Task<IActionResult> Log(LogRequest model)
         {
             //var user = await _userManager.FindByIdAsync(model.UserId);
@@ -1252,7 +1228,103 @@ namespace BackEnd.Services
             return true;
         }
 
+        public async Task<IActionResult> AddAccount(HttpRequest request)
+        {
+            var appUsers = new List<AppUser>();
+            var file = request.Form.Files[0];
+            using (var stream = file.OpenReadStream())
+            {
+                using (var reader = ExcelReaderFactory.CreateReader(stream))
+                {
+                    do
+                    {
+                        while (reader.Read()) //Each row of the file
+                        {
+                            if (reader.Name == "Students") // "STUDENTS" SHEET
+                            {
+                                if (reader.GetValue(0).ToString() == "No")
+                                {
+                                    continue;
+                                }
+                                
+                                if(await _userManager.FindByNameAsync(reader.GetValue(1).ToString()) != null ||
+                                   await _userManager.FindByEmailAsync(reader.GetValue(3).ToString()) != null)
+                                {
+                                    continue;
+                                }
 
+                                var user = new AppUser
+                                {
+                                    UserName = reader.GetValue(1).ToString(),
+                                    RealName = reader.GetValue(2).ToString(),
+                                    Email = reader.GetValue(3).ToString(),
+                                    DOB = reader.GetValue(4).ToString(),
+                                    Avatar = "default.png"
+                                };
+
+
+                                //Create user
+                                var result = await _userManager.CreateAsync(user, "123@123a");
+
+                                //Confirm email
+                                var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                                await _userManager.ConfirmEmailAsync(user, token);
+
+                                //roleManager.AddUserToRole
+                                await _userManager.AddToRoleAsync(user, "Student");
+
+                                //debug
+                                if (result != IdentityResult.Success)
+                                {
+                                    appUsers.Add(user);
+                                }
+                            }
+
+                            if (reader.Name == "Teachers") // "TEACHERS" SHEET
+                            {
+                                if (reader.GetValue(0).ToString() == "No")
+                                {
+                                    continue;
+                                }
+
+                                if (await _userManager.FindByNameAsync(reader.GetValue(1).ToString()) != null ||
+                                    await _userManager.FindByEmailAsync(reader.GetValue(3).ToString()) != null)
+                                {
+                                    continue;
+                                }
+
+                                var user = new AppUser
+                                {
+                                    UserName = reader.GetValue(1).ToString(),
+                                    RealName = reader.GetValue(2).ToString(),
+                                    Email = reader.GetValue(3).ToString(),
+                                    DOB = reader.GetValue(4).ToString(),
+                                    Avatar =  "default.png"
+                                };
+
+                                //Create user
+                                var result = await _userManager.CreateAsync(user, "123@123a");
+
+                                //roleManager.AddUserToRole
+                                await _userManager.AddToRoleAsync(user, "Teacher");
+
+                                //debug
+                                if (result != IdentityResult.Success)
+                                {
+                                    appUsers.Add(user);
+                                }
+                            }
+
+                        }
+
+                    } while (reader.NextResult());
+                }
+
+
+            }
+            return new OkObjectResult("");
+
+        }
 
     }
 }

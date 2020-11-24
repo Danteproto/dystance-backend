@@ -19,8 +19,8 @@ namespace BackEnd.Services
 {
     public interface IStudentService
     {
-        public Task<IActionResult> GetStudentBySemesterId(string semesterId);
-        public Task<IActionResult> AddStudent(TeacherRequest model, string semesterId);
+        public Task<IActionResult> GetStudent();
+        public Task<IActionResult> AddStudent(TeacherRequest model);
         public Task<IActionResult> UpdateStudent(List<TeacherRequest> model);
         public Task<IActionResult> DeleteStudent(List<string> model);
     }
@@ -48,50 +48,26 @@ namespace BackEnd.Services
         }
 
 
-        public async Task<IActionResult> GetStudentBySemesterId(string semesterId)
+        public async Task<IActionResult> GetStudent()
         {
-            //var roomLists = await (from rooms in _roomContext.Room
-            //                       where rooms.SemesterId.ToString().Contains(semesterId)
-            //                       select rooms.RoomId).ToListAsync();
-
-            //var listUserId = new List<string>();
-
-            //foreach (var roomId in roomLists)
-            //{
-            //    var result = await _roomContext.RoomUserLink.FirstOrDefaultAsync(r => r.RoomId == roomId);
-            //    if (result != null)
-            //    {
-            //        if (listUserId.FirstOrDefault(x => x == result.UserId) == null)
-            //        {
-            //            listUserId.Add(result.UserId);
-            //        }
-            //    }
-            //}
+            var listUserId = await _userManager.Users.ToListAsync();
 
             var listStudent = new List<TeacherInfoResponse>();
-            var listUserId = await (from userSemester in _context.UserSemesters
-                                    where userSemester.SemesterId == semesterId
-                                    select userSemester.UserId).ToListAsync();
 
 
-            foreach (var userId in listUserId)
+            foreach (var user in listUserId)
             {
-                var result2 = await _userManager.FindByIdAsync(userId);
-
-                if (result2 != null)
+                if (await _userManager.IsInRoleAsync(user, "Student"))
                 {
-                    if (await _userManager.IsInRoleAsync(result2, "Student"))
+                    listStudent.Add(new TeacherInfoResponse
                     {
-                        listStudent.Add(new TeacherInfoResponse
-                        {
-                            Id = result2.Id,
-                            Code = result2.UserName,
-                            Email = result2.Email,
-                            RealName = result2.RealName,
-                            Dob = String.Format("{0:yyyy-MM-dd}", Convert.ToDateTime(result2.DOB))
-                        });
+                        Id = user.Id,
+                        Code = user.UserName,
+                        Email = user.Email,
+                        RealName = user.RealName,
+                        Dob = String.Format("{0:yyyy-MM-dd}", Convert.ToDateTime(user.DOB))
+                    });
 
-                    }
                 }
             }
 
@@ -99,7 +75,7 @@ namespace BackEnd.Services
         }
 
 
-        public async Task<IActionResult> AddStudent(TeacherRequest model, string semesterId)
+        public async Task<IActionResult> AddStudent(TeacherRequest model)
         {
 
             var appUser = await _userManager.FindByNameAsync(model.Code);
@@ -114,16 +90,13 @@ namespace BackEnd.Services
                 return new BadRequestObjectResult(new { type = 1, message = "Email already exists" });
             }
 
-            string imgName = "default";
-            string extension = ".png";
-
             var registerUser = new AppUser
             {
                 Email = model.Email,
                 UserName = model.Code,
                 RealName = model.RealName,
                 DOB = model.Dob,
-                Avatar = imgName + extension
+                Avatar = "default.png"
             };
 
             var result = await _userManager.CreateAsync(registerUser, "123@123a");
@@ -141,13 +114,6 @@ namespace BackEnd.Services
             await _userManager.AddToRoleAsync(registerUser, "Student");
 
             var user = await _userManager.FindByEmailAsync(model.Email);
-
-            //adding link between student & semester
-            await UserSemesterDAO.Create(_context, new UserSemesters
-            {
-                SemesterId = semesterId,
-                UserId = user.Id
-            });
 
 
             return new OkObjectResult(new TeacherInfoResponse

@@ -24,8 +24,8 @@ namespace BackEnd.Services
 {
     public interface ITeacherService
     {
-        public Task<IActionResult> GetTeacherBySemesterId(string semesterId);
-        public Task<IActionResult> AddTeacher(TeacherRequest model, string semesterId);
+        public Task<IActionResult> GetTeacher();
+        public Task<IActionResult> AddTeacher(TeacherRequest model);
         public Task<IActionResult> UpdateTeacher(List<TeacherRequest> model);
         public Task<IActionResult> DeleteTeacher(List<string> model);
     }
@@ -60,40 +60,33 @@ namespace BackEnd.Services
             _emailSender = emailSender;
         }
 
-        public async Task<IActionResult> GetTeacherBySemesterId(string semesterId)
+        public async Task<IActionResult> GetTeacher()
         {
-            var listUserId = await (from userSemester in _userContext.UserSemesters
-                                    where userSemester.SemesterId == semesterId
-                                    select userSemester.UserId).ToListAsync();
+            var listUserId = await _userManager.Users.ToListAsync();
 
             var listTeacher = new List<TeacherInfoResponse>();
 
-
-            foreach (var userId in listUserId)
+            foreach (var user in listUserId)
             {
-                var result2 = await _userManager.FindByIdAsync(userId);
-
-                if (result2 != null)
+                if (await _userManager.IsInRoleAsync(user, "Teacher"))
                 {
-                    if (await _userManager.IsInRoleAsync(result2, "Teacher"))
+                    listTeacher.Add(new TeacherInfoResponse
                     {
-                        listTeacher.Add(new TeacherInfoResponse
-                        {
-                            Id = result2.Id,
-                            Code = result2.UserName,
-                            Email = result2.Email,
-                            RealName = result2.RealName,
-                            Dob = String.Format("{0:yyyy-MM-dd}", Convert.ToDateTime(result2.DOB))
-                        });
+                        Id = user.Id,
+                        Code = user.UserName,
+                        Email = user.Email,
+                        RealName = user.RealName,
+                        Dob = String.Format("{0:yyyy-MM-dd}", Convert.ToDateTime(user.DOB))
+                    });
 
-                    }
                 }
+
             }
 
             return new OkObjectResult(listTeacher);
         }
 
-        public async Task<IActionResult> AddTeacher(TeacherRequest model, string semesterId)
+        public async Task<IActionResult> AddTeacher(TeacherRequest model)
         {
 
             var appUser = await _userManager.FindByNameAsync(model.Code);
@@ -108,16 +101,13 @@ namespace BackEnd.Services
                 return new BadRequestObjectResult(new { type = 1, message = "Email already exists" });
             }
 
-            string imgName = "default";
-            string extension = ".png";
-
             var registerUser = new AppUser
             {
                 Email = model.Email,
                 UserName = model.Code,
                 RealName = model.RealName,
                 DOB = model.Dob,
-                Avatar = imgName + extension
+                Avatar = "default.png"
             };
 
             var result = await _userManager.CreateAsync(registerUser, "123@123a");
@@ -135,13 +125,6 @@ namespace BackEnd.Services
             await _userManager.AddToRoleAsync(registerUser, "Teacher");
 
             var user = await _userManager.FindByEmailAsync(model.Email);
-
-            //adding link between teacher & semester
-            await UserSemesterDAO.Create(_userContext, new UserSemesters
-            {
-                SemesterId = semesterId,
-                UserId = user.Id
-            });
 
             return new OkObjectResult(new TeacherInfoResponse
             {
@@ -162,7 +145,7 @@ namespace BackEnd.Services
             foreach (var req in teacherList)
             {
                 var user = await _userManager.FindByIdAsync(req.Id);
-                if(user == null)
+                if (user == null)
                 {
                     continue;
                 }
@@ -170,7 +153,7 @@ namespace BackEnd.Services
                 {
                     if (await _userManager.IsInRoleAsync(user, "Teacher"))
                     {
-                        if(!(user.UserName == req.Code && user.RealName == req.RealName && user.Email == req.Email && user.DOB == req.Dob))
+                        if (!(user.UserName == req.Code && user.RealName == req.RealName && user.Email == req.Email && user.DOB == req.Dob))
                         {
                             //Update Profile
                             if (await _userManager.FindByEmailAsync(req.Email) != null && user.Email != req.Email)
@@ -197,7 +180,7 @@ namespace BackEnd.Services
                             user.DOB = req.Dob;
                             user.Email = req.Email;
                         }
-                       
+
 
                         var resultUpdate = await _userManager.UpdateAsync(user);
                         if (resultUpdate.Succeeded)
@@ -240,18 +223,18 @@ namespace BackEnd.Services
         public async Task<IActionResult> DeleteTeacher(List<string> teacherIdList)
         {
             int i = 0;
-            foreach(string id in teacherIdList)
+            foreach (string id in teacherIdList)
             {
                 var user = await _userManager.FindByIdAsync(id);
-                
-                if(user != null && await _userManager.IsInRoleAsync(user, "Teacher"))
+
+                if (user != null && await _userManager.IsInRoleAsync(user, "Teacher"))
                 {
                     await _userManager.DeleteAsync(user);
                     i++;
                 }
             }
 
-            if(i == 0)
+            if (i == 0)
             {
                 return new OkObjectResult(new { response = "No Teachers Were Deleted " });
             }
