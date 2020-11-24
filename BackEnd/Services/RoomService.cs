@@ -488,5 +488,29 @@ namespace BackEnd.Services
                 };
             }
         }
+        public async static Task<IActionResult> GetRoomsBySemesterId(RoomDBContext context, int semesterId)
+        {
+            try
+            {
+                var listRoom = (from rooms in context.Room
+                                where rooms.SemesterId == semesterId
+                                select new { roomId = rooms.RoomId.ToString(), 
+                                            semesterId =rooms.SemesterId.ToString(), 
+                                            roomName = rooms.ClassName, 
+                                            teacherId = rooms.CreatorId,} ).ToList();
+
+
+                return new OkObjectResult(listRoom);
+            }
+            catch (Exception e)
+            {
+                return new ObjectResult(new { message = e.Message })
+                {
+                    StatusCode = 500,
+                };
+            }
+            
+        }
+
     }
 }

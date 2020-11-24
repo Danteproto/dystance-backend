@@ -239,5 +239,10 @@ namespace BackEnd.Controllers
                 Formatting = Formatting.Indented
             }));
         }
+        [HttpGet("getBySemesterId")]
+        public async Task<IActionResult> GetBySemesterId(int id)
+        {
+            return await RoomService.GetRoomsBySemesterId(_roomContext, id);
+        }
     }
 }
