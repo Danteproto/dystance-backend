@@ -12,6 +12,6 @@ namespace BackEnd.Models
         public int Id { get; set; }
         public string Name { get; set; }
         public string File { get; set; }
-        public DateTime LastUpdate { get; set; }
+        public DateTime LastUpdated { get; set; }
     }
 }

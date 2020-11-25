@@ -61,7 +61,7 @@ namespace BackEnd.Services
             var semester = new Semester
             {
                 Name = request.Form["name"],
-                LastUpdate = DateTime.Now,
+                LastUpdated = DateTime.Now,
                 File = file.FileName
             };
             SemesterDAO.Create(_roomContext, semester);
@@ -182,7 +182,7 @@ namespace BackEnd.Services
         {
             var semester = SemesterDAO.GetById(_roomContext, Convert.ToInt32(request.Form["id"]));
             semester.Name = request.Form["name"];
-            semester.LastUpdate = DateTime.Now;
+            semester.LastUpdated = DateTime.Now;
             if (request.Form.Files.Any())
             {
                 var appUsers = new List<AppUser>();

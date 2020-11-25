@@ -73,7 +73,7 @@ namespace BackEnd.Controllers
         {
             return await _semesterService.DeleteSchedule(models);
         }
-        [HttpGet("classes/get")]
+        [HttpGet("classes")]
         public async Task<IActionResult> GetClassBySemester(int semesterId)
         {
             return await _semesterService.GetSemesterClass(semesterId);
