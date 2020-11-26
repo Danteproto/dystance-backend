@@ -55,6 +55,50 @@ namespace BackEnd.Context
 
             }
 
+            if (await userManager.FindByNameAsync("admin") == null)
+            {
+                await userManager.CreateAsync(new AppUser
+                {
+                    UserName = "admin",
+                    Email = "admin@gmail.com",
+                    RealName ="Admin"
+                }, "Capstone@123");
+                var u = await userManager.FindByNameAsync("admin");
+                await userManager.AddToRoleAsync(u, "admin");
+                var token = await userManager.GenerateEmailConfirmationTokenAsync(u);
+                await userManager.ConfirmEmailAsync(u, token);
+            }
+            
+            if (await userManager.FindByNameAsync("academicManager") == null)
+            {
+                await userManager.CreateAsync(new AppUser
+                {
+                    UserName = "academicManager",
+                    Email = "academicManager@gmail.com",
+                    RealName = "Academic Manager"
+                }, "Capstone@123");
+
+                var u = await userManager.FindByNameAsync("academicManager");
+                await userManager.AddToRoleAsync(u, "academic management");
+                var token = await userManager.GenerateEmailConfirmationTokenAsync(u);
+                await userManager.ConfirmEmailAsync(u, token);
+            }
+            
+            if (await userManager.FindByNameAsync("qualityAssurance") == null)
+            {
+                await userManager.CreateAsync(new AppUser
+                {
+                    UserName = "qualityAssurance",
+                    Email = "qualityAssurance@gmail.com",
+                    RealName = "Quality Assurance"
+                }, "Capstone@123");
+
+                var u = await userManager.FindByNameAsync("qualityAssurance");
+                await userManager.AddToRoleAsync(u, "quality assurance");
+                var token = await userManager.GenerateEmailConfirmationTokenAsync(u);
+                await userManager.ConfirmEmailAsync(u, token);
+            }
+
             if (!roleManager.Roles.Any())
             {
                 var roles = new List<AppRole>

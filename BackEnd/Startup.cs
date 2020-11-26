@@ -171,6 +171,7 @@ namespace BackEnd
             services.AddScoped<IUserRoomService, UserRoomService>();
             services.AddScoped<ILogDAO, LogDAO>();
             services.AddScoped<ISemesterService, SemesterService>();
+            services.AddScoped<IAttendanceDAO, AttendanceDAO>();
 
             var emailConfig = Configuration
                 .GetSection("EmailConfiguration")

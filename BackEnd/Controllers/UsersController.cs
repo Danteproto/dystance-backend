@@ -365,6 +365,17 @@ namespace BackEnd.Controllers
         //    else
         //        return HttpContext.Connection.RemoteIpAddress.MapToIPv4().ToString();
         //}
+        
+        [HttpGet("reports/attendance")]
+        public async Task<IActionResult> GetAttendanceReports(string id, string semesterId)
+        {
+            return await _userService.GetAttendanceReports(id, semesterId);
+        }
 
+        [HttpPost("reports/attendance/update")]
+        public async Task<IActionResult> UpdateAttendanceReports([FromBody] UpdateAttendanceStudentRequest model)
+        {   
+            return await _userService.UpdateAttendanceReports( model);
+        }
     }
 }

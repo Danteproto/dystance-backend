@@ -16,6 +16,7 @@ namespace BackEnd.Context
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<PrivateMessage> PrivateMessages { get; set; }
         public DbSet<UsersLog> UserLog { get; set; }
+        public DbSet<AttendanceReports> AttendanceReports { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {            base.OnModelCreating(builder);
 

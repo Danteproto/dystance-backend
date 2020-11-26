@@ -26,6 +26,7 @@ using static BackEnd.Constant.Log;
 using BackEnd.DAO;
 using System.Text;
 using System.Text.RegularExpressions;
+using BackEnd.DBContext;
 
 namespace BackEnd.Services
 {
@@ -61,6 +62,8 @@ namespace BackEnd.Services
         public Task<IActionResult> AutoComplete(string username);
         public Task<IActionResult> Log(LogRequest model);
         public Task<IActionResult> GetLogByRoom(string roomid);
+        public Task<IActionResult> GetAttendanceReports(string userId, string semesterId);
+        public Task<IActionResult> UpdateAttendanceReports(UpdateAttendanceStudentRequest model);
     }
 
     public class UserService : IUserService
@@ -78,6 +81,8 @@ namespace BackEnd.Services
         private readonly IWebHostEnvironment _env;
         private readonly ILogDAO _logDAO;
         private readonly RoleManager<AppRole> _roleManager;
+        private readonly RoomDBContext _roomDBContext;
+        private readonly IAttendanceDAO _attendanceDAO;
 
         public enum MessageType
         {
@@ -98,7 +103,9 @@ namespace BackEnd.Services
             IUserStore userStore,
             IWebHostEnvironment env,
             ILogDAO logDAO,
-            RoleManager<AppRole> roleManager)
+            RoleManager<AppRole> roleManager,
+            RoomDBContext roomDBContext,
+            IAttendanceDAO attendanceDAO)
         {
             _context = context;
             _mapper = mapper;
@@ -113,6 +120,8 @@ namespace BackEnd.Services
             _env = env;
             _logDAO = logDAO;
             _roleManager = roleManager;
+            _roomDBContext = roomDBContext;
+            _attendanceDAO = attendanceDAO;
         }
 
         public async Task<IActionResult> Authenticate(AuthenticateRequest model)
@@ -333,6 +342,7 @@ namespace BackEnd.Services
             };
 
             var result = await _userManager.CreateAsync(registerUser, userModel.Password);
+
             if (!result.Succeeded)
             {
                 var internalErr = new ObjectResult(new { type = 2, error = result.Errors.ToList()[0].Description })
@@ -1232,18 +1242,18 @@ namespace BackEnd.Services
             }
             else
             {
-                return new BadRequestObjectResult(new { message = "Log sent successfully with some errors"});
+                return new BadRequestObjectResult(new { message = "Log sent successfully with some errors" });
 
             }
-            
+
         }
 
         public async Task<IActionResult> GetLogByRoom(string roomid)
         {
 
             var roomLists = await (from rooms in _context.UserLog
-                             where rooms.RoomId.Contains(roomid)
-                             select rooms).ToListAsync();
+                                   where rooms.RoomId.Contains(roomid)
+                                   select rooms).ToListAsync();
 
             var list = new List<LogResponse>();
 
@@ -1257,22 +1267,22 @@ namespace BackEnd.Services
                     RoomId = rooms.RoomId,
                     UserId = rooms.UserId,
                     Description = rooms.Description
-            });
+                });
             }
 
 
             return new OkObjectResult(list);
         }
 
-        public bool CheckLogExist (UsersLog model)
+        public bool CheckLogExist(UsersLog model)
         {
             var logLists = (from logs in _context.UserLog
-                            where logs.RoomId.Contains(model.RoomId) && logs.UserId.Contains(model.UserId) 
+                            where logs.RoomId.Contains(model.RoomId) && logs.UserId.Contains(model.UserId)
                                   && logs.DateTime.CompareTo(model.DateTime) == 0 && logs.LogType.Contains(model.LogType)
                                   && logs.Description.Contains(model.Description)
                             select logs).ToList();
 
-            if(logLists.Count != 0)
+            if (logLists.Count != 0)
             {
                 return false;
             }
@@ -1280,7 +1290,141 @@ namespace BackEnd.Services
             return true;
         }
 
+        public async Task<IActionResult> GetAttendanceReports(string userId, string semesterId)
+        {
+            var currentUser = await _userManager.FindByIdAsync(_userAccessor.GetCurrentUserId());
 
+            if (await _userManager.IsInRoleAsync(currentUser, "student"))
+            {
+                var attendanceList = new List<AttendanceStudentResponse>();
+
+                var attendances = (from att in _context.AttendanceReports
+                                   where att.UserId == userId
+                                   select att).ToList();
+
+                foreach (var attendance in attendances)
+                {
+                    var timetable = await _roomDBContext.TimeTable.FirstOrDefaultAsync(t => t.Id == attendance.TimeTableId);
+                    var room = await _roomDBContext.Room.FirstOrDefaultAsync(r => r.RoomId == timetable.RoomId && r.SemesterId.ToString().Contains(semesterId));
+
+                    attendanceList.Add(new AttendanceStudentResponse
+                    {
+                        Id = timetable.Id.ToString(),
+                        Class = room.ClassName,
+                        Subject = room.Subject,
+                        Date = String.Format("{0:yyyy-MM-dd}", timetable.Date),
+                        StartTime = timetable.StartTime.ToString(@"hh\:mm"),
+                        EndTime = timetable.EndTime.ToString(@"hh\:mm"),
+                        Teacher = room.CreatorId,
+                        Status = attendance.Status
+                    });
+                }
+
+                return new OkObjectResult(attendanceList);
+            }
+
+            if (await _userManager.IsInRoleAsync(currentUser, "quality assurance") || await _userManager.IsInRoleAsync(currentUser, "academic management"))
+            {
+                var attendanceList = new List<AttendanceTeacherResponse>();
+
+                var roomList = await (from rooms in _roomDBContext.Room
+                                      where rooms.SemesterId.ToString().Contains(semesterId) && rooms.CreatorId.Contains(userId)
+                                      select rooms.RoomId).ToListAsync();
+
+                var timetableList = new List<Timetable>();
+
+                foreach (int roomId in roomList)
+                {
+                    var timetable = await (from timetables in _roomDBContext.TimeTable
+                                           where timetables.RoomId == roomId
+                                           select timetables).ToListAsync();
+
+                    timetableList.AddRange(timetable);
+                }
+
+                foreach (Timetable timetable in timetableList)
+                {
+                    //var attendance = await _context.AttendanceReports.FirstOrDefaultAsync(x => x.UserId == userId && x.TimeTableId == timetable.Id);
+                    var room = await _roomDBContext.Room.FirstOrDefaultAsync(x => x.RoomId == timetable.RoomId);
+                    var listStudent = new List<AttendanceStudent>();
+
+                    var listStudentId = await (from attendances in _context.AttendanceReports
+                                               where attendances.TimeTableId == timetable.Id
+                                               select new AttendanceStudent
+                                               {
+                                                   Id = attendances.UserId,
+                                                   Status = attendances.Status
+                                               }).ToListAsync();
+
+                    listStudent.AddRange(listStudentId);
+
+
+                    attendanceList.Add(new AttendanceTeacherResponse
+                    {
+                        Id = timetable.Id.ToString(),
+                        Class = room.ClassName,
+                        Subject = room.Subject,
+                        Date = String.Format("{0:yyyy-MM-dd}", timetable.Date),
+                        StartTime = timetable.StartTime.ToString(@"hh\:mm"),
+                        EndTime = timetable.EndTime.ToString(@"hh\:mm"),
+                        Teacher = userId,
+                        Students = listStudent
+                    });
+
+                }
+                return new OkObjectResult(attendanceList);
+            }
+
+
+            return new OkObjectResult("");
+        }
+
+        public async Task<IActionResult> UpdateAttendanceReports(UpdateAttendanceStudentRequest model)
+        {
+            var currentUser = await _userManager.FindByIdAsync(_userAccessor.GetCurrentUserId());
+            var listStudent = new List<AttendanceStudent>();
+
+            if (await _userManager.IsInRoleAsync(currentUser, "academic management"))
+            {
+
+                var studentsList = model.Students.ToList();
+                var attendanceList = new List<AttendanceReports>();
+
+
+
+                foreach (AttendanceStudent student in studentsList)
+                {
+                    var updateAttendance = await _context.AttendanceReports.FirstOrDefaultAsync(x => x.UserId == student.Id);
+
+                   
+                    if (updateAttendance != null && updateAttendance.Status != student.Status)
+                    {
+                        updateAttendance.Status = student.Status;
+                        attendanceList.Add(updateAttendance);
+                        listStudent.Add(new AttendanceStudent { 
+                        Id = student.Id,
+                        Status = student.Status,
+                        });
+                    }
+                }
+
+                await _attendanceDAO.UpdateAttendance(attendanceList);
+
+                return new ObjectResult( new UpdateAttendanceStudentRequest
+                {
+                    Id = model.Id,
+                    Students = listStudent
+                });
+            }
+            else
+            {
+                return new ObjectResult(new { message = "Forbidden request" })
+                {
+                    StatusCode = 403,
+                };
+            }
+
+        }
 
     }
 }
