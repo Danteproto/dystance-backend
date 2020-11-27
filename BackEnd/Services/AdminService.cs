@@ -146,6 +146,7 @@ namespace BackEnd.Services
                         Code = user.UserName,
                         Email = user.Email,
                         RealName = user.RealName,
+                        Dob = user.DOB,
                         Role = "qa"
                     });
 
@@ -158,6 +159,7 @@ namespace BackEnd.Services
                         Code = user.UserName,
                         Email = user.Email,
                         RealName = user.RealName,
+                        Dob = user.DOB,
                         Role = "am"
                     });
 
@@ -187,6 +189,7 @@ namespace BackEnd.Services
                 Email = model.Email,
                 UserName = model.Code,
                 RealName = model.RealName,
+                DOB = model.Dob,
                 Avatar = "default.png"
             };
 
@@ -219,6 +222,7 @@ namespace BackEnd.Services
                 Code = registerUser.UserName,
                 Email = registerUser.Email,
                 RealName = registerUser.RealName,
+                Dob = registerUser.DOB,
                 Role = model.Role,
             });
 
@@ -242,7 +246,7 @@ namespace BackEnd.Services
                 {
                     if (await _userManager.IsInRoleAsync(user, "academic management") || await _userManager.IsInRoleAsync(user, "quality assurance"))
                     {
-                        if (!(user.UserName == req.Code && user.RealName == req.RealName && user.Email == req.Email && await _userManager.IsInRoleAsync(user, roleReq)))
+                        if (!(user.UserName == req.Code && user.RealName == req.RealName && user.Email == req.Email && user.DOB == req.Dob &&await _userManager.IsInRoleAsync(user, roleReq)))
                         {
                             //Update Profile
                             if (await _userManager.FindByEmailAsync(req.Email) != null && user.Email != req.Email)
@@ -267,6 +271,7 @@ namespace BackEnd.Services
                             user.UserName = req.Code;
                             user.RealName = req.RealName;
                             user.Email = req.Email;
+                            user.DOB = req.Dob;
                             if (!await _userManager.IsInRoleAsync(user, roleReq))
                             {
                                 await _userManager.RemoveFromRoleAsync(user, (await _userManager.GetRolesAsync(user))[0]);
@@ -284,6 +289,7 @@ namespace BackEnd.Services
                                 Code = user.UserName,
                                 RealName = user.RealName,
                                 Email = user.Email,
+                                Dob = user.DOB,
                                 Role = roleReq
                             });
                         }
