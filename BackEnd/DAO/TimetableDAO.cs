@@ -79,6 +79,25 @@ namespace BackEnd.DAO
                 };
             }
         }
+        public static async Task<IActionResult> Update(RoomDBContext context, Timetable timetable)
+        {
+            try
+            {
+                context.TimeTable.Update(timetable);
+                context.SaveChanges();
+                return new ObjectResult(new { message = "Add success!" })
+                {
+                    StatusCode = 200,
+                };
+            }
+            catch (Exception e)
+            {
+                return new ObjectResult(new { message = e.Message })
+                {
+                    StatusCode = 500,
+                };
+            }
+        }
         public static async Task<IActionResult> DeleteTimeTable(RoomDBContext context, List<Timetable> timetables)
         {
             try

@@ -28,7 +28,7 @@ namespace BackEnd.Services
         public Task<IActionResult> DeleteSchedule(List<string> models);
         public Task<IActionResult> GetSemesterClass(int id);
         public Task<IActionResult> AddClass(int semesterId, ClassRequest model);
-        public Task<IActionResult> UpdateClass( List<ClassRequest> models);
+        public Task<IActionResult> UpdateClass(List<ClassRequest> models);
         public Task<IActionResult> DeleteClass(List<string> models);
     }
 
@@ -71,87 +71,103 @@ namespace BackEnd.Services
             {
                 using (var reader = ExcelReaderFactory.CreateReader(stream))
                 {
-                    do
+                    try
                     {
-                        while (reader.Read()) //Each row of the file
+                        do
                         {
-                            
-                            if (reader.Name == "Classes") // "CLASSES" SHEET
+                            while (reader.Read()) //Each row of the file
                             {
-                                var room = new Room();
-                                if (reader.GetValue(0) == null && reader.GetValue(1) == null)
+
+                                if (reader.Name == "Classes") // "CLASSES" SHEET
                                 {
-                                    continue;
-                                }
-                                if (reader.GetValue(0).ToString() == "Subject")
-                                {
-                                    room.Subject = reader.GetValue(1).ToString();
-                                    reader.Read();
-                                }
-                                if (reader.GetValue(0).ToString() == "Class")
-                                {
-                                    room.ClassName = reader.GetValue(1).ToString();
-                                    reader.Read();
-                                }
-                                room.StartDate = DateTime.Now;
-                                room.EndDate = DateTime.Now;
-                                room.SemesterId = semester.Id;
-                                var result = RoomDAO.Create(_roomContext, room);
-                                room = RoomDAO.GetLastRoom(_roomContext);
-                                room.Image = $"api/rooms/getImage?roomId={room.RoomId}&imgName=default.png";
-                                RoomDAO.UpdateRoom(_roomContext, room);
-                                if (reader.GetValue(0).ToString() == "Teacher")
-                                {
-                                    var teacher = await _userManager.FindByNameAsync(reader.GetValue(1).ToString());
-                                    room.CreatorId = teacher.Id;
-                                    RoomDAO.UpdateRoom(_roomContext, room);
-                                    var link = new RoomUserLink
+                                    var room = new Room();
+                                    if (reader.GetValue(0) == null && reader.GetValue(1) == null)
                                     {
-                                        UserId = teacher.Id,
-                                        RoomId = room.RoomId,
-                                    };
-                                    result = RoomUserLinkDAO.Create(_roomContext, link);
-                                    reader.Read();
-                                }
-                                if (reader.GetValue(0).ToString() == "Num of students")
-                                {
-                                    var count = Convert.ToInt32(reader.GetValue(1).ToString());
-                                    for (int i = 0; i < count; i++)
+                                        continue;
+                                    }
+                                    if (reader.GetValue(0).ToString() == "Subject")
                                     {
+                                        room.Subject = reader.GetValue(1).ToString();
                                         reader.Read();
-                                        var student = _userManager.FindByNameAsync(reader.GetValue(1).ToString()).Result;
+                                    }
+                                    if (reader.GetValue(0).ToString() == "Class")
+                                    {
+                                        room.ClassName = reader.GetValue(1).ToString();
+                                        reader.Read();
+                                    }
+                                    room.StartDate = DateTime.Now;
+                                    room.EndDate = DateTime.Now;
+                                    room.SemesterId = semester.Id;
+                                    var result = RoomDAO.Create(_roomContext, room);
+                                    room = RoomDAO.GetLastRoom(_roomContext);
+                                    room.Image = $"api/rooms/getImage?roomId={room.RoomId}&imgName=default.png";
+                                    RoomDAO.UpdateRoom(_roomContext, room);
+                                    if (reader.GetValue(0).ToString() == "Teacher")
+                                    {
+                                        var teacher = await _userManager.FindByNameAsync(reader.GetValue(1).ToString());
+                                        if (teacher == null)
+                                        {
+                                            throw new Exception(" Teacher Accounts in this semester doesn't exist yet. Please import the accounts first");
+                                        }
+                                        room.CreatorId = teacher.Id;
+                                        RoomDAO.UpdateRoom(_roomContext, room);
                                         var link = new RoomUserLink
                                         {
-                                            UserId = student.Id,
+                                            UserId = teacher.Id,
                                             RoomId = room.RoomId,
                                         };
                                         result = RoomUserLinkDAO.Create(_roomContext, link);
+                                        reader.Read();
+                                    }
+                                    if (reader.GetValue(0).ToString() == "Num of students")
+                                    {
+                                        var count = Convert.ToInt32(reader.GetValue(1).ToString());
+                                        for (int i = 0; i < count; i++)
+                                        {
+                                            reader.Read();
+                                            var student = _userManager.FindByNameAsync(reader.GetValue(1).ToString()).Result;
+                                            if (student == null)
+                                            {
+                                                throw new Exception(" Students Accounts in this semester doesn't exist yet. Please import the accounts first");
+                                            }
+                                            var link = new RoomUserLink
+                                            {
+                                                UserId = student.Id,
+                                                RoomId = room.RoomId,
+                                            };
+                                            result = RoomUserLinkDAO.Create(_roomContext, link);
+                                        }
                                     }
                                 }
-                            }
 
 
-                            if (reader.Name == "Schedules") // "SCHEDULES" SHEET
-                            {
-                                if (reader.GetValue(0).ToString() == "Date")
+                                if (reader.Name == "Schedules") // "SCHEDULES" SHEET
                                 {
-                                    continue;
+                                    if (reader.GetValue(0).ToString() == "Date")
+                                    {
+                                        continue;
+                                    }
+                                    var subject = reader.GetValue(3).ToString();
+                                    var className = reader.GetValue(4).ToString();
+                                    var room = RoomDAO.GetRoomByClassSubjectSemester(_roomContext, className, subject, semester.Id);
+                                    var schedule = new Timetable
+                                    {
+                                        RoomId = room.RoomId,
+                                        Date = Convert.ToDateTime(reader.GetValue(0).ToString()),
+                                        StartTime = Convert.ToDateTime(reader.GetValue(1).ToString()).TimeOfDay,
+                                        EndTime = Convert.ToDateTime(reader.GetValue(2).ToString()).TimeOfDay,
+                                    };
+                                    var result = TimetableDAO.Create(_roomContext, schedule);
                                 }
-                                var subject = reader.GetValue(3).ToString();
-                                var className = reader.GetValue(4).ToString();
-                                var room = RoomDAO.GetRoomByClassAndSubject(_roomContext, className, subject);
-                                var schedule = new Timetable
-                                {
-                                    RoomId = room.RoomId,
-                                    Date = Convert.ToDateTime(reader.GetValue(0).ToString()),
-                                    StartTime = Convert.ToDateTime(reader.GetValue(1).ToString()).TimeOfDay,
-                                    EndTime = Convert.ToDateTime(reader.GetValue(2).ToString()).TimeOfDay,
-                                };
-                                var result = TimetableDAO.Create(_roomContext, schedule);
-                            }
 
-                        }
-                    } while (reader.NextResult());
+                            }
+                        } while (reader.NextResult());
+                    }
+                    catch (Exception e)
+                    {
+                        await DeleteSemester(new List<string>() { semester.Id.ToString() });
+                        return new BadRequestObjectResult(new { message = e.Message });
+                    }
                 }
 
 
@@ -193,157 +209,119 @@ namespace BackEnd.Services
                 {
                     using (var reader = ExcelReaderFactory.CreateReader(stream))
                     {
-                        do
+                        try
                         {
-                            while (reader.Read()) //Each row of the file
+                            do
                             {
-                                if (reader.Name == "Students") // "STUDENTS" SHEET
+                                while (reader.Read()) //Each row of the file
                                 {
-                                    if (reader.GetValue(0).ToString() == "No")
+                                    if (reader.Name == "Classes") // "CLASSES" SHEET
                                     {
-                                        continue;
-                                    }
-
-                                    var user = new AppUser
-                                    {
-                                        UserName = reader.GetValue(1).ToString(),
-                                        RealName = reader.GetValue(2).ToString(),
-                                        Email = reader.GetValue(3).ToString(),
-                                        DOB = reader.GetValue(4).ToString()
-                                    };
-
-                                    //roleManager.AddUserToRole
-
-                                    //Create user
-                                    var result = await _userManager.CreateAsync(user, "123@123a");
-
-                                    if (result != IdentityResult.Success)
-                                    {
-                                        appUsers.Add(user);
-                                    }
-                                }
-
-                                if (reader.Name == "Teachers") // "TEACHERS" SHEET
-                                {
-                                    if (reader.GetValue(0).ToString() == "No")
-                                    {
-                                        continue;
-                                    }
-
-                                    var user = new AppUser
-                                    {
-                                        UserName = reader.GetValue(1).ToString(),
-                                        RealName = reader.GetValue(2).ToString(),
-                                        Email = reader.GetValue(3).ToString(),
-                                        DOB = reader.GetValue(4).ToString()
-                                    };
-
-                                    //roleManager.AddUserToRole
-
-                                    //Create user
-                                    var result = await _userManager.CreateAsync(user, "123@123a");
-
-                                    if (result != IdentityResult.Success)
-                                    {
-                                        appUsers.Add(user);
-                                    }
-                                }
-
-
-                                if (reader.Name == "Classes") // "CLASSES" SHEET
-                                {
-                                    var room = new Room();
-                                    if ((reader.GetValue(0) == null && reader.GetValue(1) == null)
-                                        || reader.GetValue(0) != "Subject")
-                                    {
-                                        continue;
-                                    }
-                                    if (reader.GetValue(0).ToString() == "Subject")
-                                    {
-                                        room.Subject = reader.GetValue(1).ToString();
-                                        reader.Read();
-                                    }
-                                    if (reader.GetValue(0).ToString() == "Class")
-                                    {
-                                        room.ClassName = reader.GetValue(1).ToString();
-                                        reader.Read();
-                                    }
-                                    var extRoom = RoomDAO.GetRoomByClassSubjectSemester(_roomContext, room.ClassName, room.Subject, semester.Id);
-                                    if (!extRoom.Equals(default(Room)))
-                                    {
-                                        continue;
-                                    }
-                                    room.StartDate = DateTime.Now;
-                                    room.EndDate = DateTime.Now;
-                                    room.SemesterId = semester.Id;
-                                    var result = RoomDAO.Create(_roomContext, room);
-                                    room = RoomDAO.GetLastRoom(_roomContext);
-                                    if (reader.GetValue(0).ToString() == "Teacher")
-                                    {
-                                        var teacher = await _userManager.FindByNameAsync(reader.GetValue(1).ToString());
-                                        room.CreatorId = teacher.Id;
-                                        RoomDAO.UpdateRoom(_roomContext, room);
-                                        var link = new RoomUserLink
+                                        var room = new Room();
+                                        if ((reader.GetValue(0) == null && reader.GetValue(1) == null)
+                                            || reader.GetValue(0) != "Subject")
                                         {
-                                            UserId = teacher.Id,
-                                            RoomId = room.RoomId,
-                                        };
-                                        result = RoomUserLinkDAO.Create(_roomContext, link);
-                                        reader.Read();
-                                    }
-                                    if (reader.GetValue(0).ToString() == "Num of students")
-                                    {
-                                        var count = Convert.ToInt32(reader.GetValue(1).ToString());
-                                        for (int i = 0; i < count; i++)
+                                            continue;
+                                        }
+                                        if (reader.GetValue(0).ToString() == "Subject")
                                         {
+                                            room.Subject = reader.GetValue(1).ToString();
                                             reader.Read();
-                                            var student = _userManager.FindByNameAsync(reader.GetValue(1).ToString()).Result;
+                                        }
+                                        if (reader.GetValue(0).ToString() == "Class")
+                                        {
+                                            room.ClassName = reader.GetValue(1).ToString();
+                                            reader.Read();
+                                        }
+                                        var extRoom = RoomDAO.GetRoomByClassSubjectSemester(_roomContext, room.ClassName, room.Subject, semester.Id);
+                                        if (!extRoom.Equals(default(Room)))
+                                        {
+                                            continue;
+                                        }
+                                        room.StartDate = DateTime.Now;
+                                        room.EndDate = DateTime.Now;
+                                        room.SemesterId = semester.Id;
+                                        var result = RoomDAO.Create(_roomContext, room);
+                                        room = RoomDAO.GetLastRoom(_roomContext);
+                                        if (reader.GetValue(0).ToString() == "Teacher")
+                                        {
+                                            var teacher = await _userManager.FindByNameAsync(reader.GetValue(1).ToString());
+                                            if (teacher == null)
+                                            {
+                                                throw new Exception(" Teacher Accounts in this semester doesn't exist yet. Please import the accounts first");
+                                            }
+                                            room.CreatorId = teacher.Id;
+                                            RoomDAO.UpdateRoom(_roomContext, room);
                                             var link = new RoomUserLink
                                             {
-                                                UserId = student.Id,
+                                                UserId = teacher.Id,
                                                 RoomId = room.RoomId,
                                             };
                                             result = RoomUserLinkDAO.Create(_roomContext, link);
+                                            reader.Read();
+                                        }
+                                        if (reader.GetValue(0).ToString() == "Num of students")
+                                        {
+                                            var count = Convert.ToInt32(reader.GetValue(1).ToString());
+                                            for (int i = 0; i < count; i++)
+                                            {
+                                                reader.Read();
+                                                var student = _userManager.FindByNameAsync(reader.GetValue(1).ToString()).Result;
+                                                if (student == null)
+                                                {
+                                                    throw new Exception(" Student Accounts in this semester doesn't exist yet. Please import the accounts first");
+                                                }
+                                                var link = new RoomUserLink
+                                                {
+                                                    UserId = student.Id,
+                                                    RoomId = room.RoomId,
+                                                };
+                                                result = RoomUserLinkDAO.Create(_roomContext, link);
+                                            }
                                         }
                                     }
-                                }
 
 
-                                if (reader.Name == "Schedules") // "SCHEDULES" SHEET
-                                {
-                                    if (reader.GetValue(0).ToString() == "Date")
+                                    if (reader.Name == "Schedules") // "SCHEDULES" SHEET
                                     {
-                                        continue;
+                                        if (reader.GetValue(0).ToString() == "Date")
+                                        {
+                                            continue;
+                                        }
+                                        var subject = reader.GetValue(3).ToString();
+                                        var className = reader.GetValue(4).ToString();
+                                        var room = RoomDAO.GetRoomByClassSubjectSemester(_roomContext, className, subject, semester.Id);
+                                        var extSchedules = TimetableDAO.GetByRoomId(_roomContext, room.RoomId);
+                                        var schedule = new Timetable
+                                        {
+                                            RoomId = room.RoomId,
+                                            Date = Convert.ToDateTime(reader.GetValue(0).ToString()),
+                                            StartTime = Convert.ToDateTime(reader.GetValue(1).ToString()).TimeOfDay,
+                                            EndTime = Convert.ToDateTime(reader.GetValue(2).ToString()).TimeOfDay,
+                                        };
+                                        if (extSchedules.Any(x => x.RoomId == schedule.RoomId &&
+                                                             x.Date == schedule.Date &&
+                                                             x.StartTime == schedule.StartTime &&
+                                                             x.EndTime == schedule.EndTime))
+                                        {
+                                            continue;
+                                        }
+                                        var result = TimetableDAO.Create(_roomContext, schedule);
+
                                     }
-                                    var subject = reader.GetValue(3).ToString();
-                                    var className = reader.GetValue(4).ToString();
-                                    var room = RoomDAO.GetRoomByClassSubjectSemester(_roomContext, className, subject, semester.Id);
-                                    var extSchedules = TimetableDAO.GetByRoomId(_roomContext, room.RoomId);
-                                    var schedule = new Timetable
-                                    {
-                                        RoomId = room.RoomId,
-                                        Date = Convert.ToDateTime(reader.GetValue(0).ToString()),
-                                        StartTime = Convert.ToDateTime(reader.GetValue(1).ToString()).TimeOfDay,
-                                        EndTime = Convert.ToDateTime(reader.GetValue(2).ToString()).TimeOfDay,
-                                    };
-                                    if (extSchedules.Any(x => x.RoomId == schedule.RoomId &&
-                                                         x.Date == schedule.Date &&
-                                                         x.StartTime == schedule.StartTime &&
-                                                         x.EndTime == schedule.EndTime))
-                                    {
-                                        continue;
-                                    }
-                                    var result = TimetableDAO.Create(_roomContext, schedule);
 
                                 }
+                            } while (reader.NextResult());
+                        }
+                        catch (Exception e)
+                        {
 
-                            }
-                        } while (reader.NextResult());
+                        }
                     }
 
                 }
             }
-            SemesterDAO.Update(_roomContext, semester);
+            var finalResult = SemesterDAO.Update(_roomContext, semester);
             return new OkObjectResult(semester);
 
         }
@@ -383,6 +361,14 @@ namespace BackEnd.Services
                     StartTime = Convert.ToDateTime(model.startTime).TimeOfDay,
                     EndTime = Convert.ToDateTime(model.endTime).TimeOfDay,
                 };
+                var extSchedules = TimetableDAO.GetByRoomId(_roomContext, room.RoomId);
+                if (extSchedules.Any(item => (item.Date == schedule.Date) &&
+                     ((item.StartTime <= schedule.EndTime && schedule.EndTime <= item.EndTime) ||
+                     (item.EndTime >= schedule.StartTime && schedule.StartTime >= item.StartTime) ||
+                     (item.StartTime > schedule.StartTime && item.EndTime < schedule.EndTime))))
+                {
+                    return new BadRequestObjectResult(new { message = "Cannot add overlapping schedule" });
+                }
                 var result = TimetableDAO.Create(_roomContext, schedule).Result;
                 schedule = TimetableDAO.GetLast(_roomContext);
                 return new OkObjectResult(new ScheduleResponse
@@ -400,9 +386,12 @@ namespace BackEnd.Services
         public async Task<IActionResult> UpdateSchedule(int semesterId, List<ScheduleRequest> models)
         {
             List<Timetable> updateSchedules = new List<Timetable>();
+            List<ScheduleRequest> success = new List<ScheduleRequest>();
+            List<string> fail = new List<string>();
             foreach (var model in models)
             {
                 var room = RoomDAO.GetRoomByClassSubjectSemester(_roomContext, model.@class, model.subject, semesterId);
+
                 var schedule = new Timetable
                 {
                     Id = Convert.ToInt32(model.id),
@@ -411,10 +400,25 @@ namespace BackEnd.Services
                     StartTime = Convert.ToDateTime(model.startTime).TimeOfDay,
                     EndTime = Convert.ToDateTime(model.endTime).TimeOfDay,
                 };
-                updateSchedules.Add(schedule);
+                var extSchedules = TimetableDAO.GetByRoomId(_roomContext, room.RoomId);
+                if (extSchedules.Any(item => (item.Date == schedule.Date) &&
+                     ((item.StartTime <= schedule.EndTime && schedule.EndTime <= item.EndTime) ||
+                     (item.EndTime >= schedule.StartTime && schedule.StartTime >= item.StartTime) ||
+                     (item.StartTime > schedule.StartTime && item.EndTime < schedule.EndTime))))
+                {
+                    fail.Add(model.id);
+                    continue;
+                }
+                success.Add(model);
+                TimetableDAO.Update(_roomContext, schedule);
+
             }
-            var result = TimetableDAO.Update(_roomContext, updateSchedules);
-            return new OkObjectResult(models);
+
+            return new OkObjectResult(new
+            {
+                success = success,
+                failed = fail
+            });
         }
 
         public async Task<IActionResult> DeleteSchedule(List<string> models)
@@ -457,7 +461,7 @@ namespace BackEnd.Services
             var extClass = RoomDAO.GetRoomByClassSubjectSemester(_roomContext, model.@class, model.subject, semesterId);
             if (extClass != null)
             {
-                return new ObjectResult(new { message = "class already exist!" });
+                return new BadRequestObjectResult(new { message = "class already exist!" });
             }
             var @class = new Room
             {
@@ -472,7 +476,7 @@ namespace BackEnd.Services
             @class = RoomDAO.GetLastRoom(_roomContext);
             @class.Image = $"api/rooms/getImage?roomId={@class.RoomId}&imgName=default.png";
             RoomDAO.UpdateRoom(_roomContext, @class);
-            if (model.students.Count != 0)
+            if (model.students != null && model.students.Count != 0)
             {
                 foreach (var id in model.students)
                 {
@@ -496,7 +500,7 @@ namespace BackEnd.Services
             });
         }
 
-        public async Task<IActionResult> UpdateClass( List<ClassRequest> models)
+        public async Task<IActionResult> UpdateClass(List<ClassRequest> models)
         {
             var result = new List<ClassResponse>();
             foreach (var model in models)
