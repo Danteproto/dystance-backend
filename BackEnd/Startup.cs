@@ -173,6 +173,7 @@ namespace BackEnd
             services.AddScoped<ISemesterService, SemesterService>();
             services.AddScoped<ITeacherService, TeacherService>();
             services.AddScoped<IStudentService, StudentService>();
+            services.AddScoped<IAttendanceDAO, AttendanceDAO>();
 
             var emailConfig = Configuration
                 .GetSection("EmailConfiguration")

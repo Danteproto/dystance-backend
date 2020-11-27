@@ -18,6 +18,7 @@ namespace BackEnd.Context
         public DbSet<UsersLog> UserLog { get; set; }
         public DbSet<UserSemesters> UserSemesters { get; set; }
 
+        public DbSet<AttendanceReports> AttendanceReports { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {            base.OnModelCreating(builder);
 
