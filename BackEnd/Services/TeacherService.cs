@@ -124,8 +124,6 @@ namespace BackEnd.Services
             await _userManager.ConfirmEmailAsync(registerUser, token);
             await _userManager.AddToRoleAsync(registerUser, "Teacher");
 
-            var user = await _userManager.FindByEmailAsync(model.Email);
-
             return new OkObjectResult(new TeacherInfoResponse
             {
                 Id = registerUser.Id,

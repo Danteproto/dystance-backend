@@ -1,8 +1,11 @@
 ﻿using BackEnd.Models;
+using BackEnd.Requests;
+using BackEnd.Responses;
 using ExcelDataReader;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,6 +16,10 @@ namespace BackEnd.Services
     public interface IAdminService
     {
         public Task<IActionResult> AddAccount(HttpRequest request);
+        public Task<IActionResult> GetAccounts();
+        public Task<IActionResult> AddAccountAdmin(AdminRequest model);
+        public Task<IActionResult> UpdateAccountAdmin(List<AdminRequest> model);
+        public Task<IActionResult> DeleteManageAccounts(List<string> model);
 
     }
     public class AdminService : IAdminService
@@ -123,5 +130,208 @@ namespace BackEnd.Services
 
         }
 
+        public async Task<IActionResult> GetAccounts()
+        {
+            var listUserId = await _userManager.Users.ToListAsync();
+
+            var listAdmin = new List<AdminInfoResponse>();
+
+            foreach (var user in listUserId)
+            {
+                if (await _userManager.IsInRoleAsync(user, "quality assurance"))
+                {
+                    listAdmin.Add(new AdminInfoResponse
+                    {
+                        Id = user.Id,
+                        Code = user.UserName,
+                        Email = user.Email,
+                        RealName = user.RealName,
+                        Role = "qa"
+                    });
+
+                }
+                if (await _userManager.IsInRoleAsync(user, "academic management"))
+                {
+                    listAdmin.Add(new AdminInfoResponse
+                    {
+                        Id = user.Id,
+                        Code = user.UserName,
+                        Email = user.Email,
+                        RealName = user.RealName,
+                        Role = "am"
+                    });
+
+                }
+            }
+
+            return new OkObjectResult(listAdmin);
+        }
+
+        public async Task<IActionResult> AddAccountAdmin(AdminRequest model)
+        {
+
+            var appUser = await _userManager.FindByNameAsync(model.Code);
+            if (appUser != null)
+            {
+                return new BadRequestObjectResult(new { type = 2, message = "Employee code already exists" });
+            }
+
+            appUser = await _userManager.FindByEmailAsync(model.Email);
+            if (appUser != null)
+            {
+                return new BadRequestObjectResult(new { type = 1, message = "Email already exists" });
+            }
+
+            var registerUser = new AppUser
+            {
+                Email = model.Email,
+                UserName = model.Code,
+                RealName = model.RealName,
+                Avatar = "default.png"
+            };
+
+            var result = await _userManager.CreateAsync(registerUser, "123@123a");
+            if (!result.Succeeded)
+            {
+                var internalErr = new ObjectResult(new { type = 2, error = result.Errors.ToList()[0].Description })
+                {
+                    StatusCode = 500
+                };
+                return internalErr;
+            }
+
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(registerUser);
+            await _userManager.ConfirmEmailAsync(registerUser, token);
+
+            if (model.Role == "am")
+            {
+                await _userManager.AddToRoleAsync(registerUser, "academic management");
+            }
+            if(model.Role == "qa")
+            {
+                await _userManager.AddToRoleAsync(registerUser, "quality assurance");
+            }
+
+
+            return new OkObjectResult(new AdminInfoResponse
+            {
+                Id = registerUser.Id,
+                Code = registerUser.UserName,
+                Email = registerUser.Email,
+                RealName = registerUser.RealName,
+                Role = model.Role,
+            });
+
+        }
+
+        public async Task<IActionResult> UpdateAccountAdmin(List<AdminRequest> adminList)
+        {
+            var dict = new Dictionary<String, object>();
+            var response = new List<AdminInfoResponse>();
+            var errors = new List<Error>();
+            
+            foreach (var req in adminList)
+            {
+                string roleReq = req.Role == "am" ? "academic management" : "quality assurance";
+                var user = await _userManager.FindByIdAsync(req.Id);
+                if (user == null)
+                {
+                    continue;
+                }
+                try
+                {
+                    if (await _userManager.IsInRoleAsync(user, "academic management") || await _userManager.IsInRoleAsync(user, "quality assurance"))
+                    {
+                        if (!(user.UserName == req.Code && user.RealName == req.RealName && user.Email == req.Email && await _userManager.IsInRoleAsync(user, roleReq)))
+                        {
+                            //Update Profile
+                            if (await _userManager.FindByEmailAsync(req.Email) != null && user.Email != req.Email)
+                            {
+                                errors.Add(new Error
+                                {
+                                    Type = 1,
+                                    Message = "Email " + req.Email + " already exists",
+                                });
+                                continue;
+                            }
+                            if (await _userManager.FindByNameAsync(req.Code) != null && user.UserName != req.Code)
+                            {
+                                errors.Add(new Error
+                                {
+                                    Type = 2,
+                                    Message = "Employee Code " + req.Code + " already exists",
+                                });
+                                continue;
+                            }
+
+                            user.UserName = req.Code;
+                            user.RealName = req.RealName;
+                            user.Email = req.Email;
+                            if (!await _userManager.IsInRoleAsync(user, roleReq))
+                            {
+                                await _userManager.RemoveFromRoleAsync(user, (await _userManager.GetRolesAsync(user))[0]);
+                                await _userManager.AddToRoleAsync(user, roleReq);
+                            }
+                        }
+
+
+                        var resultUpdate = await _userManager.UpdateAsync(user);
+                        if (resultUpdate.Succeeded)
+                        {
+                            response.Add(new AdminInfoResponse
+                            {
+                                Id = user.Id,
+                                Code = user.UserName,
+                                RealName = user.RealName,
+                                Email = user.Email,
+                                Role = roleReq
+                            });
+                        }
+                        else
+                        {
+
+                            return new ObjectResult(new { type = 3, code = resultUpdate.Errors.ToList()[0].Code, description = resultUpdate.Errors.ToList()[0].Description })
+                            {
+                                StatusCode = 500
+                            };
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return new ObjectResult(new { type = 4, message = ex.Message })
+                    {
+                        StatusCode = 500
+                    };
+                }
+
+            }
+            dict.Add("success", response);
+            dict.Add("failed", errors);
+
+            return new OkObjectResult(dict);
+        }
+
+        public async Task<IActionResult> DeleteManageAccounts(List<string> model)
+        {
+            int i = 0;
+            foreach (string id in model)
+            {
+                var user = await _userManager.FindByIdAsync(id);
+
+                if (user != null && (await _userManager.IsInRoleAsync(user, "quality assurance") || await _userManager.IsInRoleAsync(user, "academic management")))
+                {
+                    await _userManager.DeleteAsync(user);
+                    i++;
+                }
+            }
+
+            if (i == 0)
+            {
+                return new OkObjectResult(new { response = "No Accounts Were Deleted " });
+            }
+
+            return new OkObjectResult(new { response = "Deleted QA/AM Accounts Successfully" });
+        }
     }
 }
