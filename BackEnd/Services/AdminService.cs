@@ -147,7 +147,7 @@ namespace BackEnd.Services
                         Email = user.Email,
                         RealName = user.RealName,
                         Dob = user.DOB,
-                        Role = "qa"
+                        Role = "quality assurance"
                     });
 
                 }
@@ -160,7 +160,7 @@ namespace BackEnd.Services
                         Email = user.Email,
                         RealName = user.RealName,
                         Dob = user.DOB,
-                        Role = "am"
+                        Role = "academic management"
                     });
 
                 }
@@ -206,14 +206,8 @@ namespace BackEnd.Services
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(registerUser);
             await _userManager.ConfirmEmailAsync(registerUser, token);
 
-            if (model.Role == "am")
-            {
-                await _userManager.AddToRoleAsync(registerUser, "academic management");
-            }
-            if(model.Role == "qa")
-            {
-                await _userManager.AddToRoleAsync(registerUser, "quality assurance");
-            }
+
+            await _userManager.AddToRoleAsync(registerUser, model.Role);
 
 
             return new OkObjectResult(new AdminInfoResponse
@@ -233,10 +227,9 @@ namespace BackEnd.Services
             var dict = new Dictionary<String, object>();
             var response = new List<AdminInfoResponse>();
             var errors = new List<Error>();
-            
+
             foreach (var req in adminList)
             {
-                string roleReq = req.Role == "am" ? "academic management" : "quality assurance";
                 var user = await _userManager.FindByIdAsync(req.Id);
                 if (user == null)
                 {
@@ -246,7 +239,7 @@ namespace BackEnd.Services
                 {
                     if (await _userManager.IsInRoleAsync(user, "academic management") || await _userManager.IsInRoleAsync(user, "quality assurance"))
                     {
-                        if (!(user.UserName == req.Code && user.RealName == req.RealName && user.Email == req.Email && user.DOB == req.Dob &&await _userManager.IsInRoleAsync(user, roleReq)))
+                        if (!(user.UserName == req.Code && user.RealName == req.RealName && user.Email == req.Email && user.DOB == req.Dob && await _userManager.IsInRoleAsync(user, req.Role)))
                         {
                             //Update Profile
                             if (await _userManager.FindByEmailAsync(req.Email) != null && user.Email != req.Email)
@@ -272,10 +265,10 @@ namespace BackEnd.Services
                             user.RealName = req.RealName;
                             user.Email = req.Email;
                             user.DOB = req.Dob;
-                            if (!await _userManager.IsInRoleAsync(user, roleReq))
+                            if (!await _userManager.IsInRoleAsync(user, req.Role))
                             {
                                 await _userManager.RemoveFromRoleAsync(user, (await _userManager.GetRolesAsync(user))[0]);
-                                await _userManager.AddToRoleAsync(user, roleReq);
+                                await _userManager.AddToRoleAsync(user, req.Role);
                             }
                         }
 
@@ -290,7 +283,7 @@ namespace BackEnd.Services
                                 RealName = user.RealName,
                                 Email = user.Email,
                                 Dob = user.DOB,
-                                Role = roleReq
+                                Role = req.Role
                             });
                         }
                         else
@@ -337,7 +330,7 @@ namespace BackEnd.Services
                 return new OkObjectResult(new { response = "No Accounts Were Deleted " });
             }
 
-            return new OkObjectResult(new { response = "Deleted QA/AM Accounts Successfully" });
+            return new OkObjectResult(new { response = "Successfully" });
         }
     }
 }
