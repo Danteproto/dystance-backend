@@ -34,7 +34,9 @@ namespace BackEnd.Services
 
         public async Task<IActionResult> AddAccount(HttpRequest request)
         {
-            var appUsers = new List<AppUser>();
+            var response = new List<AdminInfoResponse>();
+            var dict = new Dictionary<String, object>();
+            var errors = new List<Error>();
             var file = request.Form.Files[0];
             using (var stream = file.OpenReadStream())
             {
@@ -51,9 +53,22 @@ namespace BackEnd.Services
                                     continue;
                                 }
 
-                                if (await _userManager.FindByNameAsync(reader.GetValue(1).ToString()) != null ||
-                                   await _userManager.FindByEmailAsync(reader.GetValue(3).ToString()) != null)
+                                if (await _userManager.FindByEmailAsync(reader.GetValue(3).ToString()) != null)
                                 {
+                                    errors.Add(new Error
+                                    {
+                                        Type = 1,
+                                        Message = "Email " + reader.GetValue(3).ToString() + " already exists",
+                                    });
+                                    continue;
+                                }
+                                if (await _userManager.FindByNameAsync(reader.GetValue(1).ToString()) != null)
+                                {
+                                    errors.Add(new Error
+                                    {
+                                        Type = 2,
+                                        Message = "Employee Code " + reader.GetValue(1).ToString() + " already exists",
+                                    });
                                     continue;
                                 }
 
@@ -78,10 +93,15 @@ namespace BackEnd.Services
                                 await _userManager.AddToRoleAsync(user, "quality assurance");
 
                                 //debug
-                                if (result != IdentityResult.Success)
+                                response.Add(new AdminInfoResponse
                                 {
-                                    appUsers.Add(user);
-                                }
+                                    Id = user.Id,
+                                    Code = user.UserName,
+                                    RealName = user.RealName,
+                                    Email = user.Email,
+                                    Dob = user.DOB,
+                                    Role = "quality assurance"
+                                });
                             }
 
                             if (reader.Name == "Academic Management") // "Academic Management" SHEET
@@ -113,10 +133,15 @@ namespace BackEnd.Services
                                 await _userManager.AddToRoleAsync(user, "academic management");
 
                                 //debug
-                                if (result != IdentityResult.Success)
+                                response.Add(new AdminInfoResponse
                                 {
-                                    appUsers.Add(user);
-                                }
+                                    Id = user.Id,
+                                    Code = user.UserName,
+                                    RealName = user.RealName,
+                                    Email = user.Email,
+                                    Dob = user.DOB,
+                                    Role = "academic management"
+                                });
                             }
 
                         }
@@ -126,8 +151,11 @@ namespace BackEnd.Services
 
 
             }
-            return new OkObjectResult("Successful");
 
+            dict.Add("success", response);
+            dict.Add("failed", errors);
+
+            return new OkObjectResult(dict);
         }
 
         public async Task<IActionResult> GetAccounts()
