@@ -1434,7 +1434,7 @@ namespace BackEnd.Services
                 return new OkObjectResult(attendanceList);
             }
 
-            if (await _userManager.IsInRoleAsync(currentUser, "quality assurance") || await _userManager.IsInRoleAsync(currentUser, "academic management"))
+            if (await _userManager.IsInRoleAsync(currentUser, "teacher"))
             {
                 var attendanceList = new List<AttendanceTeacherResponse>();
 
@@ -1486,8 +1486,61 @@ namespace BackEnd.Services
                 return new OkObjectResult(attendanceList);
             }
 
+            if (await _userManager.IsInRoleAsync(currentUser, "quality assurance") || await _userManager.IsInRoleAsync(currentUser, "academic management"))
+            {
+                var attendanceList = new List<AttendanceTeacherResponse>();
 
-            return new OkObjectResult("");
+                var roomList = await (from rooms in _roomDBContext.Room
+                                      where rooms.SemesterId.ToString().Contains(semesterId)
+                                      select rooms.RoomId).ToListAsync();
+
+                var timetableList = new List<Timetable>();
+
+                foreach (int roomId in roomList)
+                {
+                    var timetable = await (from timetables in _roomDBContext.TimeTable
+                                           where timetables.RoomId == roomId
+                                           select timetables).ToListAsync();
+
+                    timetableList.AddRange(timetable);
+                }
+
+                foreach (Timetable timetable in timetableList)
+                {
+                    //var attendance = await _context.AttendanceReports.FirstOrDefaultAsync(x => x.UserId == userId && x.TimeTableId == timetable.Id);
+                    var room = await _roomDBContext.Room.FirstOrDefaultAsync(x => x.RoomId == timetable.RoomId);
+                    var listStudent = new List<AttendanceStudent>();
+
+                    var listStudentId = await (from attendances in _context.AttendanceReports
+                                               where attendances.TimeTableId == timetable.Id
+                                               select new AttendanceStudent
+                                               {
+                                                   Id = attendances.UserId,
+                                                   Status = attendances.Status
+                                               }).ToListAsync();
+
+                    listStudent.AddRange(listStudentId);
+
+
+                    attendanceList.Add(new AttendanceTeacherResponse
+                    {
+                        Id = timetable.Id.ToString(),
+                        Class = room.ClassName,
+                        Subject = room.Subject,
+                        Date = String.Format("{0:yyyy-MM-dd}", timetable.Date),
+                        StartTime = timetable.StartTime.ToString(@"hh\:mm"),
+                        EndTime = timetable.EndTime.ToString(@"hh\:mm"),
+                        Teacher = userId,
+                        Students = listStudent
+                    });
+
+                }
+                
+                return new OkObjectResult(attendanceList);
+
+            }
+
+                return new OkObjectResult("");
         }
 
         public async Task<IActionResult> UpdateAttendanceReports(UpdateAttendanceStudentRequest model)
