@@ -1560,8 +1560,7 @@ namespace BackEnd.Services
                 {
                     var updateAttendance = await _context.AttendanceReports.FirstOrDefaultAsync(x => x.UserId == student.Id);
 
-
-                    if (updateAttendance != null && updateAttendance.Status != student.Status)
+                    if (updateAttendance != null)
                     {
                         updateAttendance.Status = student.Status;
                         attendanceList.Add(updateAttendance);
