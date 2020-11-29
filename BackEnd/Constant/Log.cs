@@ -38,6 +38,8 @@ namespace BackEnd.Constant
             GROUP_JOIN,
             GROUP_LEAVE,
             PRIVATE_CHAT_TEXT,
+            SCREEN_SHARE_START,
+            SCREEN_SHARE_STOP
         }
     }
 }

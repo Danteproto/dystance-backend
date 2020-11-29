@@ -888,7 +888,7 @@ namespace BackEnd.Services
                                     {
                                         result.Append(await _logDAO.CreateLog(roomChatFile) + '\n');
                                     }
-                                    break;                                
+                                    break;
                                 case LogType.WHITEBOARD_ALLOW:
                                     UsersLog whiteboardAllow = new UsersLog
                                     {
@@ -1169,6 +1169,34 @@ namespace BackEnd.Services
                                         result.Append(await _logDAO.CreateLog(privateChatFile) + '\n');
                                     }
                                     break;
+                                case LogType.SCREEN_SHARE_START:
+                                    UsersLog screenShareStart = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "Started screen sharing"
+                                    };
+                                    if (CheckLogExist(screenShareStart))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(screenShareStart) + '\n');
+                                    }
+                                    break;
+                                case LogType.SCREEN_SHARE_STOP:
+                                    UsersLog screenShareStop = new UsersLog
+                                    {
+                                        DateTime = DateTimeUtil.GetDateTimeFromString(words[0]),
+                                        LogType = words[1],
+                                        RoomId = words[2],
+                                        UserId = words[3],
+                                        Description = "Stopped screen sharing"
+                                    };
+                                    if (CheckLogExist(screenShareStop))
+                                    {
+                                        result.Append(await _logDAO.CreateLog(screenShareStop) + '\n');
+                                    }
+                                    break;
                             }
                     }
                 }
@@ -1230,7 +1258,9 @@ namespace BackEnd.Services
 
         public async Task<IActionResult> AddAccount(HttpRequest request)
         {
-            var appUsers = new List<AppUser>();
+            var response = new List<TeacherInfoResponse>();
+            var dict = new Dictionary<String, object>();
+            var errors = new List<Error>();
             var file = request.Form.Files[0];
             using (var stream = file.OpenReadStream())
             {
@@ -1246,12 +1276,26 @@ namespace BackEnd.Services
                                 {
                                     continue;
                                 }
-                                
-                                if(await _userManager.FindByNameAsync(reader.GetValue(1).ToString()) != null ||
-                                   await _userManager.FindByEmailAsync(reader.GetValue(3).ToString()) != null)
+
+                                if (await _userManager.FindByEmailAsync(reader.GetValue(3).ToString()) != null)
                                 {
+                                    errors.Add(new Error
+                                    {
+                                        Type = 1,
+                                        Message = "Email " + reader.GetValue(3).ToString() + " already exists",
+                                    });
                                     continue;
                                 }
+                                if (await _userManager.FindByNameAsync(reader.GetValue(1).ToString()) != null)
+                                {
+                                    errors.Add(new Error
+                                    {
+                                        Type = 2,
+                                        Message = "Student Code " + reader.GetValue(1).ToString() + " already exists",
+                                    });
+                                    continue;
+                                }
+
 
                                 var user = new AppUser
                                 {
@@ -1274,10 +1318,14 @@ namespace BackEnd.Services
                                 await _userManager.AddToRoleAsync(user, "Student");
 
                                 //debug
-                                if (result != IdentityResult.Success)
+                                response.Add(new TeacherInfoResponse
                                 {
-                                    appUsers.Add(user);
-                                }
+                                    Id = user.Id,
+                                    Code = user.UserName,
+                                    RealName = user.RealName,
+                                    Email = user.Email,
+                                    Dob = user.DOB
+                                });
                             }
 
                             if (reader.Name == "Teachers") // "TEACHERS" SHEET
@@ -1287,9 +1335,22 @@ namespace BackEnd.Services
                                     continue;
                                 }
 
-                                if (await _userManager.FindByNameAsync(reader.GetValue(1).ToString()) != null ||
-                                    await _userManager.FindByEmailAsync(reader.GetValue(3).ToString()) != null)
+                                if (await _userManager.FindByEmailAsync(reader.GetValue(3).ToString()) != null)
                                 {
+                                    errors.Add(new Error
+                                    {
+                                        Type = 1,
+                                        Message = "Email " + reader.GetValue(3).ToString() + " already exists",
+                                    });
+                                    continue;
+                                }
+                                if (await _userManager.FindByNameAsync(reader.GetValue(1).ToString()) != null)
+                                {
+                                    errors.Add(new Error
+                                    {
+                                        Type = 2,
+                                        Message = "Employee Code " + reader.GetValue(1).ToString() + " already exists",
+                                    });
                                     continue;
                                 }
 
@@ -1299,7 +1360,7 @@ namespace BackEnd.Services
                                     RealName = reader.GetValue(2).ToString(),
                                     Email = reader.GetValue(3).ToString(),
                                     DOB = reader.GetValue(4).ToString(),
-                                    Avatar =  "default.png"
+                                    Avatar = "default.png"
                                 };
 
                                 //Create user
@@ -1309,10 +1370,14 @@ namespace BackEnd.Services
                                 await _userManager.AddToRoleAsync(user, "Teacher");
 
                                 //debug
-                                if (result != IdentityResult.Success)
+                                response.Add(new TeacherInfoResponse
                                 {
-                                    appUsers.Add(user);
-                                }
+                                    Id = user.Id,
+                                    Code = user.UserName,
+                                    RealName = user.RealName,
+                                    Email = user.Email,
+                                    Dob = user.DOB
+                                });
                             }
 
                         }
@@ -1322,7 +1387,10 @@ namespace BackEnd.Services
 
 
             }
-            return new OkObjectResult("");
+            dict.Add("success", response);
+            dict.Add("failed", errors);
+
+            return new OkObjectResult(dict);
 
         }
 
