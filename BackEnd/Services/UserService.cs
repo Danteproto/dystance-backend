@@ -1558,7 +1558,7 @@ namespace BackEnd.Services
 
                 foreach (AttendanceStudent student in studentsList)
                 {
-                    var updateAttendance = await _context.AttendanceReports.FirstOrDefaultAsync(x => x.UserId == student.Id);
+                    var updateAttendance = await _context.AttendanceReports.FirstOrDefaultAsync(x => x.UserId == student.Id && x.TimeTableId.ToString() == model.Id);
 
                     if (updateAttendance != null)
                     {
