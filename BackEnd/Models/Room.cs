@@ -8,7 +8,6 @@ namespace BackEnd.Models
 {
     public class Room
     {
-        [Key]
         public int RoomId { get; set; }
         public string Subject { get; set; }
         public string? ClassName { get; set; }

@@ -84,9 +84,9 @@ namespace BackEnd.Controllers
             return await _semesterService.AddClass(semesterId, model);
         }
         [HttpPost("classes/update")]
-        public async Task<IActionResult> UpdateClass([FromBody] List<ClassRequest> models)
+        public async Task<IActionResult> UpdateClass(int semesterId, [FromBody] List<ClassRequest> models)
         {
-            return await _semesterService.UpdateClass(models);
+            return await _semesterService.UpdateClass(semesterId ,models);
         }
         [HttpPost("classes/delete")]
         public async Task<IActionResult> DeleteClass([FromBody] List<string> ids)

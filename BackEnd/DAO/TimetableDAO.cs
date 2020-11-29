@@ -79,11 +79,11 @@ namespace BackEnd.DAO
                 };
             }
         }
-        public static async Task<IActionResult> Update(RoomDBContext context, Timetable timetable)
+        public static IActionResult Update(RoomDBContext context, Timetable timetable)
         {
             try
             {
-                context.TimeTable.Update(timetable);
+                context.TimeTable.UpdateRange(timetable);
                 context.SaveChanges();
                 return new ObjectResult(new { message = "Add success!" })
                 {

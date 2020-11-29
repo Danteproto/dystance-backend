@@ -357,7 +357,7 @@ namespace BackEnd.Services
             Room room = new Room
             {
                 Subject = request.Form["name"],
-                CreatorId = request.Form["creatorId"],
+                CreatorId = request.Form["teacherId"],
                 MainRoomId = Convert.ToInt32(request.Form["roomId"]),
                 Group = true,
                 StartDate = now,

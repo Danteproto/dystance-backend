@@ -28,7 +28,7 @@ namespace BackEnd.Services
         public Task<IActionResult> DeleteSchedule(List<string> models);
         public Task<IActionResult> GetSemesterClass(int id);
         public Task<IActionResult> AddClass(int semesterId, ClassRequest model);
-        public Task<IActionResult> UpdateClass(List<ClassRequest> models);
+        public Task<IActionResult> UpdateClass(int semesterId, List<ClassRequest> models);
         public Task<IActionResult> DeleteClass(List<string> models);
     }
 
@@ -218,8 +218,7 @@ namespace BackEnd.Services
                                     if (reader.Name == "Classes") // "CLASSES" SHEET
                                     {
                                         var room = new Room();
-                                        if ((reader.GetValue(0) == null && reader.GetValue(1) == null)
-                                            || reader.GetValue(0) != "Subject")
+                                        if ((reader.GetValue(0) == null && reader.GetValue(1) == null))
                                         {
                                             continue;
                                         }
@@ -234,15 +233,19 @@ namespace BackEnd.Services
                                             reader.Read();
                                         }
                                         var extRoom = RoomDAO.GetRoomByClassSubjectSemester(_roomContext, room.ClassName, room.Subject, semester.Id);
-                                        if (!extRoom.Equals(default(Room)))
+                                        if (extRoom == null)
                                         {
-                                            continue;
+                                            room.StartDate = DateTime.Now;
+                                            room.EndDate = DateTime.Now;
+                                            room.SemesterId = semester.Id;
+                                            var result = RoomDAO.Create(_roomContext, room);
+                                            room = RoomDAO.GetLastRoom(_roomContext);
                                         }
-                                        room.StartDate = DateTime.Now;
-                                        room.EndDate = DateTime.Now;
-                                        room.SemesterId = semester.Id;
-                                        var result = RoomDAO.Create(_roomContext, room);
-                                        room = RoomDAO.GetLastRoom(_roomContext);
+                                        else
+                                        {
+                                            room = extRoom;
+                                        }
+                                        var links = RoomUserLinkDAO.GetRoomLink(_roomContext, room.RoomId);
                                         if (reader.GetValue(0).ToString() == "Teacher")
                                         {
                                             var teacher = await _userManager.FindByNameAsync(reader.GetValue(1).ToString());
@@ -250,34 +253,52 @@ namespace BackEnd.Services
                                             {
                                                 throw new Exception(" Teacher Accounts in this semester doesn't exist yet. Please import the accounts first");
                                             }
-                                            room.CreatorId = teacher.Id;
-                                            RoomDAO.UpdateRoom(_roomContext, room);
-                                            var link = new RoomUserLink
+                                            if (room.CreatorId != teacher.Id)
                                             {
-                                                UserId = teacher.Id,
-                                                RoomId = room.RoomId,
-                                            };
-                                            result = RoomUserLinkDAO.Create(_roomContext, link);
+                                                var delLink = RoomUserLinkDAO.GetRoomUserLink(_roomContext, room.RoomId, room.CreatorId);
+                                                RoomUserLinkDAO.Delete(_roomContext, delLink);
+                                                room.CreatorId = teacher.Id;
+                                                RoomDAO.UpdateRoom(_roomContext, room);
+                                                var link = new RoomUserLink
+                                                {
+                                                    UserId = teacher.Id,
+                                                    RoomId = room.RoomId,
+                                                };
+                                                RoomUserLinkDAO.Create(_roomContext, link);
+                                            }
+
                                             reader.Read();
                                         }
                                         if (reader.GetValue(0).ToString() == "Num of students")
                                         {
                                             var count = Convert.ToInt32(reader.GetValue(1).ToString());
+                                            var listUserIds = new List<string>();
                                             for (int i = 0; i < count; i++)
                                             {
                                                 reader.Read();
                                                 var student = _userManager.FindByNameAsync(reader.GetValue(1).ToString()).Result;
                                                 if (student == null)
                                                 {
-                                                    throw new Exception(" Student Accounts in this semester doesn't exist yet. Please import the accounts first");
+                                                    throw new Exception($" Student Accounts {reader.GetValue(1).ToString()} in this semester doesn't exist yet. Please import the accounts first");
                                                 }
-                                                var link = new RoomUserLink
-                                                {
-                                                    UserId = student.Id,
-                                                    RoomId = room.RoomId,
-                                                };
-                                                result = RoomUserLinkDAO.Create(_roomContext, link);
+                                                listUserIds.Add(student.Id);
                                             }
+                                            listUserIds.Add(room.CreatorId);
+                                            var extLinkUserIds = RoomUserLinkDAO.GetRoomLink(_roomContext, room.RoomId)
+                                                                .Select(x => x.UserId).ToList();
+                                            var deleteUserIds = extLinkUserIds.Except(listUserIds).ToList();
+                                            var addUserIds = listUserIds.Except(extLinkUserIds).ToList();
+
+                                            var deleteLinks = deleteUserIds.Select(item => RoomUserLinkDAO.GetRoomUserLink(_roomContext, room.RoomId, item)).ToList();
+
+                                            var addLinks = addUserIds.Select(item => new RoomUserLink
+                                            {
+                                                UserId = item,
+                                                RoomId = room.RoomId
+                                            }).ToList();
+
+                                            RoomUserLinkDAO.Create(_roomContext, addLinks);
+                                            RoomUserLinkDAO.Delete(_roomContext, deleteLinks);
                                         }
                                     }
 
@@ -315,7 +336,7 @@ namespace BackEnd.Services
                         }
                         catch (Exception e)
                         {
-
+                            return new BadRequestObjectResult(new { message = e.Message });
                         }
                     }
 
@@ -409,8 +430,21 @@ namespace BackEnd.Services
                     fail.Add(model.id);
                     continue;
                 }
-                success.Add(model);
-                TimetableDAO.Update(_roomContext, schedule);
+                else
+                {
+                    foreach(var item in extSchedules)
+                    {
+                        if(item.Id == schedule.Id)
+                        {
+                            item.RoomId = schedule.RoomId;
+                            item.StartTime = schedule.StartTime;
+                            item.EndTime = schedule.EndTime;
+                            item.Date = schedule.Date;
+                        }
+                    }
+                    var result = TimetableDAO.Update(_roomContext, extSchedules);
+                    success.Add(model);
+                }
 
             }
 
@@ -500,12 +534,19 @@ namespace BackEnd.Services
             });
         }
 
-        public async Task<IActionResult> UpdateClass(List<ClassRequest> models)
+        public async Task<IActionResult> UpdateClass(int semesterId, List<ClassRequest> models)
         {
             var result = new List<ClassResponse>();
+            var failed = new List<string>();
             foreach (var model in models)
             {
                 var @class = RoomDAO.Get(_roomContext, Convert.ToInt32(model.id));
+                var extClass = RoomDAO.GetRoomByClassSubjectSemester(_roomContext, model.@class, model.subject, semesterId);
+                if (extClass != null && extClass.RoomId != Convert.ToInt32(model.id))
+                {
+                        failed.Add($"Class cannot upddate: Update to already exited class!");
+                        continue;
+                }
                 @class.Subject = model.subject;
                 @class.CreatorId = model.teacher;
                 @class.ClassName = model.@class;
@@ -537,7 +578,11 @@ namespace BackEnd.Services
                     students = model.students.Where(x => x != @class.CreatorId).ToList()
                 });
             }
-            return new OkObjectResult(result);
+            return new OkObjectResult(new
+            {
+                success = result,
+                failed = failed
+            });
         }
 
         public async Task<IActionResult> DeleteClass(List<string> models)

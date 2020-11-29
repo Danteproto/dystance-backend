@@ -73,7 +73,7 @@ namespace BackEnd.Services
                         RoomId = room.RoomId.ToString(),
                         EventType = 0,
                         Title = room.Subject +"-" +room.ClassName,
-                        CreatorId = room.CreatorId,
+                        TeacherId = room.CreatorId,
                         StartDate = timetable.Date.ToString("yyyy-MM-dd") + "T" + timetable.StartTime,
                         EndDate = timetable.Date.ToString("yyyy-MM-dd") + "T" + timetable.EndTime,
                     });

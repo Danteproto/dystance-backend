@@ -9,7 +9,6 @@ namespace BackEnd.Models
 {
     public class Timetable
     {
-        [Key]
         public int Id { get; set; }
         public int RoomId { get; set; }
         [Required]
