@@ -213,8 +213,9 @@ namespace BackEnd.Services
             foreach (string id in teacherIdList)
             {
                 var user = await _userManager.FindByIdAsync(id);
+                var room = await _roomContext.RoomUserLink.FirstOrDefaultAsync(x => x.UserId == id);
 
-                if (user != null && await _userManager.IsInRoleAsync(user, "Student"))
+                if (user != null && await _userManager.IsInRoleAsync(user, "Student") && room == null)
                 {
                     await _userManager.DeleteAsync(user);
                     i++;
