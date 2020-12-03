@@ -39,18 +39,20 @@ namespace BackEnd.Services
         private UserDbContext _userContext;
         private RoomDBContext _roomContext;
         private readonly IWebHostEnvironment _env;
+        private readonly IAttendanceDAO _attendanceDAO;
 
 
         public SemesterService(UserManager<AppUser> userManager
             , UserDbContext userContext
             , RoomDBContext roomContext
             , IWebHostEnvironment env
-            )
+            , IAttendanceDAO attendanceDAO)
         {
             _userManager = userManager;
             _userContext = userContext;
             _roomContext = roomContext;
             _env = env;
+            _attendanceDAO = attendanceDAO;
         }
 
         public async Task<IActionResult> AddSemester(HttpRequest request)
@@ -158,6 +160,19 @@ namespace BackEnd.Services
                                         EndTime = Convert.ToDateTime(reader.GetValue(2).ToString()).TimeOfDay,
                                     };
                                     var result = TimetableDAO.Create(_roomContext, schedule);
+                                    schedule = TimetableDAO.GetLast(_roomContext);
+                                    var userIds = RoomUserLinkDAO.GetRoomLink(_roomContext, schedule.RoomId).Select(item => item.UserId);
+                                    var attendances = new List<AttendanceReports>();
+                                    foreach (var userId in userIds)
+                                    {
+                                        attendances.Add(new AttendanceReports
+                                        {
+                                            UserId = userId,
+                                            Status = "future",
+                                            TimeTableId = schedule.Id,
+                                        });
+                                    }
+                                    await _attendanceDAO.CreateAttendance(attendances);
                                 }
 
                             }
@@ -392,6 +407,18 @@ namespace BackEnd.Services
                 }
                 var result = TimetableDAO.Create(_roomContext, schedule).Result;
                 schedule = TimetableDAO.GetLast(_roomContext);
+                var userIds = RoomUserLinkDAO.GetRoomLink(_roomContext, schedule.RoomId).Select(item => item.UserId);
+                var attendances = new List<AttendanceReports>();
+                foreach (var userId in userIds)
+                {
+                    attendances.Add(new AttendanceReports
+                    {
+                        UserId = userId,
+                        Status = "future",
+                        TimeTableId = schedule.Id,
+                    });
+                }
+                await _attendanceDAO.CreateAttendance(attendances);
                 return new OkObjectResult(new ScheduleResponse
                 {
                     id = schedule.Id.ToString(),
@@ -461,6 +488,8 @@ namespace BackEnd.Services
             foreach (var id in models)
             {
                 var schedule = TimetableDAO.GetById(_roomContext, Convert.ToInt32(id));
+                var attendances = _attendanceDAO.GetAttendanceBySchedule(schedule.Id);
+                await _attendanceDAO.DeleteAttendance(attendances);
                 if (schedule != null)
                 {
                     delSchedules.Add(schedule);
@@ -565,9 +594,33 @@ namespace BackEnd.Services
                     UserId = item,
                     RoomId = @class.RoomId
                 }).ToList();
-
-                RoomUserLinkDAO.Create(_roomContext, addLinks);
-                RoomUserLinkDAO.Delete(_roomContext, deleteLinks);
+                var schedules = TimetableDAO.GetByRoomId(_roomContext, @class.RoomId);
+                var addAttendance = new List<AttendanceReports>();
+                var delAttendance = new List<AttendanceReports>();
+                foreach (var schedule in schedules)
+                {
+                    foreach (var userId in addUserIds)
+                    {
+                        addAttendance.Add(new AttendanceReports
+                        {
+                            UserId = userId,
+                            TimeTableId = schedule.Id,
+                            Status = "future"
+                        });
+                    }
+                    foreach (var userId in deleteUserIds)
+                    {
+                        var attendance = _attendanceDAO.GetAttendanceByScheduleUserId(schedule.Id, userId);
+                        if (attendance != null)
+                        {
+                            delAttendance.Add(attendance);
+                        }
+                    }
+                }
+                await _attendanceDAO.DeleteAttendance(delAttendance);
+                await _attendanceDAO.CreateAttendance(addAttendance);
+                await RoomUserLinkDAO.Create(_roomContext, addLinks);
+                await RoomUserLinkDAO.Delete(_roomContext, deleteLinks);
 
                 result.Add(new ClassResponse
                 {
@@ -590,7 +643,7 @@ namespace BackEnd.Services
             var delRoom = new List<Room>();
             foreach (var id in models)
             {
-                RoomService.DeleteRoom(_roomContext, Convert.ToInt32(id), _env);
+                await RoomService.DeleteRoom(_roomContext, Convert.ToInt32(id), _env);
             }
             return new OkObjectResult(new { message = "delete succesful" });
         }
