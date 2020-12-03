@@ -209,24 +209,51 @@ namespace BackEnd.Services
 
         public async Task<IActionResult> DeleteStudent(List<string> teacherIdList)
         {
-            int i = 0;
+            var dict = new Dictionary<String, object>();
+            var response = new List<String>();
+            var errors = new List<Error>();
+
             foreach (string id in teacherIdList)
             {
                 var user = await _userManager.FindByIdAsync(id);
+                var room = await _roomContext.RoomUserLink.FirstOrDefaultAsync(x => x.UserId == id);
 
-                if (user != null && await _userManager.IsInRoleAsync(user, "Student"))
+                if (user == null)
                 {
-                    await _userManager.DeleteAsync(user);
-                    i++;
+                    errors.Add(new Error
+                    {
+                        Type = 1,
+                        Message = "This id " + id + " don't exist",
+                    });
+                    continue;
                 }
+                if (!await _userManager.IsInRoleAsync(user, "student"))
+                {
+                    errors.Add(new Error
+                    {
+                        Type = 2,
+                        Message = "The user " + user.UserName + " is not a student",
+                    });
+                    continue;
+                }
+                if (room != null)
+                {
+                    errors.Add(new Error
+                    {
+                        Type = 3,
+                        Message = "Student " + user.UserName + " is still linked to a classroom",
+                    });
+                    continue;
+                }
+                await _userManager.DeleteAsync(user);
+                response.Add("Delete Student " + user.UserName + " Successfully");
             }
 
-            if (i == 0)
-            {
-                return new OkObjectResult(new { response = "No Students Were Deleted " });
-            }
 
-            return new OkObjectResult(new { response = "Deleted Students Successfully" });
+            dict.Add("success", response);
+            dict.Add("failed", errors);
+
+            return new OkObjectResult(dict);
         }
 
 
