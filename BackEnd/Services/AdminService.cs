@@ -30,16 +30,19 @@ namespace BackEnd.Services
         private readonly UserDbContext _userContext;
         private readonly ILogDAO _logDAO;
         private readonly IPrivateMessageDAO _privateMessageDAO;
+        private readonly IAttendanceDAO _attendanceDAO;
 
         public AdminService(UserManager<AppUser> userManager,
             UserDbContext usercontext,
             ILogDAO logDAO,
-            IPrivateMessageDAO privateMessageDAO)
+            IPrivateMessageDAO privateMessageDAO,
+            IAttendanceDAO attendanceDAO)
         {
             _userManager = userManager;
             _userContext = usercontext;
             _logDAO = logDAO;
             _privateMessageDAO = privateMessageDAO;
+            _attendanceDAO = attendanceDAO;
         }
 
 
@@ -185,7 +188,7 @@ namespace BackEnd.Services
                         Code = user.UserName,
                         Email = user.Email,
                         RealName = user.RealName,
-                        Dob = user.DOB,
+                        Dob = Convert.ToDateTime(user.DOB).ToString("yyyy-MM-dd"),
                         Role = "quality assurance"
                     });
 
@@ -198,7 +201,7 @@ namespace BackEnd.Services
                         Code = user.UserName,
                         Email = user.Email,
                         RealName = user.RealName,
-                        Dob = user.DOB,
+                        Dob = Convert.ToDateTime(user.DOB).ToString("yyyy-MM-dd"),
                         Role = "academic management"
                     });
 
@@ -390,6 +393,13 @@ namespace BackEnd.Services
                                                  select messages).ToListAsync();
 
                 await _privateMessageDAO.DeletePrivateMessages(listPrivateMessages);
+
+                var listAttendances = await (from attendances in _userContext.AttendanceReports
+                                             where attendances.UserId.Contains(id)
+                                             select attendances).ToListAsync();
+
+                await _attendanceDAO.DeleteAttendance(listAttendances);
+
                 await _userManager.DeleteAsync(user);
 
                 response.Add(id);

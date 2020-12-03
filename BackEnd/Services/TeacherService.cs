@@ -37,19 +37,22 @@ namespace BackEnd.Services
         private RoomDBContext _roomContext;
         private readonly ILogDAO _logDAO;
         private readonly IPrivateMessageDAO _privateMessageDAO;
+        private readonly IAttendanceDAO _attendanceDAO;
 
         public TeacherService(
             UserDbContext usercontext,
             UserManager<AppUser> userManager,
             RoomDBContext roomcontext,
             ILogDAO logDAO,
-            IPrivateMessageDAO privateMessageDAO)
+            IPrivateMessageDAO privateMessageDAO,
+            IAttendanceDAO attendanceDAO)
         {
             _userContext = usercontext;
             _userManager = userManager;
             _roomContext = roomcontext;
             _logDAO = logDAO;
             _privateMessageDAO = privateMessageDAO;
+            _attendanceDAO = attendanceDAO;
         }
 
         public async Task<IActionResult> GetTeacher()
@@ -261,6 +264,11 @@ namespace BackEnd.Services
 
                 await _privateMessageDAO.DeletePrivateMessages(listPrivateMessages);
 
+                var listAttendances = await (from attendances in _userContext.AttendanceReports
+                                                 where attendances.UserId.Contains(id)
+                                                 select attendances).ToListAsync();
+
+                await _attendanceDAO.DeleteAttendance(listAttendances);
 
 
                 await _userManager.DeleteAsync(user);
