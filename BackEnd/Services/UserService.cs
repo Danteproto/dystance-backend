@@ -849,6 +849,26 @@ namespace BackEnd.Services
                                     };
                                     if (CheckLogExist(attendanceJoin))
                                     {
+                                        var schedules = TimetableDAO.GetByRoomAndDate(_roomDBContext, Convert.ToInt32(attendanceJoin.RoomId), attendanceJoin.DateTime);
+                                        foreach (var schedule in schedules)
+                                        {
+                                            var attendances = new List<AttendanceReports>();
+                                            var attendance = _attendanceDAO.GetAttendanceByScheduleUserId(schedule.Id, attendanceJoin.UserId);
+                                            if (attendance != null)
+                                            {
+                                                if (attendanceJoin.DateTime.TimeOfDay < schedule.StartTime.Add(TimeSpan.FromMinutes(10)))
+                                                {
+                                                    attendance.Status = "present";
+                                                    attendances.Add(attendance);
+                                                }
+                                                else
+                                                {
+                                                    attendance.Status = "absent";
+                                                    attendances.Add(attendance);
+                                                }
+                                            }
+                                            await _attendanceDAO.UpdateAttendance(attendances);
+                                        }
                                         result.Append(await _logDAO.CreateLog(attendanceJoin) + '\n');
                                     }
                                     break;
@@ -863,6 +883,21 @@ namespace BackEnd.Services
                                     };
                                     if (CheckLogExist(attendanceLeave))
                                     {
+                                        var schedules = TimetableDAO.GetByRoomAndDate(_roomDBContext, Convert.ToInt32(attendanceLeave.RoomId), attendanceLeave.DateTime);
+                                        foreach (var schedule in schedules)
+                                        {
+                                            var attendances = new List<AttendanceReports>();
+                                            if (attendanceLeave.DateTime.TimeOfDay < schedule.EndTime.Add(TimeSpan.FromMinutes(-10)))
+                                            {
+                                                var attendance = _attendanceDAO.GetAttendanceByScheduleUserId(schedule.Id, attendanceLeave.UserId);
+                                                if (attendance != null)
+                                                {
+                                                    attendance.Status = "absent";
+                                                    attendances.Add(attendance);
+                                                }
+                                            }
+                                            await _attendanceDAO.UpdateAttendance(attendances);
+                                        }
                                         result.Append(await _logDAO.CreateLog(attendanceLeave) + '\n');
                                     }
                                     break;
@@ -1412,7 +1447,7 @@ namespace BackEnd.Services
         }
         public async Task<IActionResult> GetAttendanceReports(string userId, string semesterId)
         {
-            var currentUser = await _userManager.FindByIdAsync(_userAccessor.GetCurrentUserId());
+            var currentUser = await _userManager.FindByIdAsync(userId);
 
             if (await _userManager.IsInRoleAsync(currentUser, "student"))
             {
@@ -1427,17 +1462,20 @@ namespace BackEnd.Services
                     var timetable = await _roomDBContext.TimeTable.FirstOrDefaultAsync(t => t.Id == attendance.TimeTableId);
                     var room = await _roomDBContext.Room.FirstOrDefaultAsync(r => r.RoomId == timetable.RoomId && r.SemesterId.ToString().Contains(semesterId));
 
-                    attendanceList.Add(new AttendanceStudentResponse
+                    if (room != null)
                     {
-                        Id = timetable.Id.ToString(),
-                        Class = room.ClassName,
-                        Subject = room.Subject,
-                        Date = String.Format("{0:yyyy-MM-dd}", timetable.Date),
-                        StartTime = timetable.StartTime.ToString(@"hh\:mm"),
-                        EndTime = timetable.EndTime.ToString(@"hh\:mm"),
-                        Teacher = room.CreatorId,
-                        Status = attendance.Status
-                    });
+                        attendanceList.Add(new AttendanceStudentResponse
+                        {
+                            Id = timetable.Id.ToString(),
+                            Class = room.ClassName,
+                            Subject = room.Subject,
+                            Date = String.Format("{0:yyyy-MM-dd}", timetable.Date),
+                            StartTime = timetable.StartTime.ToString(@"hh\:mm"),
+                            EndTime = timetable.EndTime.ToString(@"hh\:mm"),
+                            Teacher = room.CreatorId,
+                            Status = attendance.Status
+                        });
+                    }
                 }
 
                 return new OkObjectResult(attendanceList);
@@ -1539,17 +1577,17 @@ namespace BackEnd.Services
                         Date = String.Format("{0:yyyy-MM-dd}", timetable.Date),
                         StartTime = timetable.StartTime.ToString(@"hh\:mm"),
                         EndTime = timetable.EndTime.ToString(@"hh\:mm"),
-                        Teacher = userId,
+                        Teacher = room.CreatorId,
                         Students = listStudent
                     });
 
                 }
-                
+
                 return new OkObjectResult(attendanceList);
 
             }
 
-                return new OkObjectResult("");
+            return new OkObjectResult("");
         }
 
         public async Task<IActionResult> UpdateAttendanceReports(UpdateAttendanceStudentRequest model)
@@ -1557,7 +1595,7 @@ namespace BackEnd.Services
             var currentUser = await _userManager.FindByIdAsync(_userAccessor.GetCurrentUserId());
             var listStudent = new List<AttendanceStudent>();
 
-            if (await _userManager.IsInRoleAsync(currentUser, "academic management"))
+            if (await _userManager.IsInRoleAsync(currentUser, "academic management") || await _userManager.IsInRoleAsync(currentUser, "teacher"))
             {
 
                 var studentsList = model.Students.ToList();

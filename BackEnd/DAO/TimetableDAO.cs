@@ -52,6 +52,10 @@ namespace BackEnd.DAO
         {
             return context.TimeTable.Where(timetable => timetable.RoomId == roomId).ToList();
         }
+        public static List<Timetable> GetByRoomAndDate(RoomDBContext context, int roomId, DateTime date)
+        {
+            return context.TimeTable.Where(timetable => timetable.RoomId == roomId && timetable.Date == date.Date).ToList();
+        }
         public static Timetable GetById(RoomDBContext context, int id)
         {
             return context.TimeTable.Where(timetable => timetable.Id == id).FirstOrDefault();
