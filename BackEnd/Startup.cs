@@ -174,6 +174,7 @@ namespace BackEnd
             services.AddScoped<ITeacherService, TeacherService>();
             services.AddScoped<IStudentService, StudentService>();
             services.AddScoped<IAdminService, AdminService>();
+            services.AddScoped<IPrivateMessageDAO, PrivateMessageDAO>();
 
             var emailConfig = Configuration
                 .GetSection("EmailConfiguration")

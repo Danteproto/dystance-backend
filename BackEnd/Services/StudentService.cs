@@ -26,25 +26,25 @@ namespace BackEnd.Services
     }
     public class StudentService : IStudentService
     {
-        private UserDbContext _context;
-        private readonly RoleManager<AppRole> _roleManager;
+        private UserDbContext _userContext;
         private readonly RoomDBContext _roomContext;
-        private readonly IWebHostEnvironment _env;
+        private readonly ILogDAO _logDAO;
+        private readonly IPrivateMessageDAO _privateMessageDAO;
         private readonly UserManager<AppUser> _userManager;
 
 
         public StudentService(
             UserDbContext context,
             UserManager<AppUser> userManager,
-            RoleManager<AppRole> roleManager,
             RoomDBContext roomcontext,
-            IWebHostEnvironment env)
+             ILogDAO logDAO,
+            IPrivateMessageDAO privateMessageDAO)
         {
-            _context = context;
+            _userContext = context;
             _userManager = userManager;
-            _roleManager = roleManager;
             _roomContext = roomcontext;
-            _env = env;
+            _logDAO = logDAO;
+            _privateMessageDAO = privateMessageDAO;
         }
 
 
@@ -245,8 +245,22 @@ namespace BackEnd.Services
                     });
                     continue;
                 }
+
+                var listLog = await (from logs in _userContext.UserLog
+                                     where logs.UserId.Contains(id)
+                                     select logs).ToListAsync();
+
+                await _logDAO.DeleteLogs(listLog);
+
+                var listPrivateMessages = await (from messages in _userContext.PrivateMessages
+                                                 where messages.SenderId.Contains(id) || messages.ReceiverId.Contains(id)
+                                                 select messages).ToListAsync();
+
+                await _privateMessageDAO.DeletePrivateMessages(listPrivateMessages);
+
+
                 await _userManager.DeleteAsync(user);
-                response.Add("Delete Student " + user.UserName + " Successfully");
+                response.Add(id);
             }
 
 

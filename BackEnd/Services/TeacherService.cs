@@ -32,33 +32,24 @@ namespace BackEnd.Services
     }
     public class TeacherService : ITeacherService
     {
-        private readonly RoleManager<AppRole> _roleManager;
         private readonly UserManager<AppUser> _userManager;
         private UserDbContext _userContext;
         private RoomDBContext _roomContext;
-        private readonly IUrlHelperFactory _urlHelperFactory;
-        private readonly IWebHostEnvironment _env;
-        private readonly IActionContextAccessor _actionContextAccessor;
-        private readonly IEmailSender _emailSender;
+        private readonly ILogDAO _logDAO;
+        private readonly IPrivateMessageDAO _privateMessageDAO;
 
         public TeacherService(
             UserDbContext usercontext,
             UserManager<AppUser> userManager,
-            RoleManager<AppRole> roleManager,
             RoomDBContext roomcontext,
-            IUrlHelperFactory urlHelperFactory,
-            IWebHostEnvironment env,
-            IActionContextAccessor actionContextAccessor,
-            IEmailSender emailSender)
+            ILogDAO logDAO,
+            IPrivateMessageDAO privateMessageDAO)
         {
             _userContext = usercontext;
             _userManager = userManager;
-            _roleManager = roleManager;
             _roomContext = roomcontext;
-            _urlHelperFactory = urlHelperFactory;
-            _env = env;
-            _actionContextAccessor = actionContextAccessor;
-            _emailSender = emailSender;
+            _logDAO = logDAO;
+            _privateMessageDAO = privateMessageDAO;
         }
 
         public async Task<IActionResult> GetTeacher()
@@ -257,8 +248,23 @@ namespace BackEnd.Services
                     });
                     continue;
                 }
+
+                var listLog = await (from logs in _userContext.UserLog
+                                     where logs.UserId.Contains(id)
+                                     select logs).ToListAsync();
+
+                await _logDAO.DeleteLogs(listLog);
+
+                var listPrivateMessages = await (from messages in _userContext.PrivateMessages
+                                                 where messages.SenderId.Contains(id) || messages.ReceiverId.Contains(id)
+                                                 select messages).ToListAsync();
+
+                await _privateMessageDAO.DeletePrivateMessages(listPrivateMessages);
+
+
+
                 await _userManager.DeleteAsync(user);
-                response.Add("Delete Teacher " + user.UserName + " Successfully");
+                response.Add(id);
 
             }
 

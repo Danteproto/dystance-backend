@@ -1,4 +1,6 @@
-﻿using BackEnd.Models;
+﻿using BackEnd.Context;
+using BackEnd.DAO;
+using BackEnd.Models;
 using BackEnd.Requests;
 using BackEnd.Responses;
 using ExcelDataReader;
@@ -25,10 +27,19 @@ namespace BackEnd.Services
     public class AdminService : IAdminService
     {
         private readonly UserManager<AppUser> _userManager;
+        private readonly UserDbContext _userContext;
+        private readonly ILogDAO _logDAO;
+        private readonly IPrivateMessageDAO _privateMessageDAO;
 
-        public AdminService(UserManager<AppUser> userManager)
+        public AdminService(UserManager<AppUser> userManager,
+            UserDbContext usercontext,
+            ILogDAO logDAO,
+            IPrivateMessageDAO privateMessageDAO)
         {
             _userManager = userManager;
+            _userContext = usercontext;
+            _logDAO = logDAO;
+            _privateMessageDAO = privateMessageDAO;
         }
 
 
@@ -367,10 +378,21 @@ namespace BackEnd.Services
                     });
                     continue;
                 }
+                
+                var listLog = await (from logs in _userContext.UserLog
+                                     where logs.UserId.Contains(id)
+                                     select logs).ToListAsync();
 
+                await _logDAO.DeleteLogs(listLog);
+
+                var listPrivateMessages = await (from messages in _userContext.PrivateMessages
+                                                 where messages.SenderId.Contains(id) || messages.ReceiverId.Contains(id)
+                                                 select messages).ToListAsync();
+
+                await _privateMessageDAO.DeletePrivateMessages(listPrivateMessages);
                 await _userManager.DeleteAsync(user);
 
-                response.Add("Delete " + user.UserName + " Successfully");
+                response.Add(id);
             }
 
 

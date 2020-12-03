@@ -11,6 +11,7 @@ namespace BackEnd.DAO
     public interface ILogDAO
     {
         public Task<string> CreateLog(UsersLog usersLog);
+        public Task<string> DeleteLogs(List<UsersLog> usersLogs);
     }
     public class LogDAO: ILogDAO
     {
@@ -33,6 +34,21 @@ namespace BackEnd.DAO
             {
                 return "Success at creating log " + usersLog.ToString();               
             }
+        }
+
+        public async Task<string> DeleteLogs(List<UsersLog> usersLogs)
+        {
+            _context.UserLog.RemoveRange(usersLogs);
+            var no = await _context.SaveChangesAsync();
+            if (no <= 0)
+            {
+                return "Error ";
+            }
+            else
+            {
+                return "Success";
+            }
+
         }
 
     }
