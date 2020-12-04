@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using BackEnd.Context;
 using BackEnd.Models;
 using BackEnd.Security;
@@ -41,7 +41,7 @@ namespace BackEnd.Test
         {
             //setting up context
             factory = new ConnectionFactory();
-            context = factory.CreateContextForInMemory();
+            context = factory.CreateUserDbContextForInMemory();
             context.Database.EnsureDeleted();
             context.Database.EnsureCreated();
             context.SaveChanges();
@@ -100,10 +100,10 @@ namespace BackEnd.Test
             //mocking IEmailService
             var emailConfig = new EmailConfiguration
             {
-                From = "olsymailservice@gmail.com",
+                From = "dystancemailservice@gmail.com",
                 SmtpServer = "smtp.gmail.com",
                 Port = 465,
-                UserName = "olsymailservice@gmail.com"
+                UserName = "dystancemailservice@gmail.com"
             };
             var appSettings = new AppSettings
             {
@@ -140,7 +140,7 @@ namespace BackEnd.Test
             var user = new AppUser
             {
                 Email = model.Email,
-                UserName = model.Username,
+                UserName = model.UserName,
                 EmailConfirmed = true,
                 RefreshTokens = new List<RefreshToken>(),
                 Id = Guid.NewGuid().ToString()
@@ -165,7 +165,7 @@ namespace BackEnd.Test
             var user = new AppUser
             {
                 Email = model.Email,
-                UserName = model.Username,
+                UserName = model.UserName,
                 EmailConfirmed = true,
                 RefreshTokens = new List<RefreshToken>(),
                 Id = Guid.NewGuid().ToString()
@@ -282,8 +282,8 @@ namespace BackEnd.Test
 
             Assert.IsType<NotFoundObjectResult>(data);
         }
-        
-        
+
+
         //[Theory]
         //[MemberData(nameof(RegisterTestCase_ForOK))]
         //public async void TestRegister_Return_OkResult(RegisterRequest registerRequest, bool expectedOutput, string description)
@@ -298,7 +298,7 @@ namespace BackEnd.Test
 
         //    fakeUserManager.Setup(x => x.FindByEmailAsync(user.Email)).Returns(Task.FromResult(users.FirstOrDefault<AppUser>(u => u.Email == user.Email) == null ? null : user));
         //    fakeUserManager.Setup(x => x.FindByNameAsync(user.UserName)).Returns(Task.FromResult(users.FirstOrDefault<AppUser>(u => u.UserName == user.UserName) == null ? null : user));
-                      
+
         //    fakeUserManager.Setup(x => x.CreateAsync(It.IsAny<AppUser>(), It.IsAny<string>()))
         //    .ReturnsAsync(IdentityResult.Success).Callback<AppUser, string>((x, y) => context.Users.Add(new AppUser {
         //        Email = x.Email
@@ -321,7 +321,7 @@ namespace BackEnd.Test
 
 
 
-
+        #region ObjectĐểTruyềnVào Cho phần MemberData, để truyền vào object Request cho nhanh  
         public static IEnumerable<object[]> AuthenticateTestCase_ForOK
         {
             get
@@ -334,7 +334,7 @@ namespace BackEnd.Test
 
                 data.Add(TheoryDatum.Factory(new AuthenticateRequest
                 {
-                    Username = Username,
+                    UserName = Username,
                     Password = Password
                 }, true, "Email missing"));
 
@@ -361,7 +361,7 @@ namespace BackEnd.Test
 
                 data.Add(TheoryDatum.Factory(new AuthenticateRequest
                 {
-                    Username = Username,
+                    UserName = Username,
                     Password = Password
                 }, false, "Wrong Email"));
 
@@ -394,11 +394,11 @@ namespace BackEnd.Test
 
                 data.Add(TheoryDatum.Factory(new RegisterRequest
                 {
-                    Username = Username,
+                    UserName = Username,
                     Email = Email,
                     Password = Password,
                     RealName = RealName,
-                    DOB = DOB,
+                    Dob = DOB,
 
                 }, true, "Success"));
 
@@ -408,4 +408,6 @@ namespace BackEnd.Test
             }
         }
     }
+
+    #endregion  
 }
