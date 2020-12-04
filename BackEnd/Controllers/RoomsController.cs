@@ -41,11 +41,11 @@ namespace BackEnd.Controllers
             };
         }
 
-        [HttpPost("create")]
-        public async Task<IActionResult> CreateRoom()
-        {
-            return await RoomService.CreateRoom(_roomContext, Request, _env);
-        }
+        //[HttpPost("create")]
+        //public async Task<IActionResult> CreateRoom()
+        //{
+        //    return await RoomService.CreateRoom(_roomContext, Request, _env);
+        //}
 
         [HttpDelete]
         public async Task<IActionResult> Delete(int id)
@@ -53,16 +53,16 @@ namespace BackEnd.Controllers
             return await RoomService.DeleteRoom(_roomContext, id, _env);
         }
 
-        [HttpGet("getById")]
-        public IActionResult GetRoomById(int Id)
-        {
-            Room room = RoomService.GetRoomById(_roomContext, Id);
-            return Content(JsonConvert.SerializeObject(room, new JsonSerializerSettings
-            {
-                ContractResolver = _contractResolver,
-                Formatting = Formatting.Indented
-            }));
-        }
+        //[HttpGet("getById")]
+        //public IActionResult GetRoomById(int Id)
+        //{
+        //    Room room = RoomService.GetRoomById(_roomContext, Id);
+        //    return Content(JsonConvert.SerializeObject(room, new JsonSerializerSettings
+        //    {
+        //        ContractResolver = _contractResolver,
+        //        Formatting = Formatting.Indented
+        //    }));
+        //}
 
         [HttpGet("getByUserId")]
         public IActionResult GetRoomByUserId(string Id)
@@ -142,12 +142,6 @@ namespace BackEnd.Controllers
             return File(file, contentType);
         }
 
-        [HttpPost("invite")]
-        public async Task<IActionResult> InviteToRoom()
-        {
-            return await RoomService.Invite(_roomContext, _userContext, Request, _emailSender);
-        }
-
         [HttpGet("kick")]
         public async Task<IActionResult> KickFromRoom(int roomId, string userId)
         {
@@ -181,12 +175,6 @@ namespace BackEnd.Controllers
             var imgPath = Path.Combine(path, imgName);
             var image = System.IO.File.OpenRead(imgPath);
             return File(image, "image/png");
-        }
-
-        [HttpPost("update")]
-        public async Task<IActionResult> UpdateRoom()
-        {
-            return await RoomService.UpdateRoom(_roomContext, Request, _env);
         }
 
         [HttpPost("groups/create")]

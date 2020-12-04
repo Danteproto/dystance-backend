@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -40,19 +41,22 @@ namespace BackEnd.Services
         private RoomDBContext _roomContext;
         private readonly IWebHostEnvironment _env;
         private readonly IAttendanceDAO _attendanceDAO;
+        private readonly ILogDAO _logDAO;
 
 
         public SemesterService(UserManager<AppUser> userManager
             , UserDbContext userContext
             , RoomDBContext roomContext
             , IWebHostEnvironment env
-            , IAttendanceDAO attendanceDAO)
+            , IAttendanceDAO attendanceDAO
+            , ILogDAO logDao)
         {
             _userManager = userManager;
             _userContext = userContext;
             _roomContext = roomContext;
             _env = env;
             _attendanceDAO = attendanceDAO;
+            _logDAO = logDao;
         }
 
         public async Task<IActionResult> AddSemester(HttpRequest request)
@@ -201,7 +205,32 @@ namespace BackEnd.Services
                     var rooms = RoomDAO.GetRoomBySemester(_roomContext, semester.Id);
                     foreach (var room in rooms)
                     {
-                        await RoomService.DeleteRoom(_roomContext, room.RoomId, _env);
+                        var roomUserLinks = RoomUserLinkDAO.GetRoomLink(_roomContext, room.RoomId);
+                        var roomChats = RoomChatDAO.GetChatByRoomId(_roomContext, room.RoomId);
+                        var roomTimetables = TimetableDAO.GetByRoomId(_roomContext, room.RoomId);
+                        var groups = RoomDAO.GetGroupByRoom(_roomContext, room.RoomId);
+                        var log = _userContext.UserLog.Where(item => item.RoomId == id).ToList();
+                        foreach(var schedule in roomTimetables)
+                        {
+                            var attendances = _attendanceDAO.GetAttendanceBySchedule(schedule.Id);
+                            await _attendanceDAO.DeleteAttendance(attendances);
+                        }
+                        await _logDAO.DeleteLogs(log);
+                        await RoomChatDAO.DeleteRoomChat(_roomContext, roomChats);
+                        await RoomUserLinkDAO.Delete(_roomContext, roomUserLinks);
+                        await TimetableDAO.DeleteTimeTable(_roomContext, roomTimetables);
+                        foreach (var group in groups)
+                        {
+                            await RoomService.DeleteRoom(_roomContext, group.RoomId, _env);
+                        }
+
+                        var path = Path.Combine(_env.ContentRootPath, $"Files/{room.RoomId}");
+                        if (Directory.Exists(path))
+                        {
+                            Directory.Delete(path, true);
+                        }
+
+                        await RoomDAO.Delete(_roomContext, room);
                     }
                     var result = SemesterDAO.Delete(_roomContext, semester);
                 }
@@ -429,7 +458,7 @@ namespace BackEnd.Services
                     @class = room.ClassName
                 });
             }
-            return new BadRequestObjectResult(new { message = "Class not exist!" });
+            return new BadRequestObjectResult(new { message = "Class doesn't exist!" });
         }
         public async Task<IActionResult> UpdateSchedule(int semesterId, List<ScheduleRequest> models)
         {
@@ -439,7 +468,11 @@ namespace BackEnd.Services
             foreach (var model in models)
             {
                 var room = RoomDAO.GetRoomByClassSubjectSemester(_roomContext, model.@class, model.subject, semesterId);
-
+                if (room == null)
+                {
+                    fail.Add(model.id);
+                    continue;
+                }
                 var schedule = new Timetable
                 {
                     Id = Convert.ToInt32(model.id),
@@ -459,9 +492,9 @@ namespace BackEnd.Services
                 }
                 else
                 {
-                    foreach(var item in extSchedules)
+                    foreach (var item in extSchedules)
                     {
-                        if(item.Id == schedule.Id)
+                        if (item.Id == schedule.Id)
                         {
                             item.RoomId = schedule.RoomId;
                             item.StartTime = schedule.StartTime;
@@ -573,8 +606,8 @@ namespace BackEnd.Services
                 var extClass = RoomDAO.GetRoomByClassSubjectSemester(_roomContext, model.@class, model.subject, semesterId);
                 if (extClass != null && extClass.RoomId != Convert.ToInt32(model.id))
                 {
-                        failed.Add($"Class cannot upddate: Update to already exited class!");
-                        continue;
+                    failed.Add($"Class cannot upddate: Update to already exited class!");
+                    continue;
                 }
                 @class.Subject = model.subject;
                 @class.CreatorId = model.teacher;
@@ -611,7 +644,7 @@ namespace BackEnd.Services
                     foreach (var userId in deleteUserIds)
                     {
                         var attendance = _attendanceDAO.GetAttendanceByScheduleUserId(schedule.Id, userId);
-                        if (attendance != null)
+                        if (attendance != null && schedule.Date > DateTime.Now)
                         {
                             delAttendance.Add(attendance);
                         }
@@ -640,12 +673,45 @@ namespace BackEnd.Services
 
         public async Task<IActionResult> DeleteClass(List<string> models)
         {
-            var delRoom = new List<Room>();
+            var delRoom = new List<string>();
+            var failed = new List<string>();
             foreach (var id in models)
             {
-                await RoomService.DeleteRoom(_roomContext, Convert.ToInt32(id), _env);
+                var room = RoomDAO.Get(_roomContext, Convert.ToInt32(id));
+                if (room != null)
+                {
+                    var roomUserLinks = RoomUserLinkDAO.GetRoomLink(_roomContext, room.RoomId);
+                    var roomChats = RoomChatDAO.GetChatByRoomId(_roomContext, room.RoomId);
+                    var roomTimetables = TimetableDAO.GetByRoomId(_roomContext, room.RoomId);
+                    var groups = RoomDAO.GetGroupByRoom(_roomContext, room.RoomId);
+                    var log = _userContext.UserLog.Where(item => item.RoomId == id).ToList();
+                    if(roomUserLinks.Count >0 || roomTimetables.Count >0)
+                    {
+                        failed.Add(id);
+                        continue;
+                    }
+                    await _logDAO.DeleteLogs(log);
+                    await RoomChatDAO.DeleteRoomChat(_roomContext, roomChats);
+                    foreach (var group in groups)
+                    {
+                        await RoomService.DeleteRoom(_roomContext, group.RoomId, _env);
+                    }
+
+                    var path = Path.Combine(_env.ContentRootPath, $"Files/{room.RoomId}");
+                    if (Directory.Exists(path))
+                    {
+                        Directory.Delete(path, true);
+                    }
+
+                    await RoomDAO.Delete(_roomContext, room);
+                    delRoom.Add(id);
+                }
             }
-            return new OkObjectResult(new { message = "delete succesful" });
+            return new OkObjectResult(new
+            {
+                success = delRoom,
+                failed = failed
+            });
         }
 
         public async Task<IActionResult> GetSemesters()

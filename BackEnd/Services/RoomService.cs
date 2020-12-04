@@ -31,50 +31,6 @@ namespace BackEnd.Services
             Image,
             File
         }
-
-        public async static Task<IActionResult> CreateRoom(RoomDBContext context, HttpRequest request, IWebHostEnvironment _env)
-        {
-
-            Room room = new Room
-            {
-                Subject = request.Form["name"],
-                CreatorId = request.Form["creatorId"],
-                StartDate = Convert.ToDateTime(request.Form["startDate"]),
-                EndDate = Convert.ToDateTime(request.Form["endDate"]),
-                Group = false
-            };
-
-
-            var result = await RoomDAO.Create(context, room);
-            var lastRoom = RoomDAO.GetLastRoom(context);
-
-            var timetables = JsonConvert.DeserializeObject<List<Timetable>>(request.Form["roomTimes"]);
-            timetables.ForEach(timetable => timetable.RoomId = lastRoom.RoomId);
-            result = await TimetableDAO.Create(context, timetables);
-
-            var roomUserLink = new RoomUserLink
-            {
-                UserId = request.Form["CreatorId"],
-                RoomId = lastRoom.RoomId,
-            };
-
-            string imgPath;
-            string imgName = "";
-            string extension = "";
-            IFormFile img = null;
-
-            imgName = "default";
-            extension = ".png";
-            img = Ultilities.Extensions.GetRoomDefaultAvatar(_env);
-
-
-            lastRoom.Image = $"api/rooms/getImage?roomId={lastRoom.RoomId}&imgName={imgName + extension}";
-
-            RoomDAO.UpdateRoom(context, lastRoom);
-            await RoomUserLinkDAO.Create(context, roomUserLink);
-
-            return result;
-        }
         public async static Task<IActionResult> DeleteRoom(RoomDBContext context, int roomId, IWebHostEnvironment env)
         {
             var room = RoomDAO.Get(context, roomId);
@@ -103,10 +59,6 @@ namespace BackEnd.Services
                 return result;
             }
             return new BadRequestObjectResult(new { message = "Class now exist!" });
-        }
-        public static Room GetRoomById(RoomDBContext context, int Id)
-        {
-            return RoomDAO.Get(context, Id);
         }
         public static async Task<IActionResult> CreateRoomChat(RoomDBContext context, HttpRequest request, IWebHostEnvironment env)
         {
@@ -227,39 +179,6 @@ namespace BackEnd.Services
         {
             return RoomChatDAO.GetLastChat(context, roomId);
         }
-
-        public static async Task<IActionResult> Invite(
-            RoomDBContext roomContext, UserDbContext userContext,
-            HttpRequest request, IEmailSender emailSender)
-        {
-            var roomId = Convert.ToInt32(request.Form["roomId"]);
-            var room = RoomDAO.Get(roomContext, roomId);
-            var message = request.Form["message"].ToString();
-            string emailLists = request.Form["emailList"];
-            var list = emailLists.Split(",").ToList();
-            var userIds = userContext.Users.Where(user => list.Any(x => user.Email == x)).Select(user => user.Id).ToList();
-            var roomUserLinks = userIds.Select(userId => new RoomUserLink
-            {
-                RoomId = roomId,
-                UserId = userId
-            }).ToList();
-            var existLink = roomContext.RoomUserLink.Where(link => link.RoomId == roomId).ToList();
-            if (existLink.Count != 0)
-            {
-                roomUserLinks = roomUserLinks.Where(link => !existLink.Any(x => x.UserId == link.UserId)).ToList();
-            }
-            var result = await RoomUserLinkDAO.Create(roomContext, roomUserLinks);
-            roomUserLinks.ForEach(async link =>
-            {
-                var email = userContext.Users.Where(user => user.Id == link.UserId).Select(user => user.Email).FirstOrDefault().ToString();
-
-                var mailMessage = new Message(new string[] { email }, "Invite To Class", message == "" ? $"You have been invite to class {room.Subject}-{room.ClassName}" : message, null);
-
-                await emailSender.SendEmailAsync(mailMessage);
-            });
-            return result;
-        }
-
         public static async Task<IActionResult> KickFromRoom(RoomDBContext context, int roomId, string userId)
         {
             var roomUserLink = RoomUserLinkDAO.GetRoomUserLink(context, roomId, userId);
@@ -296,59 +215,6 @@ namespace BackEnd.Services
             }));
         }
 
-        public async static Task<IActionResult> UpdateRoom(RoomDBContext context, HttpRequest request, IWebHostEnvironment _env)
-        {
-            var room = RoomDAO.Get(context, Convert.ToInt32(request.Form["roomId"]));
-            if (room == null)
-            {
-                return new BadRequestObjectResult(new { type = 0, message = "Not found room" });
-            }
-            string imgPath;
-            string imgName = "";
-            string extension = "";
-            IFormFile img = null;
-            //if avatar is empty, use default
-
-            if (request.Form.Files.Any())
-            {
-                img = request.Form.Files[0];
-                extension = Path.GetExtension(img.FileName);
-
-                imgName = Convert.ToBase64String(
-                        System.Text.Encoding.UTF8.GetBytes(DateTime.Now.ToString())
-                    );
-                var path = Path.Combine(_env.ContentRootPath, $"Files/{room.RoomId}/Images");
-                if (!Directory.Exists(path))
-                {
-                    Directory.CreateDirectory(path);
-                }
-
-                imgPath = Path.Combine(path, imgName + extension);
-                if (img.Length > 0)
-                {
-                    using var fileStream = new FileStream(imgPath, FileMode.Create);
-                    img.CopyTo(fileStream);
-                }
-                room.Image = $"api/rooms/getImage?roomId={room.RoomId}&imgName={imgName + extension}";
-            }
-
-            room.Subject = request.Form["name"].Any() ? request.Form["name"].ToString() : room.Subject;
-            room.CreatorId = request.Form["creatorId"].Any() ? request.Form["creatorId"].ToString() : room.CreatorId;
-            room.StartDate = request.Form["startDate"].Any() ? Convert.ToDateTime(request.Form["startDate"]) : room.StartDate;
-            room.EndDate = request.Form["endDate"].Any() ? Convert.ToDateTime(request.Form["endDate"]) : room.EndDate;
-            var result = RoomDAO.UpdateRoom(context, room);
-
-            if (request.Form["roomTimes"].Any())
-            {
-                var timetables = TimetableDAO.GetByRoomId(context, room.RoomId);
-                await TimetableDAO.DeleteTimeTable(context, timetables);
-                timetables = JsonConvert.DeserializeObject<List<Timetable>>(request.Form["roomTimes"]);
-                timetables.ForEach(timetable => timetable.RoomId = room.RoomId);
-                result = await TimetableDAO.Create(context, timetables);
-            }
-
-            return result;
-        }
 
         public static GroupResponse CreateGroup(RoomDBContext context, HttpRequest request)
         {
