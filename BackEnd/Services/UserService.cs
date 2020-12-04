@@ -259,7 +259,7 @@ namespace BackEnd.Services
                     RealName = user.RealName,
                     UserName = user.UserName,
                     Avatar = $"api/users/getAvatar?fileName={user.Avatar}&realName=&userName={user.UserName}",
-                    Dob = user.DOB,
+                    Dob = user.DOB.ToString("yyyy-MM-dd"),
                     Email = user.Email,
                     Role = roles.Any() ? roles[0] : ""
                 });
@@ -283,7 +283,7 @@ namespace BackEnd.Services
                 Id = user.Id,
                 RealName = user.RealName,
                 Email = user.Email,
-                Dob = user.DOB,
+                Dob = user.DOB.ToString("yyyy-MM-dd"),
                 Avatar = $"api/users/getAvatar?fileName={user.Avatar}&realName=&userName={user.UserName}",
                 UserName = user.UserName,
                 Role = roles[0]
@@ -345,7 +345,7 @@ namespace BackEnd.Services
                 Email = userModel.Email,
                 UserName = userModel.UserName,
                 RealName = userModel.RealName,
-                DOB = userModel.Dob,
+                DOB = Convert.ToDateTime(userModel.Dob),
                 Avatar = imgName + extension
             };
 
@@ -442,7 +442,7 @@ namespace BackEnd.Services
                     Id = appUser.Id,
                     RealName = appUser.RealName,
                     Email = appUser.Email,
-                    Dob = appUser.DOB,
+                    Dob = appUser.DOB.ToString("yyyy-MM-dd"),
                     Avatar = $"api/users/getAvatar?fileName={appUser.Avatar}&realName=&userName={appUser.UserName}",
                     UserName = appUser.UserName,
                     Role = roles[0]
@@ -547,7 +547,10 @@ namespace BackEnd.Services
             {
                 //Update Profile
                 user.RealName = model.RealName ?? user.RealName;
-                user.DOB = model.Dob ?? user.DOB;
+                if (!String.IsNullOrEmpty(model.Dob))
+                {
+                    user.DOB = Convert.ToDateTime(model.Dob);
+                }
 
                 string imgPath;
                 string imgName = "";
@@ -602,7 +605,7 @@ namespace BackEnd.Services
                                         UserName = user.UserName,
                                         RealName = user.RealName,
                                         Email = user.Email,
-                                        Dob = user.DOB,
+                                        Dob = user.DOB.ToString("yyyy-MM-dd"),
                                         Avatar = $"api/users/getAvatar?fileName={user.Avatar}&realName={Path.GetFileName(user.Avatar)}&userName={user.UserName}",
 
                                     }
@@ -636,7 +639,7 @@ namespace BackEnd.Services
                                          UserName = user.UserName,
                                          RealName = user.RealName,
                                          Email = user.Email,
-                                         Dob = user.DOB,
+                                         Dob = user.DOB.ToString("yyyy-MM-dd"),
                                          Avatar = $"api/users/getAvatar?fileName={user.Avatar}&realName={Path.GetFileName(user.Avatar)}&userName={user.UserName}",
                                      }
                              );
@@ -1356,7 +1359,7 @@ namespace BackEnd.Services
                                     UserName = reader.GetValue(1).ToString(),
                                     RealName = reader.GetValue(2).ToString(),
                                     Email = reader.GetValue(3).ToString(),
-                                    DOB = reader.GetValue(4).ToString(),
+                                    DOB = Convert.ToDateTime(reader.GetValue(4).ToString()),
                                     Avatar = "default.png"
                                 };
 
@@ -1378,7 +1381,7 @@ namespace BackEnd.Services
                                     Code = user.UserName,
                                     RealName = user.RealName,
                                     Email = user.Email,
-                                    Dob = user.DOB
+                                    Dob = user.DOB.ToString("yyyy-MM-dd")
                                 });
                             }
 
@@ -1413,7 +1416,7 @@ namespace BackEnd.Services
                                     UserName = reader.GetValue(1).ToString(),
                                     RealName = reader.GetValue(2).ToString(),
                                     Email = reader.GetValue(3).ToString(),
-                                    DOB = reader.GetValue(4).ToString(),
+                                    DOB = Convert.ToDateTime(reader.GetValue(4).ToString()),
                                     Avatar = "default.png"
                                 };
 
@@ -1430,7 +1433,7 @@ namespace BackEnd.Services
                                     Code = user.UserName,
                                     RealName = user.RealName,
                                     Email = user.Email,
-                                    Dob = user.DOB
+                                    Dob = user.DOB.ToString("yyyy-MM-dd")
                                 });
                             }
 

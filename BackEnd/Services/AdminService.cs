@@ -91,7 +91,7 @@ namespace BackEnd.Services
                                     UserName = reader.GetValue(1).ToString(),
                                     RealName = reader.GetValue(2).ToString(),
                                     Email = reader.GetValue(3).ToString(),
-                                    DOB = reader.GetValue(4).ToString(),
+                                    DOB = Convert.ToDateTime(reader.GetValue(4).ToString()),
                                     Avatar = "default.png"
                                 };
 
@@ -113,7 +113,7 @@ namespace BackEnd.Services
                                     Code = user.UserName,
                                     RealName = user.RealName,
                                     Email = user.Email,
-                                    Dob = user.DOB,
+                                    Dob = user.DOB.ToString("yyyy-MM-dd"),
                                     Role = "quality assurance"
                                 });
                             }
@@ -136,7 +136,7 @@ namespace BackEnd.Services
                                     UserName = reader.GetValue(1).ToString(),
                                     RealName = reader.GetValue(2).ToString(),
                                     Email = reader.GetValue(3).ToString(),
-                                    DOB = reader.GetValue(4).ToString(),
+                                    DOB = Convert.ToDateTime(reader.GetValue(4).ToString()),
                                     Avatar = "default.png"
                                 };
 
@@ -153,7 +153,7 @@ namespace BackEnd.Services
                                     Code = user.UserName,
                                     RealName = user.RealName,
                                     Email = user.Email,
-                                    Dob = user.DOB,
+                                    Dob = user.DOB.ToString("yyyy-MM-dd"),
                                     Role = "academic management"
                                 });
                             }
@@ -231,7 +231,7 @@ namespace BackEnd.Services
                 Email = model.Email,
                 UserName = model.Code,
                 RealName = model.RealName,
-                DOB = model.Dob,
+                DOB = Convert.ToDateTime(model.Dob),
                 Avatar = "default.png"
             };
 
@@ -258,7 +258,7 @@ namespace BackEnd.Services
                 Code = registerUser.UserName,
                 Email = registerUser.Email,
                 RealName = registerUser.RealName,
-                Dob = registerUser.DOB,
+                Dob = registerUser.DOB.ToString("yyyy-MM-dd"),
                 Role = model.Role,
             });
 
@@ -281,7 +281,7 @@ namespace BackEnd.Services
                 {
                     if (await _userManager.IsInRoleAsync(user, "academic management") || await _userManager.IsInRoleAsync(user, "quality assurance"))
                     {
-                        if (!(user.UserName == req.Code && user.RealName == req.RealName && user.Email == req.Email && user.DOB == req.Dob && await _userManager.IsInRoleAsync(user, req.Role)))
+                        if (!(user.UserName == req.Code && user.RealName == req.RealName && user.Email == req.Email && DateTime.Compare(user.DOB, Convert.ToDateTime(req.Dob))==0 && await _userManager.IsInRoleAsync(user, req.Role)))
                         {
                             //Update Profile
                             if (await _userManager.FindByEmailAsync(req.Email) != null && user.Email != req.Email)
@@ -306,7 +306,7 @@ namespace BackEnd.Services
                             user.UserName = req.Code;
                             user.RealName = req.RealName;
                             user.Email = req.Email;
-                            user.DOB = req.Dob;
+                            user.DOB = Convert.ToDateTime(req.Dob);
                             if (!await _userManager.IsInRoleAsync(user, req.Role))
                             {
                                 await _userManager.RemoveFromRoleAsync(user, (await _userManager.GetRolesAsync(user))[0]);
@@ -324,7 +324,7 @@ namespace BackEnd.Services
                                 Code = user.UserName,
                                 RealName = user.RealName,
                                 Email = user.Email,
-                                Dob = user.DOB,
+                                Dob = user.DOB.ToString("yyyy-MM-dd"),
                                 Role = req.Role
                             });
                         }

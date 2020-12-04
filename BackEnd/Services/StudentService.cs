@@ -98,7 +98,7 @@ namespace BackEnd.Services
                 Email = model.Email,
                 UserName = model.Code,
                 RealName = model.RealName,
-                DOB = model.Dob,
+                DOB = Convert.ToDateTime(model.Dob),
                 Avatar = "default.png"
             };
 
@@ -122,7 +122,7 @@ namespace BackEnd.Services
                 Code = registerUser.UserName,
                 Email = registerUser.Email,
                 RealName = registerUser.RealName,
-                Dob = registerUser.DOB
+                Dob = registerUser.DOB.ToString("yyyy-MM-dd")
             });
 
         }
@@ -146,7 +146,7 @@ namespace BackEnd.Services
                     {
                         //Update Profile
 
-                        if (!(user.UserName == req.Code && user.RealName == req.RealName && user.Email == req.Email && user.DOB == req.Dob))
+                        if (!(user.UserName == req.Code && user.RealName == req.RealName && user.Email == req.Email && DateTime.Compare(user.DOB, Convert.ToDateTime(req.Dob)) == 0))
                         {
                             if (await _userManager.FindByEmailAsync(req.Email) != null && user.Email != req.Email)
                             {
@@ -169,7 +169,7 @@ namespace BackEnd.Services
 
                             user.UserName = req.Code;
                             user.RealName = req.RealName;
-                            user.DOB = req.Dob;
+                            user.DOB = Convert.ToDateTime(req.Dob);
                             user.Email = req.Email;
 
                             var resultUpdate = await _userManager.UpdateAsync(user);
@@ -181,7 +181,7 @@ namespace BackEnd.Services
                                     Code = user.UserName,
                                     RealName = user.RealName,
                                     Email = user.Email,
-                                    Dob = user.DOB
+                                    Dob = user.DOB.ToString("yyyy-MM-dd")
                                 });
                             }
                             else

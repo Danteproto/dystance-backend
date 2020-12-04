@@ -9,7 +9,7 @@ namespace BackEnd.Models
     public class AppUser : IdentityUser
     { 
         public string RealName { get; set; }
-        public string DOB { get; set; }
+        public DateTime DOB { get; set; }
 
         [JsonIgnore]
         public List<RefreshToken> RefreshTokens { get; set; }

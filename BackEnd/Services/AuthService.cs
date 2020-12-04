@@ -141,7 +141,7 @@ namespace BackEnd.Services
                 UserName = userView.UserName,
                 Email = userView.Email,
                 RealName = userView.RealName,
-                DOB = userView.Dob,
+                DOB = Convert.ToDateTime(userView.Dob),
                 Avatar = imgName + extension
             };
 
