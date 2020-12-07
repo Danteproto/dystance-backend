@@ -14,6 +14,9 @@ using System.Threading.Tasks;
 using BackEnd.Ultilities;
 using Microsoft.AspNetCore.Hosting;
 using BackEnd.DAO;
+using EmailService;
+using Microsoft.AspNetCore.Mvc.Routing;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 
 namespace BackEnd.Services
 {
@@ -31,8 +34,17 @@ namespace BackEnd.Services
         private readonly ILogDAO _logDAO;
         private readonly IPrivateMessageDAO _privateMessageDAO;
         private readonly IAttendanceDAO _attendanceDAO;
+        private readonly IEmailSender _emailSender;
+        private readonly IUrlHelperFactory _urlHelperFactory;
+        private readonly IActionContextAccessor _actionContextAccessor;
         private readonly UserManager<AppUser> _userManager;
 
+        private static string HTML_CONTENT = "Your account has been created on the DYSTANCE system by your organization. Use the information below to login: <br />" +
+                                             "Email: {0} <br />" +
+                                             "Username: {1} <br />" +
+                                             "Password: {2} <br />" +
+                                             "<h1 style='color:red;'>Click this link to active it first: </h1><br/>" +
+                                             "<h4>{3}</h4>";
 
         public StudentService(
             UserDbContext context,
@@ -40,7 +52,10 @@ namespace BackEnd.Services
             RoomDBContext roomcontext,
              ILogDAO logDAO,
             IPrivateMessageDAO privateMessageDAO,
-            IAttendanceDAO attendanceDAO)
+            IAttendanceDAO attendanceDAO,
+            IEmailSender emailSender,
+            IUrlHelperFactory urlHelperFactory,
+            IActionContextAccessor actionContextAccessor)
         {
             _userContext = context;
             _userManager = userManager;
@@ -48,6 +63,9 @@ namespace BackEnd.Services
             _logDAO = logDAO;
             _privateMessageDAO = privateMessageDAO;
             _attendanceDAO = attendanceDAO;
+            _emailSender = emailSender;
+            _urlHelperFactory = urlHelperFactory;
+            _actionContextAccessor = actionContextAccessor;
         }
 
 
@@ -112,9 +130,15 @@ namespace BackEnd.Services
                 return internalErr;
             }
 
-            var token = await _userManager.GenerateEmailConfirmationTokenAsync(registerUser);
-            await _userManager.ConfirmEmailAsync(registerUser, token);
             await _userManager.AddToRoleAsync(registerUser, "Student");
+            var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(registerUser);
+            var confirmationLink = urlHelper.Action("ConfirmEmail", "Users", new { token, email = registerUser.Email }, "https");
+            var content = String.Format(HTML_CONTENT, model.Email, model.Code, "123@123a", confirmationLink);
+
+            var message = new Message(new string[] { registerUser.Email }, "Your Account On DYSTANCE", content, null);
+            await _emailSender.SendEmailAsync(message);
+
 
             return new OkObjectResult(new TeacherInfoResponse
             {
