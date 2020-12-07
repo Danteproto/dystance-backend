@@ -13,7 +13,7 @@ namespace BackEnd.DAO
     {
         public Task<string> CreateLog(UsersLog usersLog);
         public Task<string> DeleteLogs(List<UsersLog> usersLogs);
-        public Task<IEnumerable<UsersLog>> GetLogsByRoomId(string roomid);
+        public Task<IList<UsersLog>> GetLogsByRoomId(string roomid);
     }
     public class LogDAO: ILogDAO
     {
@@ -26,34 +26,34 @@ namespace BackEnd.DAO
 
         public async Task<string> CreateLog(UsersLog usersLog)
         {
-            await _context.UserLog.AddAsync(usersLog);
-            var no = await _context.SaveChangesAsync();
-            if (no <= 0)
+            try
+            {
+                await _context.UserLog.AddAsync(usersLog);
+                await _context.SaveChangesAsync();
+                return "Success at creating log " + usersLog.ToString();
+            }
+            catch(Exception ex)
             {
                 return "Error at log " + usersLog.ToString();
-            }
-            else
-            {
-                return "Success at creating log " + usersLog.ToString();               
             }
         }
 
         public async Task<string> DeleteLogs(List<UsersLog> usersLogs)
         {
-            _context.UserLog.RemoveRange(usersLogs);
-            var no = await _context.SaveChangesAsync();
-            if (no <= 0)
+            try
+            {
+                _context.UserLog.RemoveRange(usersLogs);
+                 await _context.SaveChangesAsync();
+                return "Success";
+            }catch(Exception ex)
             {
                 return "Error ";
             }
-            else
-            {
-                return "Success";
-            }
+           
 
         }
 
-        public async Task<IEnumerable<UsersLog>> GetLogsByRoomId(string roomid)
+        public async Task<IList<UsersLog>> GetLogsByRoomId(string roomid)
         {
             var logLists = await (from logs in _context.UserLog
                                    where logs.RoomId.Contains(roomid)
