@@ -1,6 +1,7 @@
 ﻿using BackEnd.Context;
 using BackEnd.Models;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,6 +13,7 @@ namespace BackEnd.DAO
     {
         public Task<string> CreateLog(UsersLog usersLog);
         public Task<string> DeleteLogs(List<UsersLog> usersLogs);
+        public Task<IEnumerable<UsersLog>> GetLogsByRoomId(string roomid);
     }
     public class LogDAO: ILogDAO
     {
@@ -48,6 +50,15 @@ namespace BackEnd.DAO
             {
                 return "Success";
             }
+
+        }
+
+        public async Task<IEnumerable<UsersLog>> GetLogsByRoomId(string roomid)
+        {
+            var logLists = await (from logs in _context.UserLog
+                                   where logs.RoomId.Contains(roomid)
+                                   select logs).ToListAsync();
+            return logLists;
 
         }
 

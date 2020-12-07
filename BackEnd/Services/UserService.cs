@@ -1274,9 +1274,7 @@ namespace BackEnd.Services
         public async Task<IActionResult> GetLogByRoom(string roomid)
         {
 
-            var roomLists = await (from rooms in _context.UserLog
-                                   where rooms.RoomId.Contains(roomid)
-                                   select rooms).ToListAsync();
+            var roomLists = await _logDAO.GetLogsByRoomId(roomid);
 
             var list = new List<LogResponse>();
 
