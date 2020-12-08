@@ -15,6 +15,7 @@ using System.Text;
 using Xunit;
 using Microsoft.AspNetCore.Mvc;
 using System.IO;
+using Microsoft.Extensions.Primitives;
 
 namespace BackEnd.Test.Services.Test
 {
@@ -23,6 +24,8 @@ namespace BackEnd.Test.Services.Test
         private Mock<SemesterService> _SemetserService { get; }
         private UserDbContext userContext;
         private RoomDBContext roomContext;
+        private Mock<AttendanceDAO> attendanceDAO;
+        private Mock<LogDAO> logDAO;
         private ConnectionFactory factory;
 
         public SemetserServiceTest()
@@ -38,8 +41,10 @@ namespace BackEnd.Test.Services.Test
             roomContext.Database.EnsureCreated();
             roomContext.SaveChanges();
 
-            IAttendanceDAO attendanceDAO =(IAttendanceDAO) new AttendanceDAO(userContext);
-            ILogDAO logDAO = (ILogDAO)new LogDAO(userContext);
+            attendanceDAO = new Mock<AttendanceDAO>(userContext);
+            logDAO = new Mock<LogDAO>(userContext);
+            var iAttendanceDao = attendanceDAO.As<IAttendanceDAO>();
+            var iLogDAO = logDAO.As<ILogDAO>();
             //mocking user manager
             var users = new List<AppUser>
             {
@@ -85,7 +90,7 @@ namespace BackEnd.Test.Services.Test
             mockEnvironment
                 .Setup(m => m.EnvironmentName)
                 .Returns("Hosting:UnitTestEnvironment");
-            _SemetserService = new Mock<SemesterService>(fakeUserManager, userContext, roomContext, mockEnvironment, attendanceDAO,logDAO);
+            _SemetserService = new Mock<SemesterService>(fakeUserManager.Object, userContext, roomContext, mockEnvironment.Object, iAttendanceDao.Object, iLogDAO.Object);
         }
 
         [Fact]
@@ -102,9 +107,16 @@ namespace BackEnd.Test.Services.Test
             writer.Flush();
             memory.Position = 0;
             var fileName = PhysicalFile.Name;
-
+            var headers = new HeaderDictionary(new Dictionary<String, StringValues>
+            {
+                { "ContentDisposition", "form-data; name=\"file\"; filename=\"Semester-Sample.xlsx\""},
+                { "ContentType", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}
+            }) as IHeaderDictionary;
             formFile.Setup(_ => _.FileName).Returns(fileName);
             formFile.Setup(_ => _.Length).Returns(memory.Length);
+            formFile.Setup(_ => _.Headers).Returns(headers);
+            formFile.Setup(_ => _.ContentType).Returns("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            formFile.Setup(_ => _.ContentDisposition).Returns("form-data; name=\"file\"; filename=\"Semester-Sample.xlsx\"");
             formFile.Setup(_ => _.OpenReadStream()).Returns(memory);
             formFile.Verify();
             var file = formFile.Object;
@@ -114,9 +126,10 @@ namespace BackEnd.Test.Services.Test
             var formCol = new FormCollection(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>
             {
                 { "name", "SemesterTest" }
-            },files);
+            }, files);
             request.Setup(req => req.Form).Returns(formCol);
-            await _SemetserService.Object.AddSemester(request.Object);
+            var result = await _SemetserService.Object.AddSemester(request.Object);
+
         }
     }
 }
