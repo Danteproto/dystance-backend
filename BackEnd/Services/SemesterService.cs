@@ -73,12 +73,13 @@ namespace BackEnd.Services
             SemesterDAO.Create(_roomContext, semester);
             semester = SemesterDAO.GetLast(_roomContext);
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
-            using (var stream = file.OpenReadStream())
+            try
             {
-                using (var reader = ExcelReaderFactory.CreateReader(stream))
+                using (var stream = file.OpenReadStream())
                 {
-                    try
+                    using (var reader = ExcelReaderFactory.CreateReader(stream))
                     {
+
                         do
                         {
                             while (reader.Read()) //Each row of the file
@@ -165,7 +166,8 @@ namespace BackEnd.Services
                                     };
                                     var result = TimetableDAO.Create(_roomContext, schedule);
                                     schedule = TimetableDAO.GetLast(_roomContext);
-                                    var userIds = RoomUserLinkDAO.GetRoomLink(_roomContext, schedule.RoomId).Select(item => item.UserId);
+                                    var userIds = RoomUserLinkDAO.GetRoomLink(_roomContext, schedule.RoomId)
+                                                .Where(item => item.UserId != room.CreatorId).Select(item => item.UserId);
                                     var attendances = new List<AttendanceReports>();
                                     foreach (var userId in userIds)
                                     {
@@ -182,15 +184,15 @@ namespace BackEnd.Services
                             }
                         } while (reader.NextResult());
                     }
-                    catch (Exception e)
-                    {
-                        await DeleteSemester(new List<string>() { semester.Id.ToString() });
-                        return new BadRequestObjectResult(new { message = e.Message });
-                    }
+
                 }
 
-
                 return new OkObjectResult(semester);
+            }
+            catch (Exception e)
+            {
+                await DeleteSemester(new List<string>() { semester.Id.ToString() });
+                return new BadRequestObjectResult(new { message = e.Message });
             }
 
         }
@@ -209,8 +211,8 @@ namespace BackEnd.Services
                         var roomChats = RoomChatDAO.GetChatByRoomId(_roomContext, room.RoomId);
                         var roomTimetables = TimetableDAO.GetByRoomId(_roomContext, room.RoomId);
                         var groups = RoomDAO.GetGroupByRoom(_roomContext, room.RoomId);
-                        var log = _userContext.UserLog.Where(item => item.RoomId == id).ToList();
-                        foreach(var schedule in roomTimetables)
+                        var log = _userContext.UserLog.Where(item => item.RoomId.Contains(room.RoomId.ToString())).ToList();
+                        foreach (var schedule in roomTimetables)
                         {
                             var attendances = _attendanceDAO.GetAttendanceBySchedule(schedule.Id);
                             await _attendanceDAO.DeleteAttendance(attendances);
@@ -436,7 +438,7 @@ namespace BackEnd.Services
                 }
                 var result = TimetableDAO.Create(_roomContext, schedule).Result;
                 schedule = TimetableDAO.GetLast(_roomContext);
-                var userIds = RoomUserLinkDAO.GetRoomLink(_roomContext, schedule.RoomId).Select(item => item.UserId);
+                var userIds = RoomUserLinkDAO.GetRoomLink(_roomContext, schedule.RoomId).Where(item => item.UserId != room.CreatorId).Select(item => item.UserId);
                 var attendances = new List<AttendanceReports>();
                 foreach (var userId in userIds)
                 {
@@ -634,12 +636,15 @@ namespace BackEnd.Services
                 {
                     foreach (var userId in addUserIds)
                     {
-                        addAttendance.Add(new AttendanceReports
+                        if (userId != @class.CreatorId)
                         {
-                            UserId = userId,
-                            TimeTableId = schedule.Id,
-                            Status = "future"
-                        });
+                            addAttendance.Add(new AttendanceReports
+                            {
+                                UserId = userId,
+                                TimeTableId = schedule.Id,
+                                Status = "future"
+                            });
+                        }
                     }
                     foreach (var userId in deleteUserIds)
                     {
@@ -685,7 +690,7 @@ namespace BackEnd.Services
                     var roomTimetables = TimetableDAO.GetByRoomId(_roomContext, room.RoomId);
                     var groups = RoomDAO.GetGroupByRoom(_roomContext, room.RoomId);
                     var log = _userContext.UserLog.Where(item => item.RoomId == id).ToList();
-                    if(roomUserLinks.Count >0 || roomTimetables.Count >0)
+                    if (roomUserLinks.Count > 0 || roomTimetables.Count > 0)
                     {
                         failed.Add(id);
                         continue;

@@ -162,7 +162,7 @@ namespace BackEnd.Services
                 {
                     RoomId = room.RoomId,
                     RoomName = room.Subject + "-" + room.ClassName,
-                    CreatorId = room.CreatorId,
+                    TeacherId = room.CreatorId,
                     Image = room.Image,
                     StartDate = room.StartDate,
                     EndDate = room.EndDate,
@@ -358,15 +358,21 @@ namespace BackEnd.Services
         {
             try
             {
-                var listRoom = (from rooms in context.Room
-                                where rooms.SemesterId == semesterId
-                                select new { roomId = rooms.RoomId.ToString(), 
-                                            semesterId =rooms.SemesterId.ToString(), 
-                                            roomName = rooms.ClassName, 
-                                            teacherId = rooms.CreatorId,} ).ToList();
+                var response = new List<RoomResponse>();
+                var listRoom = RoomDAO.GetRoomBySemester(context, semesterId);
+                foreach (var room in listRoom)
+                {
+                    response.Add(new RoomResponse
+                    {
+                        RoomId = room.RoomId,
+                        RoomName = room.ClassName + "-" + room.Subject,
+                        TeacherId = room.CreatorId,
+                        Image = room.Image,
+                        SemesterId = (int)room.SemesterId
+                    });
+                }
 
-
-                return new OkObjectResult(listRoom);
+                return new OkObjectResult(response);
             }
             catch (Exception e)
             {

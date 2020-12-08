@@ -867,8 +867,11 @@ namespace BackEnd.Services
                                                 }
                                                 else
                                                 {
-                                                    attendance.Status = "absent";
-                                                    attendances.Add(attendance);
+                                                    if (attendance.Status != "present")
+                                                    {
+                                                        attendance.Status = "absent";
+                                                        attendances.Add(attendance);
+                                                    }
                                                 }
                                             }
                                             await _attendanceDAO.UpdateAttendance(attendances);
