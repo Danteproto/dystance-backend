@@ -57,7 +57,6 @@ namespace BackEnd.Controllers
             return _userService.RefreshToken(_mapper.Map<RefreshTokenRequestz>(reqForm).RefreshToken);
         }
 
-        [HttpGet]
         [HttpGet("getAll")]
         public async Task<IActionResult> GetAll()
         {
@@ -280,13 +279,6 @@ namespace BackEnd.Controllers
         {
             return await _userService.AddAccount(Request);
         }
-        //private string ipAddress()
-        //{
-        //    if (Request.Headers.ContainsKey("X-Forwarded-For"))
-        //        return Request.Headers["X-Forwarded-For"];
-        //    else
-        //        return HttpContext.Connection.RemoteIpAddress.MapToIPv4().ToString();
-        //}
 
         [HttpGet("reports/attendance")]
         public async Task<IActionResult> GetAttendanceReports(string id, string semesterId)
