@@ -1,12 +1,16 @@
-﻿using BackEnd.Context;
+﻿using BackEnd.Constant;
+using BackEnd.Context;
 using BackEnd.DAO;
 using BackEnd.Models;
 using BackEnd.Requests;
 using BackEnd.Responses;
+using EmailService;
 using ExcelDataReader;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -31,18 +35,27 @@ namespace BackEnd.Services
         private readonly ILogDAO _logDAO;
         private readonly IPrivateMessageDAO _privateMessageDAO;
         private readonly IAttendanceDAO _attendanceDAO;
+        private readonly IEmailSender _emailSender;
+        private readonly IUrlHelperFactory _urlHelperFactory;
+        private readonly IActionContextAccessor _actionContextAccessor;
 
         public AdminService(UserManager<AppUser> userManager,
             UserDbContext usercontext,
             ILogDAO logDAO,
             IPrivateMessageDAO privateMessageDAO,
-            IAttendanceDAO attendanceDAO)
+            IAttendanceDAO attendanceDAO,
+            IEmailSender emailSender,
+            IUrlHelperFactory urlHelperFactory,
+            IActionContextAccessor actionContextAccessor)
         {
             _userManager = userManager;
             _userContext = usercontext;
             _logDAO = logDAO;
             _privateMessageDAO = privateMessageDAO;
             _attendanceDAO = attendanceDAO;
+            _emailSender = emailSender;
+            _urlHelperFactory = urlHelperFactory;
+            _actionContextAccessor = actionContextAccessor;
         }
 
 
@@ -100,8 +113,13 @@ namespace BackEnd.Services
                                 var result = await _userManager.CreateAsync(user, "123@123a");
 
                                 //Confirm email
+                                var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
                                 var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                                await _userManager.ConfirmEmailAsync(user, token);
+                                var confirmationLink = urlHelper.Action("ConfirmEmail", "Users", new { token, email = user.Email }, "https");
+                                var content = String.Format(EmailTemplate.HTML_CONTENT, reader.GetValue(3).ToString(), reader.GetValue(1).ToString(), "123@123a", confirmationLink);
+
+                                var message = new Message(new string[] { user.Email }, "Your Account On DYSTANCE", content, null);
+                                await _emailSender.SendEmailAsync(message);
 
                                 //roleManager.AddUserToRole
                                 await _userManager.AddToRoleAsync(user, "quality assurance");
@@ -142,6 +160,15 @@ namespace BackEnd.Services
 
                                 //Create user
                                 var result = await _userManager.CreateAsync(user, "123@123a");
+
+                                //Confirm email
+                                var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
+                                var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                                var confirmationLink = urlHelper.Action("ConfirmEmail", "Users", new { token, email = user.Email }, "https");
+                                var content = String.Format(EmailTemplate.HTML_CONTENT, reader.GetValue(3).ToString(), reader.GetValue(1).ToString(), "123@123a", confirmationLink);
+
+                                var message = new Message(new string[] { user.Email }, "Your Account On DYSTANCE", content, null);
+                                await _emailSender.SendEmailAsync(message);
 
                                 //roleManager.AddUserToRole
                                 await _userManager.AddToRoleAsync(user, "academic management");

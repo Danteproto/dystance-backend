@@ -17,6 +17,7 @@ using BackEnd.DAO;
 using EmailService;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
+using BackEnd.Constant;
 
 namespace BackEnd.Services
 {
@@ -38,13 +39,6 @@ namespace BackEnd.Services
         private readonly IUrlHelperFactory _urlHelperFactory;
         private readonly IActionContextAccessor _actionContextAccessor;
         private readonly UserManager<AppUser> _userManager;
-
-        private static string HTML_CONTENT = "Your account has been created on the DYSTANCE system by your organization. Use the information below to login: <br />" +
-                                             "Email: {0} <br />" +
-                                             "Username: {1} <br />" +
-                                             "Password: {2} <br />" +
-                                             "<h1 style='color:red;'>Click this link to active it first: </h1><br/>" +
-                                             "<h4>{3}</h4>";
 
         public StudentService(
             UserDbContext context,
@@ -134,7 +128,7 @@ namespace BackEnd.Services
             var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(registerUser);
             var confirmationLink = urlHelper.Action("ConfirmEmail", "Users", new { token, email = registerUser.Email }, "https");
-            var content = String.Format(HTML_CONTENT, model.Email, model.Code, "123@123a", confirmationLink);
+            var content = String.Format(EmailTemplate.HTML_CONTENT, model.Email, model.Code, "123@123a", confirmationLink);
 
             var message = new Message(new string[] { registerUser.Email }, "Your Account On DYSTANCE", content, null);
             await _emailSender.SendEmailAsync(message);

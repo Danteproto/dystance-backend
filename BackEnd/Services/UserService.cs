@@ -28,6 +28,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using ExcelDataReader;
 using BackEnd.DBContext;
+using BackEnd.Constant;
 
 namespace BackEnd.Services
 {
@@ -1368,8 +1369,13 @@ namespace BackEnd.Services
                                 var result = await _userManager.CreateAsync(user, "123@123a");
 
                                 //Confirm email
+                                var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
                                 var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                                await _userManager.ConfirmEmailAsync(user, token);
+                                var confirmationLink = urlHelper.Action("ConfirmEmail", "Users", new { token, email = user.Email }, "https");
+                                var content = String.Format(EmailTemplate.HTML_CONTENT, reader.GetValue(3).ToString(), reader.GetValue(1).ToString(), "123@123a", confirmationLink);
+
+                                var message = new Message(new string[] { user.Email }, "Your Account On DYSTANCE", content, null);
+                                await _emailSender.SendEmailAsync(message);
 
                                 //roleManager.AddUserToRole
                                 await _userManager.AddToRoleAsync(user, "Student");
@@ -1422,6 +1428,15 @@ namespace BackEnd.Services
 
                                 //Create user
                                 var result = await _userManager.CreateAsync(user, "123@123a");
+
+                                //Confirm email
+                                var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
+                                var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                                var confirmationLink = urlHelper.Action("ConfirmEmail", "Users", new { token, email = user.Email }, "https");
+                                var content = String.Format(EmailTemplate.HTML_CONTENT, reader.GetValue(3).ToString(), reader.GetValue(1).ToString(), "123@123a", confirmationLink);
+
+                                var message = new Message(new string[] { user.Email }, "Your Account On DYSTANCE", content, null);
+                                await _emailSender.SendEmailAsync(message);
 
                                 //roleManager.AddUserToRole
                                 await _userManager.AddToRoleAsync(user, "Teacher");
