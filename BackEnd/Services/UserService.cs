@@ -286,7 +286,7 @@ namespace BackEnd.Services
                 Dob = user.DOB.ToString("yyyy-MM-dd"),
                 Avatar = $"api/users/getAvatar?fileName={user.Avatar}&realName=&userName={user.UserName}",
                 UserName = user.UserName,
-                Role = roles[0]
+                Role = roles.Any() ? roles[0] : ""
             };
             return new OkObjectResult(response);
         }
