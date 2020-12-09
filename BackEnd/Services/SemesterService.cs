@@ -685,7 +685,8 @@ namespace BackEnd.Services
                 var room = RoomDAO.Get(_roomContext, Convert.ToInt32(id));
                 if (room != null)
                 {
-                    var roomUserLinks = RoomUserLinkDAO.GetRoomLink(_roomContext, room.RoomId);
+                    var roomUserLinks = RoomUserLinkDAO.GetRoomLink(_roomContext, room.RoomId)
+                                .Where(link => link.UserId != room.CreatorId).Select(link => link.UserId).ToList();
                     var roomChats = RoomChatDAO.GetChatByRoomId(_roomContext, room.RoomId);
                     var roomTimetables = TimetableDAO.GetByRoomId(_roomContext, room.RoomId);
                     var groups = RoomDAO.GetGroupByRoom(_roomContext, room.RoomId);

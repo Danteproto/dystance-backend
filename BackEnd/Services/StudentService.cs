@@ -117,7 +117,7 @@ namespace BackEnd.Services
             var result = await _userManager.CreateAsync(registerUser, "123@123a");
             if (!result.Succeeded)
             {
-                var internalErr = new ObjectResult(new { type = 2, error = result.Errors.ToList()[0].Description })
+                var internalErr = new ObjectResult(new { type = 2, message = result.Errors.ToList()[0].Description })
                 {
                     StatusCode = 500
                 };

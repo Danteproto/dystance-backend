@@ -564,7 +564,7 @@ namespace BackEnd.Services
                 //if avatar is empty, use default
                 if (model.Avatar != null)
                 {
-                    deleteAvatar( user.UserName, user.Avatar);
+                    deleteAvatar(user.UserName, user.Avatar);
                     img = model.Avatar;
                     extension = Path.GetExtension(img.FileName);
 
@@ -682,13 +682,16 @@ namespace BackEnd.Services
 
         }
 
-        public void deleteAvatar( string userName, string fileName)
+        public void deleteAvatar(string userName, string fileName)
         {
-            string path;
-            var rootPath = _env.ContentRootPath;
-            path = Path.Combine(rootPath, $"Files/Users/{userName}/Images");
-            var filePath = Path.Combine(path, fileName);
-            File.Delete(filePath);
+            if (fileName != "default.png")
+            {
+                string path;
+                var rootPath = _env.ContentRootPath;
+                path = Path.Combine(rootPath, $"Files/Users/{userName}/Images");
+                var filePath = Path.Combine(path, fileName);
+                File.Delete(filePath);
+            }
         }
 
         public async Task<IActionResult> PrivateMessage(HttpRequest request)
