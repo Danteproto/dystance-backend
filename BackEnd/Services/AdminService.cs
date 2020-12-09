@@ -272,8 +272,14 @@ namespace BackEnd.Services
                 return internalErr;
             }
 
+            //Confirm email
+            var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(registerUser);
-            await _userManager.ConfirmEmailAsync(registerUser, token);
+            var confirmationLink = urlHelper.Action("ConfirmEmail", "Users", new { token, email = registerUser.Email }, "https");
+            var content = String.Format(EmailTemplate.HTML_CONTENT, model.Email, model.Code, "123@123a", confirmationLink);
+
+            var message = new Message(new string[] { registerUser.Email }, "Your Account On DYSTANCE", content, null);
+            await _emailSender.SendEmailAsync(message);
 
 
             await _userManager.AddToRoleAsync(registerUser, model.Role);
