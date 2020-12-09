@@ -364,7 +364,7 @@ namespace BackEnd.Services
                         else
                         {
 
-                            return new ObjectResult(new { type = 3, code = resultUpdate.Errors.ToList()[0].Code, description = resultUpdate.Errors.ToList()[0].Description })
+                            return new ObjectResult(new { type = 3, code = resultUpdate.Errors.ToList()[0].Code, message = resultUpdate.Errors.ToList()[0].Description })
                             {
                                 StatusCode = 500
                             };

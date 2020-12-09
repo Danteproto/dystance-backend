@@ -685,17 +685,18 @@ namespace BackEnd.Services
                 var room = RoomDAO.Get(_roomContext, Convert.ToInt32(id));
                 if (room != null)
                 {
-                    var roomUserLinks = RoomUserLinkDAO.GetRoomLink(_roomContext, room.RoomId)
-                                .Where(link => link.UserId != room.CreatorId).Select(link => link.UserId).ToList();
+                    var roomUserLinks = RoomUserLinkDAO.GetRoomLink(_roomContext, room.RoomId);
+                    var links = roomUserLinks.Where(link => link.UserId != room.CreatorId).Select(link => link.UserId).ToList();
                     var roomChats = RoomChatDAO.GetChatByRoomId(_roomContext, room.RoomId);
                     var roomTimetables = TimetableDAO.GetByRoomId(_roomContext, room.RoomId);
                     var groups = RoomDAO.GetGroupByRoom(_roomContext, room.RoomId);
                     var log = _userContext.UserLog.Where(item => item.RoomId == id).ToList();
-                    if (roomUserLinks.Count > 0 || roomTimetables.Count > 0)
+                    if (links.Count > 0 || roomTimetables.Count > 0)
                     {
                         failed.Add(id);
                         continue;
                     }
+                    await RoomUserLinkDAO.Delete(_roomContext, roomUserLinks);
                     await _logDAO.DeleteLogs(log);
                     await RoomChatDAO.DeleteRoomChat(_roomContext, roomChats);
                     foreach (var group in groups)
