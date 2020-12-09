@@ -134,10 +134,14 @@ namespace BackEnd.Services
                 if (EmailUtil.CheckIfValid(model.Email))
                 {
                     appUser = await _userManager.FindByEmailAsync(model.Email);
+                    if (appUser == null)
+                    {
+                        return new BadRequestObjectResult(new { type = 0, message = "Email not found!" });
+                    }
                 }
                 else
                 {
-                    return new BadRequestObjectResult(new { type = 0, message = "Email not found!" });
+                    return new BadRequestObjectResult(new { type = 3, message = "Wrong format email!" });
                 }
             }
             else
