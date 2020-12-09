@@ -11,6 +11,7 @@ namespace BackEnd.Constant
                                              "Email: {0} <br />" +
                                              "Username: {1} <br />" +
                                              "Password: {2} <br />" +
-                                             "<a href='{3}'><h1 style='color:red;'>Click this link to active it first</h1><br/></a>";
+                                             "<a href='{3}'><h2><u>Click this link to activate it first</u></h2><br/></a>" +
+                                             "<div style='color:red;'><i>Please change your password after logging in for the first time to secure your account</i></div>";
     }
 }

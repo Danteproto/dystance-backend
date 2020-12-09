@@ -364,7 +364,9 @@ namespace BackEnd.Services
             var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(registerUser);
             var confirmationLink = urlHelper.Action("ConfirmEmail", "Users", new { token, email = registerUser.Email }, "https");
-            var message = new Message(new string[] { registerUser.Email }, "Confirmation email link", confirmationLink, null);
+            var content = String.Format(EmailTemplate.HTML_CONTENT, registerUser.Email, registerUser.UserName, "123@123a", confirmationLink);
+
+            var message = new Message(new string[] { registerUser.Email }, "Your Account On DYSTANCE", content, null);
             await _emailSender.SendEmailAsync(message);
             //await _userManager.AddToRoleAsync(user, "Visitor");
 
@@ -401,10 +403,11 @@ namespace BackEnd.Services
             }
 
             var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
-
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
             var confirmationLink = urlHelper.Action("ConfirmEmail", "Users", new { token, email = user.Email }, "https");
-            var message = new Message(new string[] { user.Email }, "Confirmation email link", confirmationLink, null);
+            var content = String.Format(EmailTemplate.HTML_CONTENT, user.Email, user.UserName, "123@123a", confirmationLink);
+
+            var message = new Message(new string[] { user.Email }, "Your Account On DYSTANCE", content, null);
             await _emailSender.SendEmailAsync(message);
 
             return new OkObjectResult(new { message = "Successful" });
