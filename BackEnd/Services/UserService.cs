@@ -551,6 +551,7 @@ namespace BackEnd.Services
         {
 
             var user = await _userManager.FindByIdAsync(_userAccessor.GetCurrentUserId());
+            var roles = await _userManager.GetRolesAsync(user);
             try
             {
                 //Update Profile
@@ -615,7 +616,7 @@ namespace BackEnd.Services
                                         Email = user.Email,
                                         Dob = user.DOB.ToString("yyyy-MM-dd"),
                                         Avatar = $"api/users/getAvatar?fileName={user.Avatar}&realName={Path.GetFileName(user.Avatar)}&userName={user.UserName}",
-
+                                        Role = roles[0]
                                     }
                             );
                         }
@@ -649,6 +650,7 @@ namespace BackEnd.Services
                                          Email = user.Email,
                                          Dob = user.DOB.ToString("yyyy-MM-dd"),
                                          Avatar = $"api/users/getAvatar?fileName={user.Avatar}&realName={Path.GetFileName(user.Avatar)}&userName={user.UserName}",
+                                         Role = roles[0]
                                      }
                              );
                 }
