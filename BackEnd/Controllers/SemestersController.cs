@@ -18,17 +18,11 @@ namespace BackEnd.Controllers
     [ApiController]
     public class SemestersController : ControllerBase
     {
-        private readonly IMapper _mapper;
         private readonly ISemesterService _semesterService;
-        private readonly ITeacherService _teacherService;
-        private readonly IStudentService _studentService;
 
         public SemestersController(IMapper mapper, ISemesterService semesterService, ITeacherService teacherService, IStudentService studentService)
         {
-            _mapper = mapper;
             _semesterService = semesterService;
-            _teacherService = teacherService;
-            _studentService = studentService;
         }
 
         [HttpGet]

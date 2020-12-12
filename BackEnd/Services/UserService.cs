@@ -134,10 +134,14 @@ namespace BackEnd.Services
                 if (EmailUtil.CheckIfValid(model.Email))
                 {
                     appUser = await _userManager.FindByEmailAsync(model.Email);
+                    if (appUser == null)
+                    {
+                        return new BadRequestObjectResult(new { type = 0, message = "Email not found!" });
+                    }
                 }
                 else
                 {
-                    return new BadRequestObjectResult(new { type = 0, message = "Email not found!" });
+                    return new BadRequestObjectResult(new { type = 3, message = "Wrong format email!" });
                 }
             }
             else
@@ -547,6 +551,7 @@ namespace BackEnd.Services
         {
 
             var user = await _userManager.FindByIdAsync(_userAccessor.GetCurrentUserId());
+            var roles = await _userManager.GetRolesAsync(user);
             try
             {
                 //Update Profile
@@ -611,7 +616,7 @@ namespace BackEnd.Services
                                         Email = user.Email,
                                         Dob = user.DOB.ToString("yyyy-MM-dd"),
                                         Avatar = $"api/users/getAvatar?fileName={user.Avatar}&realName={Path.GetFileName(user.Avatar)}&userName={user.UserName}",
-
+                                        Role = roles[0]
                                     }
                             );
                         }
@@ -645,6 +650,7 @@ namespace BackEnd.Services
                                          Email = user.Email,
                                          Dob = user.DOB.ToString("yyyy-MM-dd"),
                                          Avatar = $"api/users/getAvatar?fileName={user.Avatar}&realName={Path.GetFileName(user.Avatar)}&userName={user.UserName}",
+                                         Role = roles[0]
                                      }
                              );
                 }
