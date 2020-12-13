@@ -123,7 +123,6 @@ namespace BackEnd.Controllers
         [HttpGet("chat/getFile")]
         public async Task<IActionResult> GetFile(string fileName, int type, int roomId, string realName)
         {
-
             var rootPath = _env.ContentRootPath;
             string path = "";
             if (type == (int)RoomService.ChatType.Image)

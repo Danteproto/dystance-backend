@@ -11,8 +11,6 @@ namespace BackEnd.Ultilities
                 yield return day;
         }
 
-      
-
         public static DateTime GetDateTimeFromString(String str)
         {
             var date = str.ToDateTime("yyyy-M-ddTHH:mm:ss"); // {31.05.2016 13:33:00}

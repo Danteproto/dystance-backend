@@ -3,10 +3,7 @@ using BackEnd.DAO;
 using BackEnd.DBContext;
 using BackEnd.Models;
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 using Xunit;
 
