@@ -108,7 +108,6 @@ namespace BackEnd.Services
             IUserStore userStore,
             IWebHostEnvironment env,
             ILogDAO logDAO,
-            RoleManager<AppRole> roleManager,
             RoomDBContext roomDBContext,
             IAttendanceDAO attendanceDAO)
         {
@@ -124,7 +123,6 @@ namespace BackEnd.Services
             _userStore = userStore;
             _env = env;
             _logDAO = logDAO;
-            _roleManager = roleManager;
             _roomDBContext = roomDBContext;
             _attendanceDAO = attendanceDAO;
         }
@@ -1393,7 +1391,6 @@ namespace BackEnd.Services
                                 var message = new Message(new string[] { user.Email }, "Your Account On DYSTANCE", content, null);
                                 await _emailSender.SendEmailAsync(message);
 
-                                //roleManager.AddUserToRole
                                 await _userManager.AddToRoleAsync(user, "Student");
 
                                 //debug
