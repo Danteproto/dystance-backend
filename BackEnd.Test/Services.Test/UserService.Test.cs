@@ -17,6 +17,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
@@ -173,7 +174,7 @@ namespace BackEnd.Test
             userStore.Setup(x => x.IsTokenValid(It.IsAny<String>())).Returns(true);
 
             var _env = new Mock<IWebHostEnvironment>();
-
+            _env.Setup(x => x.ContentRootPath).Returns(Directory.GetCurrentDirectory);
 
 
             _userService = new Mock<UserService>(
@@ -186,11 +187,11 @@ namespace BackEnd.Test
                 new EmailSender(emailConfig), 
                 _jwtGenerator.Object, 
                 new UserAccessor(mockHttpContextAccessor.Object),
-                userStore,
-                _env,
-                logDAO,
+                userStore.Object,
+                _env.Object,
+                logDAO.Object,
                 roomContext,
-                attendanceDAO
+                attendanceDAO.Object
                 );
 
         }

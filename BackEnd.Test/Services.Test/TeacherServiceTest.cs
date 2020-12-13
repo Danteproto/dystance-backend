@@ -146,8 +146,11 @@ namespace BackEnd.Test.Services.Test
         //}
 
 
-        [Fact]
-        public async void AddTeacher(TeacherRequest teacherRequest)
+        //[Fact]
+        //public async void AddTeacher(TeacherRequest teacherRequest)
+        //{
+
+        //}
 
     }
 }
