@@ -85,7 +85,6 @@ namespace BackEnd.Services
         private readonly IUserStore _userStore;
         private readonly IWebHostEnvironment _env;
         private readonly ILogDAO _logDAO;
-        private readonly RoleManager<AppRole> _roleManager;
         private readonly RoomDBContext _roomDBContext;
         private readonly IAttendanceDAO _attendanceDAO;
 
