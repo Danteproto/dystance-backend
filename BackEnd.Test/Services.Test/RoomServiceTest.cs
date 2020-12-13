@@ -37,7 +37,7 @@ namespace BackEnd.Test.Services.Test
             var formCol = new FormCollection(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>
             {
                 { "chatType", "0" },
-                {"" }
+                {"", "" }
             }, files);
             var request = new Mock<HttpRequest>();
             request.Setup(req => req.Form).Returns(formCol);

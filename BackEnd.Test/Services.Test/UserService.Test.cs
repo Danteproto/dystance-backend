@@ -135,7 +135,7 @@ namespace BackEnd.Test
 
         [Theory]
         [MemberData(nameof(AuthenticateTestCase_ForOK))]
-        public async void TestAuthenticate_Return_OkResult(AuthenticateRequest model, bool expectedOutput, string description)
+        public async void TestAuthenticate_Return_OkResult(AuthenticateRequest model, string description)
         {
             var user = new AppUser
             {
@@ -160,7 +160,7 @@ namespace BackEnd.Test
 
         [Theory]
         [MemberData(nameof(AuthenticateTestCase_ForNotOK))]
-        public async void TestAuthenticate_Return_NotOkResult(AuthenticateRequest model, bool expectedOutput, string description)
+        public async void TestAuthenticate_Return_NotOkResult(AuthenticateRequest model, string description)
         {
             var user = new AppUser
             {
@@ -336,13 +336,13 @@ namespace BackEnd.Test
                 {
                     UserName = Username,
                     Password = Password
-                }, true, "Email missing"));
+                }, "Email missing"));
 
                 data.Add(TheoryDatum.Factory(new AuthenticateRequest
                 {
                     Email = Email,
                     Password = Password
-                }, true, "Username missing"));
+                }, "Username missing"));
 
 
                 return data.ConvertAll(d => d.ToParameterArray());
@@ -363,18 +363,18 @@ namespace BackEnd.Test
                 {
                     UserName = Username,
                     Password = Password
-                }, false, "Wrong Email"));
+                }, "Wrong Email"));
 
                 data.Add(TheoryDatum.Factory(new AuthenticateRequest
                 {
                     Email = Email,
                     Password = Password
-                }, false, "Wrong Username"));
+                }, "Wrong Username"));
                 data.Add(TheoryDatum.Factory(new AuthenticateRequest
                 {
                     Email = Email,
                     Password = Password
-                }, false, "Wrong Password"));
+                }, "Wrong Password"));
 
                 return data.ConvertAll(d => d.ToParameterArray());
             }
@@ -400,7 +400,7 @@ namespace BackEnd.Test
                     RealName = RealName,
                     Dob = DOB,
 
-                }, true, "Success"));
+                }, "Success"));
 
                 
 

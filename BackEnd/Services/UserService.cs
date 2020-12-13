@@ -104,7 +104,6 @@ namespace BackEnd.Services
             IUserStore userStore,
             IWebHostEnvironment env,
             ILogDAO logDAO,
-            RoleManager<AppRole> roleManager,
             RoomDBContext roomDBContext,
             IAttendanceDAO attendanceDAO)
         {
@@ -120,7 +119,6 @@ namespace BackEnd.Services
             _userStore = userStore;
             _env = env;
             _logDAO = logDAO;
-            _roleManager = roleManager;
             _roomDBContext = roomDBContext;
             _attendanceDAO = attendanceDAO;
         }
@@ -1369,7 +1367,6 @@ namespace BackEnd.Services
                                 var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
                                 await _userManager.ConfirmEmailAsync(user, token);
 
-                                //roleManager.AddUserToRole
                                 await _userManager.AddToRoleAsync(user, "Student");
 
                                 //debug
