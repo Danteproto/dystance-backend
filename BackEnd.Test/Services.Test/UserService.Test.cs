@@ -1,9 +1,13 @@
 ﻿using AutoMapper;
 using BackEnd.Context;
+using BackEnd.DAO;
+using BackEnd.DBContext;
 using BackEnd.Models;
 using BackEnd.Security;
 using BackEnd.Services;
+using BackEnd.Stores;
 using EmailService;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -36,6 +40,11 @@ namespace BackEnd.Test
 
         private ConnectionFactory factory;
 
+        private Mock<IAttendanceDAO> attendanceDAO;
+
+        private Mock<ILogDAO>logDAO;
+
+        private RoomDBContext roomContext;
 
         public UserServiceTest(TestFixture<Startup> fixture)
         {
@@ -45,6 +54,13 @@ namespace BackEnd.Test
             context.Database.EnsureDeleted();
             context.Database.EnsureCreated();
             context.SaveChanges();
+
+            //setting up room context
+            factory = new ConnectionFactory();
+            roomContext = factory.CreateRoomDbContextForInMemory();
+            roomContext.Database.EnsureDeleted();
+            roomContext.Database.EnsureCreated();
+            roomContext.SaveChanges();
 
 
             //mocking user manager
@@ -127,8 +143,54 @@ namespace BackEnd.Test
            
             _jwtGenerator = new Mock<JwtGenerator>(options, mapper, context);
 
-            _userService = new Mock<UserService>(context, mapper, fakeSignInManager.Object, fakeUserManager.Object,
-                new UrlHelperFactory(), new ActionContextAccessor(), new EmailSender(emailConfig), _jwtGenerator.Object, new UserAccessor(mockHttpContextAccessor.Object)
+            //mocking attendanceDAO
+            attendanceDAO = new Mock<IAttendanceDAO>();
+            attendanceDAO.Setup(x => x.UpdateAttendance(It.IsAny<List<AttendanceReports>>())).ReturnsAsync(new ObjectResult(new { message = "success" })
+            {
+                StatusCode = 200,
+            });
+
+            attendanceDAO.Setup(x => x.CreateAttendance(It.IsAny<List<AttendanceReports>>())).ReturnsAsync(new ObjectResult(new { message = "success" })
+            {
+                StatusCode = 200,
+            });
+
+            attendanceDAO.Setup(x => x.DeleteAttendance(It.IsAny<List<AttendanceReports>>())).ReturnsAsync(new ObjectResult(new { message = "success" })
+            {
+                StatusCode = 200,
+            });
+
+
+            //MockLogDAO
+            logDAO = new Mock<ILogDAO>();
+            logDAO.Setup(x => x.CreateLog(It.IsAny<UsersLog>())).ReturnsAsync("success");
+            logDAO.Setup(x => x.DeleteLogs(It.IsAny<List<UsersLog>>())).ReturnsAsync("success");
+            logDAO.Setup(x => x.GetLogsByRoomId(It.IsAny<string>())).ReturnsAsync(new List<UsersLog>());
+
+            //mocking UserStore
+            var userStore = new Mock<IUserStore>();
+            userStore.Setup(x => x.GenerateTokenAndSave(It.IsAny<String>())).Returns("");
+            userStore.Setup(x => x.IsTokenValid(It.IsAny<String>())).Returns(true);
+
+            var _env = new Mock<IWebHostEnvironment>();
+
+
+
+            _userService = new Mock<UserService>(
+                context, 
+                mapper, 
+                fakeSignInManager.Object, 
+                fakeUserManager.Object,
+                new UrlHelperFactory(), 
+                new ActionContextAccessor(), 
+                new EmailSender(emailConfig), 
+                _jwtGenerator.Object, 
+                new UserAccessor(mockHttpContextAccessor.Object),
+                userStore,
+                _env,
+                logDAO,
+                roomContext,
+                attendanceDAO
                 );
 
         }
