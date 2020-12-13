@@ -218,7 +218,6 @@ namespace BackEnd.Test
             var data = await _userService.Object.Authenticate(model);
 
             Assert.IsType<OkObjectResult>(data);
-
         }
 
         [Theory]
@@ -306,7 +305,7 @@ namespace BackEnd.Test
 
         [Theory]
         [InlineData("1")]
-        public void TestGetById_Return_OkResult(string id)
+        public async void TestGetById_Return_OkResult(string id)
         { 
             var user = new AppUser
             {
@@ -314,13 +313,14 @@ namespace BackEnd.Test
                 UserName = "GetById",
                 EmailConfirmed = true,
                 RefreshTokens = new List<RefreshToken>(),
-                Id = "1"
+                Id = "1",
+                Avatar = "default.png"
             };
 
             context.Add(user);
             context.SaveChanges();
 
-            var data = _userService.Object.GetById(id);
+            var data = await _userService.Object.GetById(id);
 
             Assert.IsType<OkObjectResult>(data);
         }
