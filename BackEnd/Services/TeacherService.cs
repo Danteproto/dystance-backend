@@ -49,7 +49,6 @@ namespace BackEnd.Services
             UserManager<AppUser> userManager,
             RoomDBContext roomcontext,
             ILogDAO logDAO,
-            IPrivateMessageDAO privateMessageDAO,
             IAttendanceDAO attendanceDAO,
             IEmailSender emailSender,
             IUrlHelperFactory urlHelperFactory,
@@ -59,7 +58,6 @@ namespace BackEnd.Services
             _userManager = userManager;
             _roomContext = roomcontext;
             _logDAO = logDAO;
-            _privateMessageDAO = privateMessageDAO;
             _attendanceDAO = attendanceDAO;
             _emailSender = emailSender;
             _urlHelperFactory = urlHelperFactory;

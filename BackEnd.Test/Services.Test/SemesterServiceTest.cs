@@ -19,7 +19,7 @@ using Microsoft.Extensions.Primitives;
 
 namespace BackEnd.Test.Services.Test
 {
-    public class SemetserServiceTest
+    public class SemesterServiceTest
     {
         private Mock<SemesterService> _SemetserService { get; }
         private UserDbContext userContext;
@@ -28,7 +28,7 @@ namespace BackEnd.Test.Services.Test
         private Mock<LogDAO> logDAO;
         private ConnectionFactory factory;
 
-        public SemetserServiceTest()
+        public SemesterServiceTest()
         {
             factory = new ConnectionFactory();
             userContext = factory.CreateUserDbContextForInMemory();
