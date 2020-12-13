@@ -45,7 +45,7 @@ namespace BackEnd.Services
                                              "Email: {0} <br />" +
                                              "Username: {1} <br />" +
                                              "Password: {2} <br />" +
-                                             "<h1 style='color:red;'>Click this link to active it first: </h1><br/>"+
+                                             "<h1 style='color:red;'>Click this link to active it first: </h1><br/>" +
                                              "<h4>{3}</h4>";
 
         public TeacherService(
@@ -70,24 +70,22 @@ namespace BackEnd.Services
 
         public async Task<IActionResult> GetTeacher()
         {
-            var listUserId = await _userManager.Users.ToListAsync();
-
+            var listUserId = await _userManager.GetUsersInRoleAsync("teacher");
             var listTeacher = new List<TeacherInfoResponse>();
 
             foreach (var user in listUserId)
             {
-                if (await _userManager.IsInRoleAsync(user, "Teacher"))
-                {
-                    listTeacher.Add(new TeacherInfoResponse
-                    {
-                        Id = user.Id,
-                        Code = user.UserName,
-                        Email = user.Email,
-                        RealName = user.RealName,
-                        Dob = String.Format("{0:yyyy-MM-dd}", Convert.ToDateTime(user.DOB))
-                    });
 
-                }
+                listTeacher.Add(new TeacherInfoResponse
+                {
+                    Id = user.Id,
+                    Code = user.UserName,
+                    Email = user.Email,
+                    RealName = user.RealName,
+                    Dob = String.Format("{0:yyyy-MM-dd}", Convert.ToDateTime(user.DOB))
+                });
+
+
 
             }
 
@@ -127,7 +125,7 @@ namespace BackEnd.Services
                 };
                 return internalErr;
             }
-           
+
             await _userManager.AddToRoleAsync(registerUser, "Teacher");
 
             var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);

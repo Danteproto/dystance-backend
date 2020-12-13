@@ -62,7 +62,6 @@ namespace BackEnd.Test.Services.Test
             fakeUserManager.Setup(x => x.UpdateAsync(It.IsAny<AppUser>()))
             .ReturnsAsync(IdentityResult.Success);
 
-
             //MockLogDAO
             var logDAO = new Mock<ILogDAO>();
             logDAO.Setup(x => x.CreateLog(It.IsAny<UsersLog>())).ReturnsAsync("success");
@@ -105,45 +104,72 @@ namespace BackEnd.Test.Services.Test
                 _roomContext, logDAO.Object, attendanceDAO.Object, new EmailSender(emailConfig), new UrlHelperFactory(), new ActionContextAccessor());
         }
 
-        //[Fact]
-        //public async void GetTeacher_Returns_Correctly()
-        //{
-        //    //Arrange
-        //    var teacherResponses = new List<TeacherInfoResponse>()
-        //    {
-        //        new TeacherInfoResponse{
-        //            Id = "TestId001",
-        //            Code = "TestCode001",
-        //            Email = "TestEmail001",
-        //            RealName = "TestName001",
-        //            Dob = "TestDob001"
-        //        },
-        //        new TeacherInfoResponse{
-        //            Id = "TestId002",
-        //            Code = "TestCode002",
-        //            Email = "TestEmail002",
-        //            RealName = "TestName002",
-        //            Dob = "TestDob002"
-        //        },
-        //        new TeacherInfoResponse{
-        //            Id = "TestId003",
-        //            Code = "TestCode003",
-        //            Email = "TestEmail003",
-        //            RealName = "TestName003",
-        //            Dob = "TestDob003"
-        //        }
-        //    };
+        [Fact]
+        public async void GetTeacher_Returns_Correctly()
+        {
+            //Arrange
+            var teacherResponses = new List<TeacherInfoResponse>()
+            {
+                new TeacherInfoResponse{
+                    Id = "TestId001",
+                    Code = "TestCode001",
+                    Email = "TestEmail001",
+                    RealName = "TestName001",
+                    Dob = "TestDob001"
+                },
+                new TeacherInfoResponse{
+                    Id = "TestId002",
+                    Code = "TestCode002",
+                    Email = "TestEmail002",
+                    RealName = "TestName002",
+                    Dob = "TestDob002"
+                },
+                new TeacherInfoResponse{
+                    Id = "TestId003",
+                    Code = "TestCode003",
+                    Email = "TestEmail003",
+                    RealName = "TestName003",
+                    Dob = "TestDob003"
+                }
+            };
 
-        //    _teacherService.Setup(x => x.GetTeacher()).Returns(Task.FromResult<IActionResult>(new OkObjectResult(teacherResponses)));
+            //_teacherService.Setup(x => x.GetTeacher()).Returns(Task.FromResult<IActionResult>(new OkObjectResult(teacherResponses)));
 
-        //    //Act
-        //    var result = await _teacherService.Object.GetTeacher();
+            var user = new AppUser
+            {
+                Email = "GetById@gmail",
+                UserName = "GetById",
+                EmailConfirmed = true,
+                RefreshTokens = new List<RefreshToken>(),
+                Id = "1",
+                Avatar = "default.png"
+            };
+
+            var role = new AppRole
+            {
+                Name = "teacher"
+            };
+
+            var rolez = new IdentityUserRole<string>
+            {
+                RoleId = role.Id,
+                UserId = user.Id
+            };
+
+            await _userContext.Users.AddAsync(user);
+            await _userContext.Roles.AddAsync(role);
+            await _userContext.UserRoles.AddAsync(rolez);
+            await _userContext.SaveChangesAsync();
+            fakeUserManager.Setup(x => x.GetUsersInRoleAsync(It.IsAny<string>())).ReturnsAsync(new List<AppUser>() { user });
+
+            //Act
+            var result = await _teacherService.Object.GetTeacher();
 
 
 
 
-        //    //Assert
-        //}
+            //Assert
+        }
 
 
         //[Fact]
