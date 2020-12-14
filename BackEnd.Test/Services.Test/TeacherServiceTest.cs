@@ -7,8 +7,10 @@ using BackEnd.Responses;
 using BackEnd.Security;
 using BackEnd.Services;
 using EmailService;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.EntityFrameworkCore;
@@ -29,14 +31,26 @@ namespace BackEnd.Test.Services.Test
         private Mock<FakeUserManager> fakeUserManager;
 
         private UserDbContext _userContext;
-        private RoomDBContext _roomContext;
 
+        private RoomDBContext _roomContext;
 
         private ConnectionFactory factory;
 
         private Mock<TeacherService> _teacherService;
 
         private IQueryable<AppUser> users;
+
+        private Mock<IEmailSender> mockEmailSender;
+
+        private Mock<UserAccessor> mockUserAccessor;
+
+        private Mock<IHttpContextAccessor> mockHttpContextAccessor;
+
+        private Mock<IUrlHelperFactory> mockUrlHelperFactory;
+
+        private Mock<IActionContextAccessor> actionContextAccessor;
+
+        private Mock<IUrlHelper> mockUrlHelper;
 
         public TeacherServiceTest()
         {
@@ -54,11 +68,11 @@ namespace BackEnd.Test.Services.Test
 
             //mocking user manager
             fakeUserManager = new Mock<FakeUserManager>();
-            
+
             fakeUserManager.Setup(x => x.DeleteAsync(It.IsAny<AppUser>()))
             .ReturnsAsync(IdentityResult.Success);
             fakeUserManager.Setup(x => x.CreateAsync(It.IsAny<AppUser>(), It.IsAny<string>()))
-            .ReturnsAsync(IdentityResult.Success);
+                .ReturnsAsync(IdentityResult.Success);
             fakeUserManager.Setup(x => x.UpdateAsync(It.IsAny<AppUser>()))
             .ReturnsAsync(IdentityResult.Success);
 
@@ -99,84 +113,220 @@ namespace BackEnd.Test.Services.Test
             };
             IOptions<AppSettings> options = Options.Create(appSettings);
 
+            //mocking HttpContextAccessor
+            mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
+            var HttpContext = new DefaultHttpContext();
+            mockHttpContextAccessor.Setup(_ => _.HttpContext).Returns(HttpContext);
 
-            _teacherService = new Mock<TeacherService>(_userContext, fakeUserManager.Object,
-                _roomContext, logDAO.Object, attendanceDAO.Object, new EmailSender(emailConfig), new UrlHelperFactory(), new ActionContextAccessor());
+            //Mocking EmailSender
+            mockEmailSender = new Mock<IEmailSender>();
+
+            //Mocking UserAccessor
+            mockUserAccessor = new Mock<UserAccessor>(mockHttpContextAccessor.Object);
+
+            //Mocking UrlHelper
+            mockUrlHelperFactory = new Mock<IUrlHelperFactory>();
+
+            //Mockikng ActionContextAccessor
+            actionContextAccessor = new Mock<IActionContextAccessor>();
+
+            //MockPMAO
+            var privateDAO = new Mock<IPrivateMessageDAO>();
+            privateDAO.Setup(x => x.DeletePrivateMessages(It.IsAny<List<PrivateMessage>>())).ReturnsAsync(new OkObjectResult(""));
+
+            _teacherService = new Mock<TeacherService>(
+                _userContext,
+                fakeUserManager.Object,
+                _roomContext,
+                logDAO.Object,
+                attendanceDAO.Object,
+                privateDAO.Object,
+                mockEmailSender.Object,
+                mockUrlHelperFactory.Object,
+                actionContextAccessor.Object);
         }
 
         [Fact]
         public async void GetTeacher_Returns_Correctly()
         {
             //Arrange
+            var user = new AppUser
+            {
+                Id = "1",
+                UserName = "Test1",
+                Email = "Test1@gmail",
+                Avatar = "default.png",
+                RealName = "Test 1",
+                DOB = new DateTime(2020, 09, 29)
+            };
+
+            var user2 = new AppUser
+            {
+                Id = "2",
+                UserName = "Test2",
+                Email = "Test2@gmail",
+                Avatar = "default.png",
+                RealName = "Test 2",
+                DOB = new DateTime(2020, 02, 29)
+            };
+
+            var user3 = new AppUser
+            {
+                Id = "3",
+                UserName = "Test3",
+                Email = "Test3@gmail",
+                Avatar = "default.png",
+                RealName = "Test 3",
+                DOB = new DateTime(2020, 07, 01)
+            };
+
             var teacherResponses = new List<TeacherInfoResponse>()
             {
                 new TeacherInfoResponse{
-                    Id = "TestId001",
-                    Code = "TestCode001",
-                    Email = "TestEmail001",
-                    RealName = "TestName001",
-                    Dob = "TestDob001"
+                    Id = user.Id,
+                    Code = user.UserName,
+                    Email = user.Email,
+                    RealName = user.RealName,
+                    Dob = String.Format("{0:yyyy-MM-dd}", Convert.ToDateTime(user.DOB))
                 },
                 new TeacherInfoResponse{
-                    Id = "TestId002",
-                    Code = "TestCode002",
-                    Email = "TestEmail002",
-                    RealName = "TestName002",
-                    Dob = "TestDob002"
+                    Id = user2.Id,
+                    Code = user2.UserName,
+                    Email = user2.Email,
+                    RealName = user2.RealName,
+                    Dob = String.Format("{0:yyyy-MM-dd}", Convert.ToDateTime(user2.DOB))
                 },
                 new TeacherInfoResponse{
-                    Id = "TestId003",
-                    Code = "TestCode003",
-                    Email = "TestEmail003",
-                    RealName = "TestName003",
-                    Dob = "TestDob003"
+                    Id = user3.Id,
+                    Code = user3.UserName,
+                    Email = user3.Email,
+                    RealName = user3.RealName,
+                    Dob = String.Format("{0:yyyy-MM-dd}", Convert.ToDateTime(user3.DOB))
                 }
             };
 
-            //_teacherService.Setup(x => x.GetTeacher()).Returns(Task.FromResult<IActionResult>(new OkObjectResult(teacherResponses)));
-
-            var user = new AppUser
-            {
-                Email = "GetById@gmail",
-                UserName = "GetById",
-                EmailConfirmed = true,
-                RefreshTokens = new List<RefreshToken>(),
-                Id = "1",
-                Avatar = "default.png"
-            };
-
-            var role = new AppRole
-            {
-                Name = "teacher"
-            };
-
-            var rolez = new IdentityUserRole<string>
-            {
-                RoleId = role.Id,
-                UserId = user.Id
-            };
-
-            await _userContext.Users.AddAsync(user);
-            await _userContext.Roles.AddAsync(role);
-            await _userContext.UserRoles.AddAsync(rolez);
-            await _userContext.SaveChangesAsync();
-            fakeUserManager.Setup(x => x.GetUsersInRoleAsync(It.IsAny<string>())).ReturnsAsync(new List<AppUser>() { user });
+            fakeUserManager.Setup(x => x.GetUsersInRoleAsync(It.IsAny<string>())).ReturnsAsync(new List<AppUser>() { user, user2, user3 });
 
             //Act
             var result = await _teacherService.Object.GetTeacher();
-
-
+            var okObjectResult = result as OkObjectResult;
+            var model = okObjectResult.Value as List<TeacherInfoResponse>;
 
 
             //Assert
+            Assert.Equal(200, okObjectResult.StatusCode);
+            Assert.NotEmpty(model);
+            Assert.IsType<OkObjectResult>(okObjectResult);
+
+            //check teacherresponse 1
+            Assert.Equal(teacherResponses[0].Code, model[0].Code);
+            Assert.Equal(teacherResponses[0].RealName, model[0].RealName);
+            Assert.Equal(teacherResponses[0].Code, model[0].Code);
+            Assert.Equal(teacherResponses[0].Email, model[0].Email);
+            Assert.Equal(teacherResponses[0].Dob, model[0].Dob);
+            Assert.Equal(teacherResponses[0].Id, model[0].Id);
+
+            //check teacherresponse 2
+            Assert.Equal(teacherResponses[1].Code, model[1].Code);
+            Assert.Equal(teacherResponses[1].RealName, model[1].RealName);
+            Assert.Equal(teacherResponses[1].Code, model[1].Code);
+            Assert.Equal(teacherResponses[1].Email, model[1].Email);
+            Assert.Equal(teacherResponses[1].Dob, model[1].Dob);
+            Assert.Equal(teacherResponses[1].Id, model[1].Id);
+
+            //check teacherresponse 3
+            Assert.Equal(teacherResponses[2].Code, model[2].Code);
+            Assert.Equal(teacherResponses[2].RealName, model[2].RealName);
+            Assert.Equal(teacherResponses[2].Code, model[2].Code);
+            Assert.Equal(teacherResponses[2].Email, model[2].Email);
+            Assert.Equal(teacherResponses[2].Dob, model[2].Dob);
+            Assert.Equal(teacherResponses[2].Id, model[2].Id);
+
         }
 
 
-        //[Fact]
-        //public async void AddTeacher(TeacherRequest teacherRequest)
-        //{
+        [Fact]
+        public async void AddTeacher_Returns_Correctly()
+        {
+            //Arrange
+            var user = new TeacherRequest
+            {
+                Id = "1",
+                Code = "Test1",
+                Email = "Test1@gmail",
+                RealName = "Test 1",
+                Dob = "2020-09-29"
+            };
 
-        //}
+            var teacherResponses = new List<TeacherInfoResponse>()
+            {
+                new TeacherInfoResponse{
+                    Id = user.Id,
+                    Code = user.Code,
+                    Email = user.Email,
+                    RealName = user.RealName,
+                    Dob = user.Dob
+                },
+            };
+
+            // create url helper mock
+            Type t = typeof(UserServiceTest);
+            var httpContext = new Mock<HttpContext>().Object;
+            actionContextAccessor.Setup(x => x.ActionContext).Returns(new ActionContext(
+                httpContext,
+                new Microsoft.AspNetCore.Routing.RouteData(),
+                new ControllerActionDescriptor()
+                {
+                    MethodInfo = t.GetMethod(nameof(TeacherServiceTest.AddTeacher_Returns_Correctly))
+                }));
+
+
+            mockUrlHelper = new Mock<IUrlHelper>();
+
+            mockUrlHelperFactory.Setup(x => x.GetUrlHelper(It.IsAny<ActionContext>())).Returns(mockUrlHelper.Object);
+            mockUrlHelper.SetupGet(h => h.ActionContext).Returns(actionContextAccessor.Object.ActionContext);
+
+            UrlActionContext actual = null;
+
+            mockUrlHelper.Setup(h => h.Action(It.IsAny<UrlActionContext>()))
+                .Callback((UrlActionContext context) => actual = context);
+
+            fakeUserManager.Setup(x => x.GenerateEmailConfirmationTokenAsync(It.IsAny<AppUser>())).ReturnsAsync("");
+            mockEmailSender.Setup(x => x.SendEmailAsync(It.IsAny<Message>())).Returns(() => Task.FromResult(""));
+
+
+
+
+            //Act
+            var result = await _teacherService.Object.AddTeacher(user);
+            var okObjectResult = result as OkObjectResult;
+            var model = okObjectResult.Value as TeacherInfoResponse;
+
+            var list = new List<TeacherInfoResponse>();
+
+            list.Add(model);
+
+            //Assert
+            Assert.Equal(200, okObjectResult.StatusCode);
+            Assert.NotEmpty(list);
+            Assert.IsType<OkObjectResult>(okObjectResult);
+
+            //check teacherresponse 1
+            Assert.Equal(teacherResponses[0].Code, model.Code);
+            Assert.Equal(teacherResponses[0].RealName, model.RealName);
+            Assert.Equal(teacherResponses[0].Code, model.Code);
+            Assert.Equal(teacherResponses[0].Email, model.Email);
+            Assert.Equal(teacherResponses[0].Dob, model.Dob);
+        }
+
+        [Fact]
+        public async void DeleteTeacher_Returns_Correctly()
+        {
+
+
+
+        }
+
 
     }
 }
