@@ -418,8 +418,10 @@ namespace BackEnd.Test
                 Id = Guid.NewGuid().ToString()
             };
 
-            fakeUserManager.Setup(x => x.FindByEmailAsync(user.Email)).Returns(Task.FromResult(users.FirstOrDefault<AppUser>(u => u.Email == user.Email) == null ? null : user));
-            fakeUserManager.Setup(x => x.FindByNameAsync(user.UserName)).Returns(Task.FromResult(users.FirstOrDefault<AppUser>(u => u.UserName == user.UserName) == null ? null : user));
+            fakeUserManager.Setup(x => x.FindByEmailAsync(user.Email))
+                .Returns(Task.FromResult(users.FirstOrDefault<AppUser>(u => u.Email == user.Email) == null ? null : user));
+            fakeUserManager.Setup(x => x.FindByNameAsync(user.UserName))
+                .Returns(Task.FromResult(users.FirstOrDefault<AppUser>(u => u.UserName == user.UserName) == null ? null : user));
 
             fakeUserManager.Setup(x => x.CreateAsync(It.IsAny<AppUser>(), It.IsAny<string>()))
             .ReturnsAsync(IdentityResult.Success).Callback<AppUser, string>((x, y) => context.Users.Add(new AppUser

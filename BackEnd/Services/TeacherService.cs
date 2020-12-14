@@ -54,6 +54,7 @@ namespace BackEnd.Services
             RoomDBContext roomcontext,
             ILogDAO logDAO,
             IAttendanceDAO attendanceDAO,
+            IPrivateMessageDAO privateMessageDAO,
             IEmailSender emailSender,
             IUrlHelperFactory urlHelperFactory,
             IActionContextAccessor actionContextAccessor)
@@ -63,6 +64,7 @@ namespace BackEnd.Services
             _roomContext = roomcontext;
             _logDAO = logDAO;
             _attendanceDAO = attendanceDAO;
+            _privateMessageDAO = privateMessageDAO;
             _emailSender = emailSender;
             _urlHelperFactory = urlHelperFactory;
             _actionContextAccessor = actionContextAccessor;
