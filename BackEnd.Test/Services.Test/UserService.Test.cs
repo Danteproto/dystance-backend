@@ -3,14 +3,17 @@ using BackEnd.Context;
 using BackEnd.DAO;
 using BackEnd.DBContext;
 using BackEnd.Models;
+using BackEnd.Responses;
 using BackEnd.Security;
 using BackEnd.Services;
 using BackEnd.Stores;
 using EmailService;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.Extensions.Options;
@@ -46,6 +49,18 @@ namespace BackEnd.Test
         private Mock<ILogDAO>logDAO;
 
         private RoomDBContext roomContext;
+        
+        private Mock<IUrlHelperFactory> mockUrlHelperFactory;
+        
+        private Mock<IHttpContextAccessor> mockHttpContextAccessor;
+
+        private Mock<IActionContextAccessor> actionContextAccessor;
+
+        private Mock<IEmailSender> mockEmailSender;
+
+        private Mock<UserAccessor> mockUserAccessor;
+
+        private Mock<IUrlHelper> mockUrlHelper;
 
         public UserServiceTest(TestFixture<Startup> fixture)
         {
@@ -131,7 +146,7 @@ namespace BackEnd.Test
 
 
             //mocking HttpContextAccessor
-            var mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
+            mockHttpContextAccessor = new Mock<IHttpContextAccessor>();
             var HttpContext = new DefaultHttpContext();
             mockHttpContextAccessor.Setup(_ => _.HttpContext).Returns(HttpContext);
 
@@ -177,16 +192,31 @@ namespace BackEnd.Test
             _env.Setup(x => x.ContentRootPath).Returns(Directory.GetCurrentDirectory);
 
 
+            //Mocking UrlHelper
+            mockUrlHelperFactory = new Mock<IUrlHelperFactory>();
+            
+
+
+            //Mockikng ActionContextAccessor
+            actionContextAccessor = new Mock<IActionContextAccessor>();
+
+
+            //Mocking EmailSender
+            mockEmailSender = new Mock<IEmailSender>();
+
+            //Mocking UserAccessor
+            mockUserAccessor = new Mock<UserAccessor>(mockHttpContextAccessor.Object);
+            
             _userService = new Mock<UserService>(
                 context, 
                 mapper, 
                 fakeSignInManager.Object, 
                 fakeUserManager.Object,
-                new UrlHelperFactory(), 
-                new ActionContextAccessor(), 
-                new EmailSender(emailConfig), 
-                _jwtGenerator.Object, 
-                new UserAccessor(mockHttpContextAccessor.Object),
+                mockUrlHelperFactory.Object,
+                actionContextAccessor.Object,
+                mockEmailSender.Object, 
+                _jwtGenerator.Object,
+                mockUserAccessor.Object,
                 userStore.Object,
                 _env.Object,
                 logDAO.Object,
@@ -307,6 +337,7 @@ namespace BackEnd.Test
         [InlineData("1")]
         public async void TestGetById_Return_OkResult(string id)
         { 
+            //Arrange
             var user = new AppUser
             {
                 Email = "GetById@gmail",
@@ -314,66 +345,122 @@ namespace BackEnd.Test
                 EmailConfirmed = true,
                 RefreshTokens = new List<RefreshToken>(),
                 Id = "1",
-                Avatar = "default.png"
+                Avatar = "default.png",
+                DOB = new DateTime(1999,09,29)
             };
 
-            context.Add(user);
+            context.Users.Add(user);
             context.SaveChanges();
-
+            fakeUserManager.Setup(x => x.GetRolesAsync(It.IsAny<AppUser>())).ReturnsAsync(new List<string>() { "student" });
+            
+            
+            
+            
+            //Act
             var data = await _userService.Object.GetById(id);
 
+
+            //Assert
+            var okObjectResult = data as OkObjectResult;
+            var model = okObjectResult.Value as UserInfoResponse;
             Assert.IsType<OkObjectResult>(data);
+            Assert.Equal("1", model.Id);
+            Assert.Equal("GetById@gmail", model.Email);
+            Assert.Equal("GetById", model.UserName);
+            Assert.Contains("api/users/getAvatar?fileName=default.png", model.Avatar);
+            Assert.Equal("student", model.Role);
         }
 
         [Theory]
-        [InlineData("2")]
-        public void TestGetById_Return_NotOkResult(string id)
+        [InlineData("-1")]
+        [InlineData("0")]
+        [InlineData("99")]
+        public async void TestGetById_Return_NotOkResult(string id)
         {
+            //Arrange
             var user = new AppUser
             {
                 Email = "GetById@gmail",
                 UserName = "GetById",
                 EmailConfirmed = true,
                 RefreshTokens = new List<RefreshToken>(),
-                Id = "1"
+                Id = "1",
+                Avatar = "default.png",
+                DOB = new DateTime(1999, 09, 29)
             };
 
-            context.Add(user);
+            context.Users.Add(user);
             context.SaveChanges();
+            fakeUserManager.Setup(x => x.GetRolesAsync(It.IsAny<AppUser>())).ReturnsAsync(new List<string>() { "student" });
 
-            var data = _userService.Object.GetById(id);
 
+
+
+            //Act
+            var data = await _userService.Object.GetById(id);
+
+
+            //Assert
             Assert.IsType<NotFoundObjectResult>(data);
         }
 
 
-        //[Theory]
-        //[MemberData(nameof(RegisterTestCase_ForOK))]
-        //public async void TestRegister_Return_OkResult(RegisterRequest registerRequest, bool expectedOutput, string description)
-        //{
-        //    var user = new AppUser
-        //    {
-        //        Email = registerRequest.Email,
-        //        UserName = registerRequest.Username,
-        //        RefreshTokens = new List<RefreshToken>(),
-        //        Id = Guid.NewGuid().ToString()
-        //    };
+        [Theory]
+        [MemberData(nameof(RegisterTestCase_ForOK))]
+        public async void TestRegister_Return_OkResult(RegisterRequest registerRequest, string description)
+        {
+            //Arrange
+            var user = new AppUser
+            {
+                Email = registerRequest.Email,
+                UserName = registerRequest.UserName,
+                RefreshTokens = new List<RefreshToken>(),
+                Id = Guid.NewGuid().ToString()
+            };
 
-        //    fakeUserManager.Setup(x => x.FindByEmailAsync(user.Email)).Returns(Task.FromResult(users.FirstOrDefault<AppUser>(u => u.Email == user.Email) == null ? null : user));
-        //    fakeUserManager.Setup(x => x.FindByNameAsync(user.UserName)).Returns(Task.FromResult(users.FirstOrDefault<AppUser>(u => u.UserName == user.UserName) == null ? null : user));
+            fakeUserManager.Setup(x => x.FindByEmailAsync(user.Email)).Returns(Task.FromResult(users.FirstOrDefault<AppUser>(u => u.Email == user.Email) == null ? null : user));
+            fakeUserManager.Setup(x => x.FindByNameAsync(user.UserName)).Returns(Task.FromResult(users.FirstOrDefault<AppUser>(u => u.UserName == user.UserName) == null ? null : user));
 
-        //    fakeUserManager.Setup(x => x.CreateAsync(It.IsAny<AppUser>(), It.IsAny<string>()))
-        //    .ReturnsAsync(IdentityResult.Success).Callback<AppUser, string>((x, y) => context.Users.Add(new AppUser {
-        //        Email = x.Email
-        //        }));
+            fakeUserManager.Setup(x => x.CreateAsync(It.IsAny<AppUser>(), It.IsAny<string>()))
+            .ReturnsAsync(IdentityResult.Success).Callback<AppUser, string>((x, y) => context.Users.Add(new AppUser
+            {
+                Email = x.Email
+            }));
+
+            // create url helper mock
+            Type t = typeof(UserServiceTest);
+            var httpContext = new Mock<HttpContext>().Object;
+            actionContextAccessor.Setup(x => x.ActionContext).Returns(new ActionContext(
+                httpContext,
+                new Microsoft.AspNetCore.Routing.RouteData(),
+                new ControllerActionDescriptor()
+                {
+                    MethodInfo = t.GetMethod(nameof(UserServiceTest.TestRegister_Return_OkResult))
+                }));
 
 
-        //    var data = await _userService.Object.Register(registerRequest);
+            mockUrlHelper = new Mock<IUrlHelper>();
+
+            mockUrlHelperFactory.Setup(x => x.GetUrlHelper(It.IsAny<ActionContext>())).Returns(mockUrlHelper.Object);
+            mockUrlHelper.SetupGet(h => h.ActionContext).Returns(actionContextAccessor.Object.ActionContext);
+
+            UrlActionContext actual = null;
+
+            mockUrlHelper.Setup(h => h.Action(It.IsAny<UrlActionContext>()))
+                .Callback((UrlActionContext context) => actual = context);
+
+            fakeUserManager.Setup(x => x.GenerateEmailConfirmationTokenAsync(It.IsAny<AppUser>())).ReturnsAsync("");
+            mockEmailSender.Setup(x => x.SendEmailAsync(It.IsAny<Message>())).Returns(() => Task.FromResult(""));
+            
+            
+            
+            //Act
+            var data = await _userService.Object.Register(registerRequest);
 
 
-
-        //    Assert.IsType<OkObjectResult>(data);
-        //}
+            //Assert
+            Assert.IsType<OkObjectResult>(data);
+        }
 
 
 
@@ -451,7 +538,7 @@ namespace BackEnd.Test
                 var Email = "dathaynha@gmail.com";
                 var Password = "dathaynha1";
                 var RealName = "Ha Quoc Dat";
-                var DOB = "29-09-1999";
+                var DOB = "1999/09/29";
 
                var data = new List<ITheoryDatum>();
 
