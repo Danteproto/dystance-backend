@@ -322,8 +322,62 @@ namespace BackEnd.Test.Services.Test
         [Fact]
         public async void DeleteTeacher_Returns_Correctly()
         {
+            //Arrange
+            var user = new AppUser
+            {
+                Id = "1",
+                UserName = "Test1",
+                Email = "Test1@gmail",
+                Avatar = "default.png",
+                RealName = "Test 1",
+                DOB = new DateTime(2020, 09, 29)
+            };
+
+            var user2 = new AppUser
+            {
+                Id = "2",
+                UserName = "Test2",
+                Email = "Test2@gmail",
+                Avatar = "default.png",
+                RealName = "Test 2",
+                DOB = new DateTime(2020, 02, 29)
+            };
+
+            var user3 = new AppUser
+            {
+                Id = "3",
+                UserName = "Test3",
+                Email = "Test3@gmail",
+                Avatar = "default.png",
+                RealName = "Test 3",
+                DOB = new DateTime(2020, 07, 01)
+            };
 
 
+            List<string> list = new List<string>() { user.Id,user2.Id,user3.Id};
+            fakeUserManager.Setup(x => x.FindByIdAsync(user.Id)).ReturnsAsync(user);
+            fakeUserManager.Setup(x => x.FindByIdAsync(user2.Id)).ReturnsAsync(user2);
+            fakeUserManager.Setup(x => x.FindByIdAsync(user3.Id)).ReturnsAsync(user3);
+            fakeUserManager.Setup(x => x.IsInRoleAsync(It.IsAny<AppUser>(), "teacher")).ReturnsAsync(true);
+
+
+
+            //Act
+            var result = await _teacherService.Object.DeleteTeacher(list);
+            var okObjectResult = result as OkObjectResult;
+            var model = okObjectResult.Value as Dictionary<String, object>;
+            var keys = model.Keys.ToArray();
+            var values = model.Values.ToArray();
+            var emptyList = new List<string>();
+
+            //Assert
+            Assert.Equal(200, okObjectResult.StatusCode);
+            Assert.IsType<OkObjectResult>(okObjectResult);
+            Assert.Equal(2, model.Count);
+            Assert.Equal("success", keys[0].ToString());
+            Assert.Equal("failed", keys[1].ToString());
+            Assert.Equal(list, values[0]);
+            Assert.Equal(emptyList ,values[1]);
 
         }
 
