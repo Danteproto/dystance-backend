@@ -294,5 +294,25 @@ namespace BackEnd.Controllers
         {   
             return await _userService.UpdateAttendanceReports( model);
         }
+
+        [HttpGet("reports/attendance/export")]
+        public async Task<IActionResult> ExportAttendanceReports(string roomId)
+        {
+            var fileInfo =  await _userService.ExportAttendance(roomId);
+            var bytes = System.IO.File.ReadAllBytes(fileInfo.FullName);
+
+            const string contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            HttpContext.Response.ContentType = contentType;
+            HttpContext.Response.Headers.Add("Access-Control-Expose-Headers", "Content-Disposition");
+
+            var fileContentResult = new FileContentResult(bytes, contentType)
+            {
+                FileDownloadName = fileInfo.Name
+            };
+
+            System.IO.File.Delete(fileInfo.FullName);
+
+            return fileContentResult;
+        }
     }
 }

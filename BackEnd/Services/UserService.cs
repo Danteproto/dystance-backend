@@ -29,6 +29,8 @@ using System.Text.RegularExpressions;
 using ExcelDataReader;
 using BackEnd.DBContext;
 using BackEnd.Constant;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
 
 namespace BackEnd.Services
 {
@@ -66,6 +68,7 @@ namespace BackEnd.Services
         public Task<IActionResult> AddAccount(HttpRequest request);
         public Task<IActionResult> GetAttendanceReports(string userId, string semesterId);
         public Task<IActionResult> UpdateAttendanceReports(UpdateAttendanceStudentRequest model);
+        public Task<FileInfo> ExportAttendance(string roomId);
     }
 
     public class UserService : IUserService
@@ -1668,6 +1671,68 @@ namespace BackEnd.Services
 
         }
 
+        public async Task<FileInfo> ExportAttendance(string roomId)
+        {
+            var stream = new MemoryStream();
+            FileInfo fileInfo = new FileInfo("Room"+roomId.ToString()+"AttendanceReports.xlsx");
+            using (ExcelPackage excel = new ExcelPackage(stream))
+            {
+
+                var listTimetable = await (from timetables in _roomDBContext.TimeTable
+                                           where timetables.RoomId.ToString().Contains(roomId)
+                                           select timetables).ToListAsync();
+
+
+                foreach (var timetable in listTimetable)
+                {
+                    var startMinutes = String.Format(timetable.StartTime.Minutes == 0 ? "{0:00}" : "{0:##}", timetable.StartTime.Minutes);
+                    var endMinutes = String.Format(timetable.EndTime.Minutes == 0 ? "{0:00}" : "{0:##}", timetable.EndTime.Minutes);    
+                    var workSheet = excel.Workbook.Worksheets.Add(String.Format("{0} {1}h{2}-{3}h{4}", timetable.Date.ToString("dd-MM-yyyy"), timetable.StartTime.Hours, startMinutes, timetable.EndTime.Hours, endMinutes));
+
+                    //Header of table  
+                    // 
+                    workSheet.Row(1).Height = 20;
+                    workSheet.Row(1).Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                    workSheet.Row(1).Style.Font.Bold = true;
+                    workSheet.Cells[1, 1].Value = "Student Code";
+                    workSheet.Cells[1, 2].Value = "Real Name";
+                    workSheet.Cells[1, 3].Value = "Email";
+                    workSheet.Cells[1, 4].Value = "Status";
+
+                    //Get students from slot
+                    //
+                    var listStudents = await (from students in _context.AttendanceReports
+                                              where students.TimeTableId == timetable.Id
+                                              select students).ToListAsync();
+
+
+                    //Body of table  
+                    //
+                    int recordIndex = 2;
+                    foreach (var student in listStudents)
+                    {
+                        var user = await _userManager.FindByIdAsync(student.UserId);
+                        workSheet.Cells[recordIndex, 1].Value = user.UserName;
+                        workSheet.Cells[recordIndex, 2].Value = user.RealName;
+                        workSheet.Cells[recordIndex, 3].Value = user.Email;
+                        workSheet.Cells[recordIndex, 4].Value = student.Status;
+                        recordIndex++;
+                    }
+
+
+                    //Fit
+                    workSheet.Column(1).AutoFit();
+                    workSheet.Column(2).AutoFit();
+                    workSheet.Column(3).AutoFit();
+                    workSheet.Column(4).AutoFit();
+
+                    
+                    excel.SaveAs(fileInfo);
+                }
+            }
+
+            return fileInfo;
+        }
 
 
     }
