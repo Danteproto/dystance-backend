@@ -1673,8 +1673,9 @@ namespace BackEnd.Services
 
         public async Task<FileInfo> ExportAttendance(string roomId)
         {
+            var room = _roomDBContext.Room.FirstOrDefault(x => x.RoomId.ToString() == roomId);
             var stream = new MemoryStream();
-            FileInfo fileInfo = new FileInfo("Room"+roomId.ToString()+"AttendanceReports.xlsx");
+            FileInfo fileInfo = new FileInfo(room.Subject + "-" + room.ClassName + ".xlsx");
             using (ExcelPackage excel = new ExcelPackage(stream))
             {
 
