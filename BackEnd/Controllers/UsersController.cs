@@ -13,6 +13,9 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using System.Linq;
 using System.Collections.Generic;
+using System.IO;
+using System.Net;
+using System.Net.Http;
 
 namespace BackEnd.Controllers
 {
@@ -26,14 +29,16 @@ namespace BackEnd.Controllers
         private readonly IMapper _mapper;
         private readonly ITeacherService _teacherService;
         private readonly IStudentService _studentService;
+        private readonly IWebHostEnvironment _env;
 
-        public UsersController(IUserService userService, IAuthService authService, IMapper mapper, ITeacherService teacherService, IStudentService studentService)
+        public UsersController(IUserService userService, IAuthService authService, IMapper mapper, ITeacherService teacherService, IStudentService studentService, IWebHostEnvironment environment)
         {
             _userService = userService;
             _authService = authService;
             _mapper = mapper;
             _teacherService = teacherService;
             _studentService = studentService;
+            _env = environment;
         }
 
         [AllowAnonymous]
@@ -294,25 +299,46 @@ namespace BackEnd.Controllers
         {   
             return await _userService.UpdateAttendanceReports( model);
         }
-
         [HttpGet("reports/attendance/export")]
         public async Task<IActionResult> ExportAttendanceReports(string roomId)
         {
-            var fileInfo =  await _userService.ExportAttendance(roomId);
-            var bytes = System.IO.File.ReadAllBytes(fileInfo.FullName);
+            var fileInfo = await _userService.ExportAttendance(roomId);
+            //var bytes = System.IO.File.ReadAllBytes(fileInfo.FullName);
 
-            const string contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-            HttpContext.Response.ContentType = contentType;
-            HttpContext.Response.Headers.Add("Access-Control-Expose-Headers", "Content-Disposition");
+            //const string contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            //HttpContext.Response.ContentType = contentType;
+            //HttpContext.Response.Headers.Add("Access-Control-Expose-Headers", "Content-Disposition");
 
-            var fileContentResult = new FileContentResult(bytes, contentType)
+            //var fileContentResult = new FileContentResult(bytes, contentType)
+            //{
+            //    FileDownloadName = fileInfo.Name
+            //};
+
+            //System.IO.File.Delete(fileInfo.FullName);
+
+            //return fileContentResult;
+
+            string filePath = string.Format("api/users/reports/attendance/getFile?fileName={0}&roomId={1}", fileInfo.Name, roomId);
+            return Ok(new ExportExcelResponse
             {
-                FileDownloadName = fileInfo.Name
-            };
+                RoomId = roomId,
+                Url = filePath
+            });
 
-            System.IO.File.Delete(fileInfo.FullName);
-
-            return fileContentResult;
         }
+
+        [AllowAnonymous]
+        [HttpGet("reports/attendance/getFile")]
+        public async Task<IActionResult> GetExport(string fileName, string roomId)
+        {
+            var rootPath = _env.ContentRootPath;
+            var filePath = Path.Combine(rootPath, $"Files/{roomId}/Exports/" + fileName);
+            var file = System.IO.File.OpenRead(filePath);
+            string contentType;
+            new FileExtensionContentTypeProvider().TryGetContentType(fileName, out contentType);
+            Response.Headers.Add("Content-Disposition", $"attachment; filename={fileName}");
+            return File(file, contentType);
+        }
+
     }
 }

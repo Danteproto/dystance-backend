@@ -1675,7 +1675,13 @@ namespace BackEnd.Services
         {
             var room = _roomDBContext.Room.FirstOrDefault(x => x.RoomId.ToString() == roomId);
             var stream = new MemoryStream();
-            FileInfo fileInfo = new FileInfo(room.Subject + "-" + room.ClassName + ".xlsx");
+            string filePath = String.Format(@"Files/{0}/Exports/", roomId);
+
+                if (!Directory.Exists(filePath))
+            {
+                Directory.CreateDirectory(filePath);
+            }
+            FileInfo fileInfo = new FileInfo(filePath + room.Subject + "-" + room.ClassName + ".xlsx");
             using (ExcelPackage excel = new ExcelPackage(stream))
             {
 
@@ -1728,8 +1734,8 @@ namespace BackEnd.Services
                     workSheet.Column(4).AutoFit();
 
                     
-                    excel.SaveAs(fileInfo);
                 }
+                excel.SaveAs(fileInfo);
             }
 
             return fileInfo;
