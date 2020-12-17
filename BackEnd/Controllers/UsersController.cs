@@ -303,42 +303,42 @@ namespace BackEnd.Controllers
         public async Task<IActionResult> ExportAttendanceReports(string roomId)
         {
             var fileInfo = await _userService.ExportAttendance(roomId);
-            //var bytes = System.IO.File.ReadAllBytes(fileInfo.FullName);
+            var bytes = System.IO.File.ReadAllBytes(fileInfo.FullName);
 
-            //const string contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-            //HttpContext.Response.ContentType = contentType;
-            //HttpContext.Response.Headers.Add("Access-Control-Expose-Headers", "Content-Disposition");
+            const string contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            HttpContext.Response.ContentType = contentType;
+            HttpContext.Response.Headers.Add("Access-Control-Expose-Headers", "Content-Disposition");
 
-            //var fileContentResult = new FileContentResult(bytes, contentType)
-            //{
-            //    FileDownloadName = fileInfo.Name
-            //};
-
-            //System.IO.File.Delete(fileInfo.FullName);
-
-            //return fileContentResult;
-
-            string filePath = string.Format("api/users/reports/attendance/getFile?fileName={0}&roomId={1}", fileInfo.Name, roomId);
-            return Ok(new ExportExcelResponse
+            var fileContentResult = new FileContentResult(bytes, contentType)
             {
-                RoomId = roomId,
-                Url = filePath
-            });
+                FileDownloadName = fileInfo.Name
+            };
+
+            System.IO.File.Delete(fileInfo.FullName);
+
+            return fileContentResult;
+
+            //string filePath = string.Format("api/users/reports/attendance/getFile?fileName={0}&roomId={1}", fileInfo.Name, roomId);
+            //return Ok(new ExportExcelResponse
+            //{
+            //    RoomId = roomId,
+            //    Url = filePath
+            //});
 
         }
 
-        [AllowAnonymous]
-        [HttpGet("reports/attendance/getFile")]
-        public async Task<IActionResult> GetExport(string fileName, string roomId)
-        {
-            var rootPath = _env.ContentRootPath;
-            var filePath = Path.Combine(rootPath, $"Files/{roomId}/Exports/" + fileName);
-            var file = System.IO.File.OpenRead(filePath);
-            string contentType;
-            new FileExtensionContentTypeProvider().TryGetContentType(fileName, out contentType);
-            Response.Headers.Add("Content-Disposition", $"attachment; filename={fileName}");
-            return File(file, contentType);
-        }
+        //[AllowAnonymous]
+        //[HttpGet("reports/attendance/getFile")]
+        //public async Task<IActionResult> GetExport(string fileName, string roomId)
+        //{
+        //    var rootPath = _env.ContentRootPath;
+        //    var filePath = Path.Combine(rootPath, $"Files/{roomId}/Exports/" + fileName);
+        //    var file = System.IO.File.OpenRead(filePath);
+        //    string contentType;
+        //    new FileExtensionContentTypeProvider().TryGetContentType(fileName, out contentType);
+        //    Response.Headers.Add("Content-Disposition", $"attachment; filename={fileName}");
+        //    return File(file, contentType);
+        //}
 
     }
 }
