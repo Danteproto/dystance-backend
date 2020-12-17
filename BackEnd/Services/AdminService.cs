@@ -75,7 +75,7 @@ namespace BackEnd.Services
                         {
                             if (reader.Name == "Quality Assurance") // "Quality Assurance" SHEET
                             {
-                                if (reader.GetValue(0).ToString() == "No")
+                                if (reader.GetValue(0).ToString() == "No" || reader.GetValue(0) == null)
                                 {
                                     continue;
                                 }
@@ -138,7 +138,7 @@ namespace BackEnd.Services
 
                             if (reader.Name == "Academic Management") // "Academic Management" SHEET
                             {
-                                if (reader.GetValue(0).ToString() == "No")
+                                if (reader.GetValue(0).ToString() == "No" || reader.GetValue(0) == null)
                                 {
                                     continue;
                                 }
@@ -314,7 +314,7 @@ namespace BackEnd.Services
                 {
                     if (await _userManager.IsInRoleAsync(user, "academic management") || await _userManager.IsInRoleAsync(user, "quality assurance"))
                     {
-                        if (!(user.UserName == req.Code && user.RealName == req.RealName && user.Email == req.Email && DateTime.Compare(user.DOB, Convert.ToDateTime(req.Dob))==0 && await _userManager.IsInRoleAsync(user, req.Role)))
+                        if (!(user.UserName == req.Code && user.RealName == req.RealName && user.Email == req.Email && DateTime.Compare(user.DOB, Convert.ToDateTime(req.Dob)) == 0 && await _userManager.IsInRoleAsync(user, req.Role)))
                         {
                             //Update Profile
                             if (await _userManager.FindByEmailAsync(req.Email) != null && user.Email != req.Email)
@@ -414,7 +414,7 @@ namespace BackEnd.Services
                     });
                     continue;
                 }
-                
+
                 var listLog = await (from logs in _userContext.UserLog
                                      where logs.UserId.Contains(id)
                                      select logs).ToListAsync();

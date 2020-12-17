@@ -62,7 +62,7 @@ namespace BackEnd.Services
 
                 if (user == null)
                 {
-                    return new NotFoundObjectResult(new { type = 0 ,message = "You need to update your information before proceed", googleName = payload.Name, email = payload.Email });
+                    return new NotFoundObjectResult(new { type = 0 ,message = "Account doesn't exist", googleName = payload.Name, email = payload.Email });
                 }
                 if (!user.EmailConfirmed)
                 {

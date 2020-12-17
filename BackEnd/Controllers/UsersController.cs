@@ -150,7 +150,7 @@ namespace BackEnd.Controllers
             var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
             return await _userService.UpdateProfile(_mapper.Map<UpdateProfileRequest>(reqForm));
         }
-        
+
         [AllowAnonymous]
         [HttpGet("getAvatar")]
         public async Task<IActionResult> GetAvatar(string userName, string fileName, string realName)
@@ -209,7 +209,7 @@ namespace BackEnd.Controllers
                 Formatting = Formatting.Indented
             }));
         }
-        
+
         [AllowAnonymous]
         [HttpGet("chat/getFile")]
         public async Task<IActionResult> PMFile(string Id, string fileName, int type, string realName)
@@ -287,7 +287,7 @@ namespace BackEnd.Controllers
         //    else
         //        return HttpContext.Connection.RemoteIpAddress.MapToIPv4().ToString();
         //}
-        
+
         [HttpGet("reports/attendance")]
         public async Task<IActionResult> GetAttendanceReports(string id, string semesterId)
         {
@@ -296,9 +296,10 @@ namespace BackEnd.Controllers
 
         [HttpPost("reports/attendance/update")]
         public async Task<IActionResult> UpdateAttendanceReports([FromBody] UpdateAttendanceStudentRequest model)
-        {   
-            return await _userService.UpdateAttendanceReports( model);
+        {
+            return await _userService.UpdateAttendanceReports(model);
         }
+
         [HttpGet("reports/attendance/export")]
         public async Task<IActionResult> ExportAttendanceReports(string roomId)
         {
@@ -313,8 +314,6 @@ namespace BackEnd.Controllers
             {
                 FileDownloadName = fileInfo.Name
             };
-
-            System.IO.File.Delete(fileInfo.FullName);
 
             return fileContentResult;
 

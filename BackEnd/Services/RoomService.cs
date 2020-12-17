@@ -365,7 +365,7 @@ namespace BackEnd.Services
                     response.Add(new RoomResponse
                     {
                         RoomId = room.RoomId,
-                        RoomName = room.ClassName + "-" + room.Subject,
+                        RoomName = room.Subject + "-" + room.ClassName,
                         TeacherId = room.CreatorId,
                         Image = room.Image,
                         SemesterId = (int)room.SemesterId

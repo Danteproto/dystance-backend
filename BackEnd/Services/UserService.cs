@@ -1346,7 +1346,7 @@ namespace BackEnd.Services
                         {
                             if (reader.Name == "Students") // "STUDENTS" SHEET
                             {
-                                if (reader.GetValue(0).ToString() == "No")
+                                if (reader.GetValue(0).ToString() == "No" || reader.GetValue(0) == null)
                                 {
                                     continue;
                                 }
@@ -1409,7 +1409,7 @@ namespace BackEnd.Services
 
                             if (reader.Name == "Teachers") // "TEACHERS" SHEET
                             {
-                                if (reader.GetValue(0).ToString() == "No")
+                                if (reader.GetValue(0).ToString() == "No" || reader.GetValue(0) == null)
                                 {
                                     continue;
                                 }
@@ -1675,13 +1675,7 @@ namespace BackEnd.Services
         {
             var room = _roomDBContext.Room.FirstOrDefault(x => x.RoomId.ToString() == roomId);
             var stream = new MemoryStream();
-            string filePath = String.Format(@"Files/{0}/Exports/", roomId);
-
-                if (!Directory.Exists(filePath))
-            {
-                Directory.CreateDirectory(filePath);
-            }
-            FileInfo fileInfo = new FileInfo(filePath + room.Subject + "-" + room.ClassName + ".xlsx");
+            FileInfo fileInfo = new FileInfo(room.Subject + "-" + room.ClassName + ".xlsx");
             using (ExcelPackage excel = new ExcelPackage(stream))
             {
 

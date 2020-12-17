@@ -173,6 +173,7 @@ namespace BackEnd
             services.AddScoped<ISemesterService, SemesterService>();
             services.AddScoped<ITeacherService, TeacherService>();
             services.AddScoped<IStudentService, StudentService>();
+            services.AddScoped<IPublicService, PublicService>();
             services.AddScoped<IAttendanceDAO, AttendanceDAO>();
             services.AddScoped<IAdminService, AdminService>();
             services.AddScoped<IPrivateMessageDAO, PrivateMessageDAO>();
