@@ -163,7 +163,7 @@ namespace BackEnd.Services
                 }
                 try
                 {
-                    if (await _userManager.IsInRoleAsync(user, "Teacher"))
+                    if (await _userManager.IsInRoleAsync(user, "teacher"))
                     {
                         if (!(user.UserName == req.Code && user.RealName == req.RealName && user.Email == req.Email && DateTime.Compare(user.DOB, Convert.ToDateTime(req.Dob)) == 0))
                         {

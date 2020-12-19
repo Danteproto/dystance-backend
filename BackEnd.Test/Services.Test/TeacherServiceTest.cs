@@ -319,8 +319,11 @@ namespace BackEnd.Test.Services.Test
             Assert.Equal(teacherResponses[0].Dob, model.Dob);
         }
 
-        [Fact]
-        public async void DeleteTeacher_Returns_Correctly()
+        [Theory]
+        [InlineData("1")]
+        [InlineData("2")]
+        [InlineData("3")]
+        public async void DeleteTeacher_Returns_Correctly(string id)
         {
             //Arrange
             var user = new AppUser
@@ -369,6 +372,7 @@ namespace BackEnd.Test.Services.Test
             var keys = model.Keys.ToArray();
             var values = model.Values.ToArray();
             var emptyList = new List<string>();
+            var listSuccess = (List<string>)values[0];
 
             //Assert
             Assert.Equal(200, okObjectResult.StatusCode);
@@ -377,9 +381,147 @@ namespace BackEnd.Test.Services.Test
             Assert.Equal("success", keys[0].ToString());
             Assert.Equal("failed", keys[1].ToString());
             Assert.Equal(list, values[0]);
+
+            //check value in dictionary
+            Assert.Equal(user.Id, listSuccess[0]);
+            Assert.Equal(user2.Id, listSuccess[1]);
+            Assert.Equal(user3.Id, listSuccess[2]);
             Assert.Equal(emptyList ,values[1]);
 
         }
+
+        [Fact]
+        public async void UpdateTeacher_Returns_Correctly()
+        {
+            //Arrange
+            var user = new AppUser
+            {
+                Id = "1",
+                UserName = "Test1",
+                Email = "Test1@gmail",
+                Avatar = "default.png",
+                RealName = "Test 1",
+                DOB = new DateTime(2020, 09, 29)
+            };
+
+            var user2 = new AppUser
+            {
+                Id = "2",
+                UserName = "Test2",
+                Email = "Test2@gmail",
+                Avatar = "default.png",
+                RealName = "Test 2",
+                DOB = new DateTime(2020, 02, 29)
+            };
+
+            var user3 = new AppUser
+            {
+                Id = "3",
+                UserName = "Test3",
+                Email = "Test3@gmail",
+                Avatar = "default.png",
+                RealName = "Test 3",
+                DOB = new DateTime(2020, 07, 01)
+            };
+
+
+            List<TeacherRequest> list = new List<TeacherRequest>() {
+                new TeacherRequest{
+                    Id = user.Id,
+                    Code = user.UserName,
+                    Email = user.Email,
+                    RealName = user.RealName,
+                    Dob = user.DOB.ToString("yyyy-MM-dd")
+                },
+                new TeacherRequest{
+                    Id = user2.Id,
+                    Code = user2.UserName,
+                    Email = user2.Email,
+                    RealName = user2.RealName,
+                    Dob = user2.DOB.ToString("yyyy-MM-dd")
+                },
+                new TeacherRequest{
+                    Id = user3.Id,
+                    Code = user3.UserName,
+                    Email = user3.Email,
+                    RealName = user3.RealName,
+                    Dob = user3.DOB.ToString("yyyy-MM-dd")
+                } };
+
+            List<TeacherInfoResponse> listres = new List<TeacherInfoResponse>() {
+                new TeacherInfoResponse{
+                    Id = user.Id,
+                    Code = user.UserName,
+                    Email = user.Email,
+                    RealName = user.RealName,
+                    Dob = user.DOB.ToString("yyyy-MM-dd")
+                },
+                new TeacherInfoResponse{
+                    Id = user2.Id,
+                    Code = user2.UserName,
+                    Email = user2.Email,
+                    RealName = user2.RealName,
+                    Dob = user2.DOB.ToString("yyyy-MM-dd")
+                },
+                new TeacherInfoResponse{
+                    Id = user3.Id,
+                    Code = user3.UserName,
+                    Email = user3.Email,
+                    RealName = user3.RealName,
+                    Dob = user3.DOB.ToString("yyyy-MM-dd")
+                } };
+
+            fakeUserManager.Setup(x => x.FindByIdAsync(user.Id)).ReturnsAsync(user);
+            fakeUserManager.Setup(x => x.FindByIdAsync(user2.Id)).ReturnsAsync(user2);
+            fakeUserManager.Setup(x => x.FindByIdAsync(user3.Id)).ReturnsAsync(user3);
+            fakeUserManager.Setup(x => x.IsInRoleAsync(It.IsAny<AppUser>(), "teacher")).ReturnsAsync(true);
+
+
+
+            //Act
+            var result = await _teacherService.Object.UpdateTeacher(list);
+            var okObjectResult = result as OkObjectResult;
+            var model = okObjectResult.Value as Dictionary<String, object>;
+            var keys = model.Keys.ToArray();
+            var values = model.Values.ToArray();
+
+            var listSuccess = (List<TeacherInfoResponse>)values[0];
+
+            var listFailed = new List<Error>();
+
+            //Assert
+            Assert.Equal(200, okObjectResult.StatusCode);
+            Assert.IsType<OkObjectResult>(okObjectResult);
+            Assert.Equal(2, model.Count);
+            Assert.Equal("success", keys[0].ToString());
+            Assert.Equal("failed", keys[1].ToString());
+            
+            //check response 1
+            Assert.Equal(listres[0].Id , listSuccess[0].Id);
+            Assert.Equal(listres[0].Code, listSuccess[0].Code);
+            Assert.Equal(listres[0].Email, listSuccess[0].Email);
+            Assert.Equal(listres[0].RealName, listSuccess[0].RealName);
+            Assert.Equal(listres[0].Dob, listSuccess[0].Dob);
+
+            //check response 2
+            Assert.Equal(listres[1].Id, listSuccess[1].Id);
+            Assert.Equal(listres[1].Code, listSuccess[1].Code);
+            Assert.Equal(listres[1].Email, listSuccess[1].Email);
+            Assert.Equal(listres[1].RealName, listSuccess[1].RealName);
+            Assert.Equal(listres[1].Dob, listSuccess[1].Dob);
+
+            //check response 3
+            Assert.Equal(listres[2].Id, listSuccess[2].Id);
+            Assert.Equal(listres[2].Code, listSuccess[2].Code);
+            Assert.Equal(listres[2].Email, listSuccess[2].Email);
+            Assert.Equal(listres[2].RealName, listSuccess[2].RealName);
+            Assert.Equal(listres[2].Dob, listSuccess[2].Dob);
+
+            //check list failed = empty
+            Assert.Equal(listFailed, values[1]);
+        }
+
+
 
 
     }
