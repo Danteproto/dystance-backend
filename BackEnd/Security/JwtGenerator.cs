@@ -22,6 +22,7 @@ namespace BackEnd.Security
         public int toSeconds(DateTime second, DateTime first);
         public AuthenticateResponse VerifyAndReturnToken(AppUser appUser);
     }
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
 
     public class JwtGenerator : IJwtGenerator
     {

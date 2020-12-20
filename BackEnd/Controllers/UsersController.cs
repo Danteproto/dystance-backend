@@ -13,12 +13,14 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using System.Linq;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BackEnd.Controllers
 {
     [Authorize]
     [ApiController]
     [Route("api/[controller]")]
+    [ExcludeFromCodeCoverage]
     public class UsersController : ControllerBase
     {
         private IUserService _userService;

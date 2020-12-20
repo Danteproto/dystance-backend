@@ -10,9 +10,11 @@ using Microsoft.AspNetCore.Mvc;
 using System.Net;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BackEnd.Test.DAO.Test
 {
+    
     public class AttendanceDAOTest
     {
         private ConnectionFactory factory;

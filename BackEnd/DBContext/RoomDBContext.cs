@@ -4,9 +4,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using BackEnd.Models;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BackEnd.DBContext
 {
+    [ExcludeFromCodeCoverage]
     public class RoomDBContext:DbContext
     {
         public RoomDBContext(DbContextOptions<RoomDBContext> options): base(options)

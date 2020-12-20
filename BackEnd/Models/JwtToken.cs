@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace BackEnd.Models
 {
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class JwtToken
     {
         public JwtToken(string token, string expireDate, string startDate)

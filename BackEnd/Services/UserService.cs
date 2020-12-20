@@ -28,6 +28,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using ExcelDataReader;
 using BackEnd.DBContext;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BackEnd.Services
 {
@@ -67,6 +68,7 @@ namespace BackEnd.Services
         public Task<IActionResult> UpdateAttendanceReports(UpdateAttendanceStudentRequest model);
     }
 
+    [ExcludeFromCodeCoverage]
     public class UserService : IUserService
     {
         private UserDbContext _context;

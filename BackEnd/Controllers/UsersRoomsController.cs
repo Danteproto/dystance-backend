@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using AutoMapper;
 using BackEnd.Requests;
@@ -11,6 +12,7 @@ namespace BackEnd.Controllers
     [Authorize]
     [Route("api/users")]
     [ApiController]
+    [ExcludeFromCodeCoverage]
     public class UsersRoomsController : ControllerBase
     {
         private readonly IUserRoomService _userRoomService;

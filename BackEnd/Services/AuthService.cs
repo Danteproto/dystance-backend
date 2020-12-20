@@ -26,7 +26,7 @@ namespace BackEnd.Services
         Task<IActionResult> GoogleUpdateInfo( GoogleLoginRequest userView);
 
     }
-
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class AuthService : IAuthService
     {
         private readonly UserManager<AppUser> _userManager;
