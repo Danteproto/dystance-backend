@@ -23,8 +23,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Xunit;
+using static BackEnd.Constant.Log;
 using SignInResult = Microsoft.AspNetCore.Identity.SignInResult;
 
 namespace BackEnd.Test.Services.Test
@@ -864,6 +866,200 @@ namespace BackEnd.Test.Services.Test
         }
 
 
+        [Theory]
+        [InlineData("TestUserId01", "TestSemesterId01")]
+        [InlineData("TestUserId02", "TestSemesterId01")]
+        [InlineData("TestUserId03", "TestSemesterId01")]
+        public async void GetAttendanceReports_Student(string userId, string semesterId)
+        {
+            //Arrange
+            var user = new AppUser
+            {
+                Email = "TestEmailStudent@gmail.com",
+                RefreshTokens = new List<RefreshToken>(),
+                Id = userId,
+                PasswordHash = "testhash"
+            };
+
+            fakeUserManager.Setup(x => x.FindByIdAsync(It.IsAny<string>()))
+                .Returns(Task.FromResult(user));
+            fakeUserManager.Setup(x => x.IsInRoleAsync(It.IsAny<AppUser>(), "student"))
+                .ReturnsAsync(true);
+
+
+
+            //Act
+            var result = _userService.Object.GetAttendanceReports(userId, semesterId);
+
+            //Assert
+            await Assert.IsType<Task<IActionResult>>(result);
+        }
+
+
+        [Theory]
+        [InlineData("TestUserId01", "TestSemesterId01")]
+        [InlineData("TestUserId02", "TestSemesterId01")]
+        [InlineData("TestUserId03", "TestSemesterId01")]
+        public async void GetAttendanceReports_Teacher(string userId, string semesterId)
+        {
+            //Arrange
+            var user = new AppUser
+            {
+                Email = "TestEmailTeacher@gmail.com",
+                RefreshTokens = new List<RefreshToken>(),
+                Id = userId,
+                PasswordHash = "testhash"
+            };
+
+            fakeUserManager.Setup(x => x.FindByIdAsync(It.IsAny<string>()))
+                .Returns(Task.FromResult(user));
+            fakeUserManager.Setup(x => x.IsInRoleAsync(It.IsAny<AppUser>(), "teacher"))
+                .ReturnsAsync(true);
+
+
+
+            //Act
+            var result = _userService.Object.GetAttendanceReports(userId, semesterId);
+
+            //Assert
+            await Assert.IsType<Task<IActionResult>>(result);
+        }
+
+        [Theory]
+        [InlineData("TestUserId01", "TestSemesterId01")]
+        [InlineData("TestUserId02", "TestSemesterId01")]
+        [InlineData("TestUserId03", "TestSemesterId01")]
+        public async void GetAttendanceReports_QA(string userId, string semesterId)
+        {
+            //Arrange
+            var user = new AppUser
+            {
+                Email = "TestEmailQA@gmail.com",
+                RefreshTokens = new List<RefreshToken>(),
+                Id = userId,
+                PasswordHash = "testhash"
+            };
+
+            fakeUserManager.Setup(x => x.FindByIdAsync(It.IsAny<string>()))
+                .Returns(Task.FromResult(user));
+            fakeUserManager.Setup(x => x.IsInRoleAsync(It.IsAny<AppUser>(), "quality assurance"))
+                .ReturnsAsync(true);
+
+
+
+            //Act
+            var result = _userService.Object.GetAttendanceReports(userId, semesterId);
+
+            //Assert
+            await Assert.IsType<Task<IActionResult>>(result);
+        }
+
+        [Theory]
+        [MemberData(nameof(UpdateAttendanceStudentRequest_Valid))]
+        public async void UpdateAttendanceReports_Success(UpdateAttendanceStudentRequest model, string description)
+        {
+            //Arrange
+            var user = new AppUser
+            {
+                Email = "TestEmailQA@gmail.com",
+                RefreshTokens = new List<RefreshToken>(),
+                Id = "TestUserId01",
+                PasswordHash = "testhash"
+            };
+
+            fakeUserManager.Setup(x => x.FindByIdAsync(It.IsAny<string>()))
+                .Returns(Task.FromResult(user));
+            fakeUserManager.Setup(x => x.IsInRoleAsync(It.IsAny<AppUser>(), "academic management"))
+                .ReturnsAsync(true);
+
+
+            //Act
+            var result = _userService.Object.UpdateAttendanceReports(model);
+
+
+            //Assert
+            await Assert.IsType<Task<IActionResult>>(result);
+
+        }
+
+        [Theory]
+        [MemberData(nameof(UpdateAttendanceStudentRequest_Valid))]
+        public async void UpdateAttendanceReports_Failed_Forbidden(UpdateAttendanceStudentRequest model, string description)
+        {
+            //Arrange
+            var user = new AppUser
+            {
+                Email = "TestEmailQA@gmail.com",
+                RefreshTokens = new List<RefreshToken>(),
+                Id = "TestUserId01",
+                PasswordHash = "testhash"
+            };
+
+            fakeUserManager.Setup(x => x.FindByIdAsync(It.IsAny<string>()))
+                .Returns(Task.FromResult(user));
+            fakeUserManager.Setup(x => x.IsInRoleAsync(It.IsAny<AppUser>(), "academic management"))
+                .ReturnsAsync(false);
+
+
+            //Act
+            var result = _userService.Object.UpdateAttendanceReports(model);
+
+
+            //Assert
+            await Assert.IsType<Task<IActionResult>>(result);
+        }
+
+
+        [Theory]
+        [InlineData(LogType.ATTENDANCE_JOIN)]
+        [InlineData(LogType.ATTENDANCE_LEAVE)]
+        [InlineData(LogType.PRIVATE_CHAT_IMAGE)]
+        [InlineData(LogType.PRIVATE_CHAT_FILE)]
+        [InlineData(LogType.PRIVATE_CHAT_MESSAGE)]
+        [InlineData(LogType.ROOM_CHAT_IMAGE)]
+        [InlineData(LogType.ROOM_CHAT_FILE)]
+        [InlineData(LogType.ROOM_CHAT_TEXT)]
+        [InlineData(LogType.KICK)]
+        [InlineData(LogType.MUTE)]
+        [InlineData(LogType.GOT_MUTED)]
+        [InlineData(LogType.TOGGLE_WHITEBOARD)]
+        [InlineData(LogType.REMOTE_CONTROL_PERMISSION)]
+        [InlineData(LogType.REMOTE_CONTROL_ACCEPT)]
+        [InlineData(LogType.REMOTE_CONTROL_REJECT)]
+        [InlineData(LogType.REMOTE_CONTROL_STOP)]
+        [InlineData(LogType.WHITEBOARD_ALLOW)]
+        [InlineData(LogType.WHITEBOARD_DISABLE)]
+        [InlineData(LogType.GROUP_CREATE)]
+        [InlineData(LogType.GROUP_DELETE)]
+        [InlineData(LogType.GROUP_START)]
+        [InlineData(LogType.GROUP_STOP)]
+        [InlineData(LogType.GROUP_JOIN)]
+        [InlineData(LogType.GROUP_LEAVE)]
+        [InlineData(LogType.PRIVATE_CHAT_TEXT)]
+        [InlineData(LogType.SCREEN_SHARE_START)]
+        [InlineData(LogType.SCREEN_SHARE_STOP)]
+        public async void Log_Returns_Correctly(LogType type)
+        {
+
+            //Arrange
+            IFormFile file = new FormFile(
+                new MemoryStream(Encoding.UTF8.GetBytes("This is a dummy file")), 0, 0, "Data", "dummy.txt");
+            var logReq = new LogRequest()
+            {
+                UserId = "",
+                Log = file,
+            };
+
+            //Act
+            var result = _userService.Object.Log(logReq);
+
+
+            //Assert
+
+           await Assert.IsType<Task<IActionResult>>(result);
+        }
+
+
 
 
         #region ObjectĐểTruyềnVào Cho phần MemberData, để truyền vào object Request cho nhanh  
@@ -1071,6 +1267,25 @@ namespace BackEnd.Test.Services.Test
                 return data.ConvertAll(d => d.ToParameterArray());
             }
         }
+
+        
+              public static IEnumerable<object[]> UpdateAttendanceStudentRequest_Valid
+        {
+            get
+            {
+
+                var data = new List<ITheoryDatum>();
+
+                data.Add(TheoryDatum.Factory(new UpdateAttendanceStudentRequest
+                {
+                   Id = "TimeTableId01",
+                   Students = new List<AttendanceStudent>()
+                }, "Success"));
+
+                return data.ConvertAll(d => d.ToParameterArray());
+            }
+        }
+
 
     }
 
