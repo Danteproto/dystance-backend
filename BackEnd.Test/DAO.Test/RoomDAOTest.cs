@@ -149,6 +149,42 @@ namespace BackEnd.Test.DAO.Test
         }
 
         [Fact]
+        public async Task DeleteFail()
+        {
+            var room = new Room()
+            {
+                RoomId = 1,
+                Subject = "testSubject",
+                ClassName = "testName",
+                CreatorId = "testUser",
+                SemesterId = 1
+            };
+
+            var room2 = new Room()
+            {
+                RoomId = 2,
+                Subject = "testSubject",
+                ClassName = "testName",
+                CreatorId = "testUser",
+                SemesterId = 1
+            };
+
+            // Act
+            var result = await RoomDAO.Create(roomContext, room);
+            // Assert
+            Assert.Equal((int)HttpStatusCode.OK, ((ObjectResult)result).StatusCode);
+
+            result = await RoomDAO.Delete(roomContext, room2);
+
+            Assert.Equal((int)HttpStatusCode.InternalServerError, ((ObjectResult)result).StatusCode);
+
+            room = RoomDAO.Get(roomContext, 1);
+
+            Assert.NotNull(room);
+
+        }
+
+        [Fact]
         public async Task GetLastRoom()
         {
             var result = await RoomDAO.Create(roomContext, new Room()
@@ -235,6 +271,7 @@ namespace BackEnd.Test.DAO.Test
             Assert.Equal("testUser", room.CreatorId);
             Assert.Equal(1, room.SemesterId);
         }
+
         [Fact]
         public async Task GetRoomBySemester()
         {
@@ -322,6 +359,28 @@ namespace BackEnd.Test.DAO.Test
             Assert.Equal("testUser", room.CreatorId);
             Assert.Equal(1, room.SemesterId);
         }
+
+        [Fact]
+        public async Task GetGroupByRoom()
+        {
+            var result = await RoomDAO.Create(roomContext, new Room()
+            {
+                RoomId = 1,
+                Subject = "testSubject",
+                ClassName = "testName",
+                CreatorId = "testUser",
+                SemesterId = 1,
+                Group = true,
+                MainRoomId = 1,
+            });
+
+            Assert.Equal((int)HttpStatusCode.OK, ((ObjectResult)result).StatusCode);
+
+            var room = RoomDAO.GetGroupByRoom(roomContext, 1);
+
+            Assert.NotNull(room);
+        }
+
         [Fact]
         public async Task GetRoomByClassSubjectSemetser()
         {
