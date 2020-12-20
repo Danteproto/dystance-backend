@@ -27,6 +27,10 @@ using BackEnd.DAO;
 using System.Text;
 using System.Text.RegularExpressions;
 using ExcelDataReader;
+using BackEnd.Constant;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
+using System.Diagnostics.CodeAnalysis;
 using BackEnd.DBContext;
 using System.Diagnostics.CodeAnalysis;
 
@@ -66,6 +70,7 @@ namespace BackEnd.Services
         public Task<IActionResult> AddAccount(HttpRequest request);
         public Task<IActionResult> GetAttendanceReports(string userId, string semesterId);
         public Task<IActionResult> UpdateAttendanceReports(UpdateAttendanceStudentRequest model);
+        public Task<FileInfo> ExportAttendance(string roomId);
     }
 
     [ExcludeFromCodeCoverage]
@@ -132,10 +137,14 @@ namespace BackEnd.Services
                 if (EmailUtil.CheckIfValid(model.Email))
                 {
                     appUser = await _userManager.FindByEmailAsync(model.Email);
+                    if (appUser == null)
+                    {
+                        return new BadRequestObjectResult(new { type = 0, message = "Email not found!" });
+                    }
                 }
                 else
                 {
-                    return new BadRequestObjectResult(new { type = 0, message = "Email not found!" });
+                    return new BadRequestObjectResult(new { type = 3, message = "Wrong format email!" });
                 }
             }
             else
@@ -362,7 +371,9 @@ namespace BackEnd.Services
             var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(registerUser);
             var confirmationLink = urlHelper.Action("ConfirmEmail", "Users", new { token, email = registerUser.Email }, "https");
-            var message = new Message(new string[] { registerUser.Email }, "Confirmation email link", confirmationLink, null);
+            var content = String.Format(EmailTemplate.HTML_CONTENT, registerUser.Email, registerUser.UserName, "123@123a", confirmationLink);
+
+            var message = new Message(new string[] { registerUser.Email }, "Your Account On DYSTANCE", content, null);
             await _emailSender.SendEmailAsync(message);
             //await _userManager.AddToRoleAsync(user, "Visitor");
 
@@ -399,10 +410,11 @@ namespace BackEnd.Services
             }
 
             var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
-
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
             var confirmationLink = urlHelper.Action("ConfirmEmail", "Users", new { token, email = user.Email }, "https");
-            var message = new Message(new string[] { user.Email }, "Confirmation email link", confirmationLink, null);
+            var content = String.Format(EmailTemplate.HTML_CONTENT, user.Email, user.UserName, "123@123a", confirmationLink);
+
+            var message = new Message(new string[] { user.Email }, "Your Account On DYSTANCE", content, null);
             await _emailSender.SendEmailAsync(message);
 
             return new OkObjectResult(new { message = "Successful" });
@@ -542,6 +554,7 @@ namespace BackEnd.Services
         {
 
             var user = await _userManager.FindByIdAsync(_userAccessor.GetCurrentUserId());
+            var roles = await _userManager.GetRolesAsync(user);
             try
             {
                 //Update Profile
@@ -559,7 +572,7 @@ namespace BackEnd.Services
                 //if avatar is empty, use default
                 if (model.Avatar != null)
                 {
-                    deleteAvatar( user.UserName, user.Avatar);
+                    deleteAvatar(user.UserName, user.Avatar);
                     img = model.Avatar;
                     extension = Path.GetExtension(img.FileName);
 
@@ -606,7 +619,7 @@ namespace BackEnd.Services
                                         Email = user.Email,
                                         Dob = user.DOB.ToString("yyyy-MM-dd"),
                                         Avatar = $"api/users/getAvatar?fileName={user.Avatar}&realName={Path.GetFileName(user.Avatar)}&userName={user.UserName}",
-
+                                        Role = roles[0]
                                     }
                             );
                         }
@@ -640,6 +653,7 @@ namespace BackEnd.Services
                                          Email = user.Email,
                                          Dob = user.DOB.ToString("yyyy-MM-dd"),
                                          Avatar = $"api/users/getAvatar?fileName={user.Avatar}&realName={Path.GetFileName(user.Avatar)}&userName={user.UserName}",
+                                         Role = roles[0]
                                      }
                              );
                 }
@@ -677,13 +691,16 @@ namespace BackEnd.Services
 
         }
 
-        public void deleteAvatar( string userName, string fileName)
+        public void deleteAvatar(string userName, string fileName)
         {
-            string path;
-            var rootPath = _env.ContentRootPath;
-            path = Path.Combine(rootPath, $"Files/Users/{userName}/Images");
-            var filePath = Path.Combine(path, fileName);
-            File.Delete(filePath);
+            if (fileName != "default.png")
+            {
+                string path;
+                var rootPath = _env.ContentRootPath;
+                path = Path.Combine(rootPath, $"Files/Users/{userName}/Images");
+                var filePath = Path.Combine(path, fileName);
+                File.Delete(filePath);
+            }
         }
 
         public async Task<IActionResult> PrivateMessage(HttpRequest request)
@@ -865,8 +882,11 @@ namespace BackEnd.Services
                                                 }
                                                 else
                                                 {
-                                                    attendance.Status = "absent";
-                                                    attendances.Add(attendance);
+                                                    if (attendance.Status != "present")
+                                                    {
+                                                        attendance.Status = "absent";
+                                                        attendances.Add(attendance);
+                                                    }
                                                 }
                                             }
                                             await _attendanceDAO.UpdateAttendance(attendances);
@@ -1326,7 +1346,7 @@ namespace BackEnd.Services
                         {
                             if (reader.Name == "Students") // "STUDENTS" SHEET
                             {
-                                if (reader.GetValue(0).ToString() == "No")
+                                if (reader.GetValue(0).ToString() == "No" || reader.GetValue(0) == null)
                                 {
                                     continue;
                                 }
@@ -1365,8 +1385,13 @@ namespace BackEnd.Services
                                 var result = await _userManager.CreateAsync(user, "123@123a");
 
                                 //Confirm email
+                                var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
                                 var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                                await _userManager.ConfirmEmailAsync(user, token);
+                                var confirmationLink = urlHelper.Action("ConfirmEmail", "Users", new { token, email = user.Email }, "https");
+                                var content = String.Format(EmailTemplate.HTML_CONTENT, reader.GetValue(3).ToString(), reader.GetValue(1).ToString(), "123@123a", confirmationLink);
+
+                                var message = new Message(new string[] { user.Email }, "Your Account On DYSTANCE", content, null);
+                                await _emailSender.SendEmailAsync(message);
 
                                 await _userManager.AddToRoleAsync(user, "Student");
 
@@ -1381,9 +1406,9 @@ namespace BackEnd.Services
                                 });
                             }
 
-                            if (reader.Name == "Teachers") // "TEACHERS" SHEET
+                            else if (reader.Name == "Teachers") // "TEACHERS" SHEET
                             {
-                                if (reader.GetValue(0).ToString() == "No")
+                                if (reader.GetValue(0).ToString() == "No" || reader.GetValue(0) == null)
                                 {
                                     continue;
                                 }
@@ -1419,6 +1444,15 @@ namespace BackEnd.Services
                                 //Create user
                                 var result = await _userManager.CreateAsync(user, "123@123a");
 
+                                //Confirm email
+                                var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
+                                var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                                var confirmationLink = urlHelper.Action("ConfirmEmail", "Users", new { token, email = user.Email }, "https");
+                                var content = String.Format(EmailTemplate.HTML_CONTENT, reader.GetValue(3).ToString(), reader.GetValue(1).ToString(), "123@123a", confirmationLink);
+
+                                var message = new Message(new string[] { user.Email }, "Your Account On DYSTANCE", content, null);
+                                await _emailSender.SendEmailAsync(message);
+
                                 //roleManager.AddUserToRole
                                 await _userManager.AddToRoleAsync(user, "Teacher");
 
@@ -1431,6 +1465,11 @@ namespace BackEnd.Services
                                     Email = user.Email,
                                     Dob = user.DOB.ToString("yyyy-MM-dd")
                                 });
+                            }
+                            else
+                            {
+                                return new BadRequestObjectResult(new { message = "Teacher and student import error: Wrong file format" });
+
                             }
 
                         }
@@ -1511,7 +1550,7 @@ namespace BackEnd.Services
                                                {
                                                    Id = attendances.UserId,
                                                    Status = attendances.Status
-                                               }).ToListAsync();
+                                               }).OrderByDescending(x=>x.Id).ToListAsync();
 
                     listStudent.AddRange(listStudentId);
 
@@ -1563,7 +1602,7 @@ namespace BackEnd.Services
                                                {
                                                    Id = attendances.UserId,
                                                    Status = attendances.Status
-                                               }).ToListAsync();
+                                               }).OrderByDescending(x=>x.Id).ToListAsync();
 
                     listStudent.AddRange(listStudentId);
 
@@ -1636,6 +1675,69 @@ namespace BackEnd.Services
 
         }
 
+        public async Task<FileInfo> ExportAttendance(string roomId)
+        {
+            var room = _roomDBContext.Room.FirstOrDefault(x => x.RoomId.ToString() == roomId);
+            var stream = new MemoryStream();
+            FileInfo fileInfo = new FileInfo(room.Subject + "-" + room.ClassName + ".xlsx");
+            using (ExcelPackage excel = new ExcelPackage(stream))
+            {
+
+                var listTimetable = await (from timetables in _roomDBContext.TimeTable
+                                           where timetables.RoomId.ToString().Contains(roomId)
+                                           select timetables).ToListAsync();
+
+
+                foreach (var timetable in listTimetable)
+                {
+                    var startMinutes = String.Format(timetable.StartTime.Minutes == 0 ? "{0:00}" : "{0:##}", timetable.StartTime.Minutes);
+                    var endMinutes = String.Format(timetable.EndTime.Minutes == 0 ? "{0:00}" : "{0:##}", timetable.EndTime.Minutes);    
+                    var workSheet = excel.Workbook.Worksheets.Add(String.Format("{0} {1}h{2}-{3}h{4}", timetable.Date.ToString("dd-MM-yyyy"), timetable.StartTime.Hours, startMinutes, timetable.EndTime.Hours, endMinutes));
+
+                    //Header of table  
+                    // 
+                    workSheet.Row(1).Height = 20;
+                    workSheet.Row(1).Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                    workSheet.Row(1).Style.Font.Bold = true;
+                    workSheet.Cells[1, 1].Value = "Student Code";
+                    workSheet.Cells[1, 2].Value = "Real Name";
+                    workSheet.Cells[1, 3].Value = "Email";
+                    workSheet.Cells[1, 4].Value = "Status";
+
+                    //Get students from slot
+                    //
+                    var listStudents = await (from students in _context.AttendanceReports
+                                              where students.TimeTableId == timetable.Id
+                                              select students).OrderByDescending(x => x.UserId).ToListAsync();
+
+
+                    //Body of table  
+                    //
+                    int recordIndex = 2;
+                    foreach (var student in listStudents)
+                    {
+                        var user = await _userManager.FindByIdAsync(student.UserId);
+                        workSheet.Cells[recordIndex, 1].Value = user.UserName;
+                        workSheet.Cells[recordIndex, 2].Value = user.RealName;
+                        workSheet.Cells[recordIndex, 3].Value = user.Email;
+                        workSheet.Cells[recordIndex, 4].Value = student.Status;
+                        recordIndex++;
+                    }
+
+
+                    //Fit
+                    workSheet.Column(1).AutoFit();
+                    workSheet.Column(2).AutoFit();
+                    workSheet.Column(3).AutoFit();
+                    workSheet.Column(4).AutoFit();
+
+                    
+                }
+                excel.SaveAs(fileInfo);
+            }
+
+            return fileInfo;
+        }
 
 
     }

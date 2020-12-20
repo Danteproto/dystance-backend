@@ -73,12 +73,13 @@ namespace BackEnd.Services
             SemesterDAO.Create(_roomContext, semester);
             semester = SemesterDAO.GetLast(_roomContext);
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
-            using (var stream = file.OpenReadStream())
+            try
             {
-                using (var reader = ExcelReaderFactory.CreateReader(stream))
+                using (var stream = file.OpenReadStream())
                 {
-                    try
+                    using (var reader = ExcelReaderFactory.CreateReader(stream))
                     {
+
                         do
                         {
                             while (reader.Read()) //Each row of the file
@@ -100,6 +101,11 @@ namespace BackEnd.Services
                                     {
                                         room.ClassName = reader.GetValue(1).ToString();
                                         reader.Read();
+                                    }
+                                    var extRoom = RoomDAO.GetRoomByClassSubjectSemester(_roomContext, room.ClassName, room.Subject, semester.Id);
+                                    if(extRoom!= null)
+                                    {
+                                        throw new Exception("Excel File Error: Class Already Exists");
                                     }
                                     room.StartDate = DateTime.Now;
                                     room.EndDate = DateTime.Now;
@@ -147,7 +153,7 @@ namespace BackEnd.Services
                                 }
 
 
-                                if (reader.Name == "Schedules") // "SCHEDULES" SHEET
+                                else if (reader.Name == "Schedules") // "SCHEDULES" SHEET
                                 {
                                     if (reader.GetValue(0).ToString() == "Date")
                                     {
@@ -163,10 +169,27 @@ namespace BackEnd.Services
                                         StartTime = Convert.ToDateTime(reader.GetValue(1).ToString()).TimeOfDay,
                                         EndTime = Convert.ToDateTime(reader.GetValue(2).ToString()).TimeOfDay,
                                     };
+                                    var userIds = RoomUserLinkDAO.GetRoomLink(_roomContext, schedule.RoomId)
+                                    .Select(item => item.UserId);
+                                    foreach (var id in userIds)
+                                    {
+                                        var roomsList = RoomDAO.GetRoomsByUserId(_roomContext, id);
+                                        foreach (var r in roomsList)
+                                        {
+                                            var rSchedules = TimetableDAO.GetByRoomId(_roomContext, r.RoomId);
+                                            if (rSchedules.Any(item => (item.Date == schedule.Date) &&
+                                             ((item.StartTime <= schedule.EndTime && schedule.EndTime <= item.EndTime) ||
+                                             (item.EndTime >= schedule.StartTime && schedule.StartTime >= item.StartTime) ||
+                                             (item.StartTime > schedule.StartTime && item.EndTime < schedule.EndTime))))
+                                            {
+                                                throw new Exception("User schedule is overlaping");
+                                            }
+                                        }
+                                    }
                                     var result = TimetableDAO.Create(_roomContext, schedule);
                                     schedule = TimetableDAO.GetLast(_roomContext);
-                                    var userIds = RoomUserLinkDAO.GetRoomLink(_roomContext, schedule.RoomId).Select(item => item.UserId);
                                     var attendances = new List<AttendanceReports>();
+                                    userIds = userIds.Where(item => item != room.CreatorId).ToList();
                                     foreach (var userId in userIds)
                                     {
                                         attendances.Add(new AttendanceReports
@@ -178,19 +201,23 @@ namespace BackEnd.Services
                                     }
                                     await _attendanceDAO.CreateAttendance(attendances);
                                 }
+                                else
+                                {
+                                    throw new Exception("Semester import error: Wrong file format");
+                                }
 
                             }
                         } while (reader.NextResult());
                     }
-                    catch (Exception e)
-                    {
-                        await DeleteSemester(new List<string>() { semester.Id.ToString() });
-                        return new BadRequestObjectResult(new { message = e.Message });
-                    }
+
                 }
 
-
                 return new OkObjectResult(semester);
+            }
+            catch (Exception e)
+            {
+                await DeleteSemester(new List<string>() { semester.Id.ToString() });
+                return new BadRequestObjectResult(new { message = e.Message });
             }
 
         }
@@ -209,8 +236,8 @@ namespace BackEnd.Services
                         var roomChats = RoomChatDAO.GetChatByRoomId(_roomContext, room.RoomId);
                         var roomTimetables = TimetableDAO.GetByRoomId(_roomContext, room.RoomId);
                         var groups = RoomDAO.GetGroupByRoom(_roomContext, room.RoomId);
-                        var log = _userContext.UserLog.Where(item => item.RoomId == id).ToList();
-                        foreach(var schedule in roomTimetables)
+                        var log = _userContext.UserLog.Where(item => item.RoomId.Contains(room.RoomId.ToString())).ToList();
+                        foreach (var schedule in roomTimetables)
                         {
                             var attendances = _attendanceDAO.GetAttendanceBySchedule(schedule.Id);
                             await _attendanceDAO.DeleteAttendance(attendances);
@@ -347,7 +374,7 @@ namespace BackEnd.Services
                                     }
 
 
-                                    if (reader.Name == "Schedules") // "SCHEDULES" SHEET
+                                    else if (reader.Name == "Schedules") // "SCHEDULES" SHEET
                                     {
                                         if (reader.GetValue(0).ToString() == "Date")
                                         {
@@ -371,8 +398,42 @@ namespace BackEnd.Services
                                         {
                                             continue;
                                         }
+                                        var userIds = RoomUserLinkDAO.GetRoomLink(_roomContext, schedule.RoomId)
+                                        .Select(item => item.UserId);
+                                        foreach (var id in userIds)
+                                        {
+                                            var roomsList = RoomDAO.GetRoomsByUserId(_roomContext, id);
+                                            foreach (var r in roomsList)
+                                            {
+                                                var rSchedules = TimetableDAO.GetByRoomId(_roomContext, r.RoomId);
+                                                if (rSchedules.Any(item => (item.Date == schedule.Date) &&
+                                                 ((item.StartTime <= schedule.EndTime && schedule.EndTime <= item.EndTime) ||
+                                                 (item.EndTime >= schedule.StartTime && schedule.StartTime >= item.StartTime) ||
+                                                 (item.StartTime > schedule.StartTime && item.EndTime < schedule.EndTime))))
+                                                {
+                                                    throw new Exception("User schedule is overlaping");
+                                                }
+                                            }
+                                        }
                                         var result = TimetableDAO.Create(_roomContext, schedule);
+                                        schedule = TimetableDAO.GetLast(_roomContext);
+                                        var attendances = new List<AttendanceReports>();
+                                        userIds = userIds.Where(item => item != room.CreatorId).ToList();
+                                        foreach (var userId in userIds)
+                                        {
+                                            attendances.Add(new AttendanceReports
+                                            {
+                                                UserId = userId,
+                                                Status = "future",
+                                                TimeTableId = schedule.Id,
+                                            });
+                                        }
+                                        await _attendanceDAO.CreateAttendance(attendances);
 
+                                    }
+                                    else
+                                    {
+                                        throw new Exception("Semester import error: Wrong file format");
                                     }
 
                                 }
@@ -434,9 +495,26 @@ namespace BackEnd.Services
                 {
                     return new BadRequestObjectResult(new { message = "Cannot add overlapping schedule" });
                 }
+                var userIds = RoomUserLinkDAO.GetRoomLink(_roomContext, schedule.RoomId)
+                .Select(item => item.UserId);
+                foreach (var id in userIds)
+                {
+                    var roomsList = RoomDAO.GetRoomsByUserId(_roomContext, id);
+                    foreach (var r in roomsList)
+                    {
+                        var rSchedules = TimetableDAO.GetByRoomId(_roomContext, r.RoomId);
+                        if (rSchedules.Any(item => (item.Date == schedule.Date) &&
+                         ((item.StartTime <= schedule.EndTime && schedule.EndTime <= item.EndTime) ||
+                         (item.EndTime >= schedule.StartTime && schedule.StartTime >= item.StartTime) ||
+                         (item.StartTime > schedule.StartTime && item.EndTime < schedule.EndTime))))
+                        {
+                            return new BadRequestObjectResult(new { message = "User Schedule overlapping!" });
+                        }
+                    }
+                }
                 var result = TimetableDAO.Create(_roomContext, schedule).Result;
                 schedule = TimetableDAO.GetLast(_roomContext);
-                var userIds = RoomUserLinkDAO.GetRoomLink(_roomContext, schedule.RoomId).Select(item => item.UserId);
+                userIds = userIds.Where(item => item != room.CreatorId).ToList();
                 var attendances = new List<AttendanceReports>();
                 foreach (var userId in userIds)
                 {
@@ -464,13 +542,13 @@ namespace BackEnd.Services
         {
             List<Timetable> updateSchedules = new List<Timetable>();
             List<ScheduleRequest> success = new List<ScheduleRequest>();
-            List<string> fail = new List<string>();
+            List<object> fail = new List<object>();
             foreach (var model in models)
             {
                 var room = RoomDAO.GetRoomByClassSubjectSemester(_roomContext, model.@class, model.subject, semesterId);
                 if (room == null)
                 {
-                    fail.Add(model.id);
+                    fail.Add(new { message = "Schedule update error: Class not exist" });
                     continue;
                 }
                 var schedule = new Timetable
@@ -482,16 +560,39 @@ namespace BackEnd.Services
                     EndTime = Convert.ToDateTime(model.endTime).TimeOfDay,
                 };
                 var extSchedules = TimetableDAO.GetByRoomId(_roomContext, room.RoomId);
-                if (extSchedules.Any(item => (item.Date == schedule.Date) &&
+                if (extSchedules.Any(item =>(item.Id != schedule.Id) && (item.Date == schedule.Date) &&
                      ((item.StartTime <= schedule.EndTime && schedule.EndTime <= item.EndTime) ||
                      (item.EndTime >= schedule.StartTime && schedule.StartTime >= item.StartTime) ||
                      (item.StartTime > schedule.StartTime && item.EndTime < schedule.EndTime))))
                 {
-                    fail.Add(model.id);
+                    fail.Add(new { message = "Schedule update error: Schedule overlaping"});
                     continue;
                 }
                 else
                 {
+                    var flag = false;
+                    var userIds = RoomUserLinkDAO.GetRoomLink(_roomContext, schedule.RoomId)
+                    .Select(item => item.UserId);
+                    foreach (var id in userIds)
+                    {
+                        var roomsList = RoomDAO.GetRoomsByUserId(_roomContext, id);
+                        foreach (var r in roomsList)
+                        {
+                            var rSchedules = TimetableDAO.GetByRoomId(_roomContext, r.RoomId);
+                            if (rSchedules.Any(item => (item.Id != schedule.Id) && (item.Date == schedule.Date) &&
+                             ((item.StartTime <= schedule.EndTime && schedule.EndTime <= item.EndTime) ||
+                             (item.EndTime >= schedule.StartTime && schedule.StartTime >= item.StartTime) ||
+                             (item.StartTime > schedule.StartTime && item.EndTime < schedule.EndTime))))
+                            {
+                                fail.Add(new { message="Schedule update error: User's schedule overlaping"});
+                                flag = true;
+                            }
+                        }
+                    }
+                    if (flag)
+                    {
+                        continue;
+                    }
                     foreach (var item in extSchedules)
                     {
                         if (item.Id == schedule.Id)
@@ -572,6 +673,12 @@ namespace BackEnd.Services
             @class = RoomDAO.GetLastRoom(_roomContext);
             @class.Image = $"api/rooms/getImage?roomId={@class.RoomId}&imgName=default.png";
             RoomDAO.UpdateRoom(_roomContext, @class);
+            var teacherLink = new RoomUserLink
+            {
+                UserId = model.teacher,
+                RoomId = @class.RoomId
+            };
+            result = RoomUserLinkDAO.Create(_roomContext, teacherLink);
             if (model.students != null && model.students.Count != 0)
             {
                 foreach (var id in model.students)
@@ -606,13 +713,10 @@ namespace BackEnd.Services
                 var extClass = RoomDAO.GetRoomByClassSubjectSemester(_roomContext, model.@class, model.subject, semesterId);
                 if (extClass != null && extClass.RoomId != Convert.ToInt32(model.id))
                 {
-                    failed.Add($"Class cannot upddate: Update to already exited class!");
+                    failed.Add($"Cannot Update Class: Class Already Exists!");
                     continue;
                 }
-                @class.Subject = model.subject;
-                @class.CreatorId = model.teacher;
-                @class.ClassName = model.@class;
-                RoomDAO.UpdateRoom(_roomContext, @class);
+                
                 var listUserIds = model.students;
                 listUserIds.Add(model.teacher);
                 var extLinkUserIds = RoomUserLinkDAO.GetRoomLink(_roomContext, @class.RoomId)
@@ -620,6 +724,31 @@ namespace BackEnd.Services
                 var deleteUserIds = extLinkUserIds.Except(listUserIds).ToList();
                 var addUserIds = listUserIds.Except(extLinkUserIds).ToList();
 
+                var schedules = TimetableDAO.GetByRoomId(_roomContext, @class.RoomId);
+                var flag = false;
+                foreach (var id in addUserIds)
+                {
+                    var roomsList = RoomDAO.GetRoomsByUserId(_roomContext, id);
+                    foreach (var r in roomsList)
+                    {
+                        foreach (var schedule in schedules)
+                        {
+                            var rSchedules = TimetableDAO.GetByRoomId(_roomContext, r.RoomId);
+                            if (rSchedules.Any(item => (item.Date == schedule.Date) &&
+                             ((item.StartTime <= schedule.EndTime && schedule.EndTime <= item.EndTime) ||
+                             (item.EndTime >= schedule.StartTime && schedule.StartTime >= item.StartTime) ||
+                             (item.StartTime > schedule.StartTime && item.EndTime < schedule.EndTime))))
+                            {
+                                failed.Add($"Cannot Update Class: User Schedule Overlapping!");
+                                flag = true;
+                            }
+                        }
+                    }
+                }
+                if (flag)
+                {
+                    continue;
+                }
                 var deleteLinks = deleteUserIds.Select(item => RoomUserLinkDAO.GetRoomUserLink(_roomContext, @class.RoomId, item)).ToList();
 
                 var addLinks = addUserIds.Select(item => new RoomUserLink
@@ -627,19 +756,21 @@ namespace BackEnd.Services
                     UserId = item,
                     RoomId = @class.RoomId
                 }).ToList();
-                var schedules = TimetableDAO.GetByRoomId(_roomContext, @class.RoomId);
                 var addAttendance = new List<AttendanceReports>();
                 var delAttendance = new List<AttendanceReports>();
                 foreach (var schedule in schedules)
                 {
                     foreach (var userId in addUserIds)
                     {
-                        addAttendance.Add(new AttendanceReports
+                        if (userId != @class.CreatorId)
                         {
-                            UserId = userId,
-                            TimeTableId = schedule.Id,
-                            Status = "future"
-                        });
+                            addAttendance.Add(new AttendanceReports
+                            {
+                                UserId = userId,
+                                TimeTableId = schedule.Id,
+                                Status = "future"
+                            });
+                        }
                     }
                     foreach (var userId in deleteUserIds)
                     {
@@ -654,7 +785,10 @@ namespace BackEnd.Services
                 await _attendanceDAO.CreateAttendance(addAttendance);
                 await RoomUserLinkDAO.Create(_roomContext, addLinks);
                 await RoomUserLinkDAO.Delete(_roomContext, deleteLinks);
-
+                @class.Subject = model.subject;
+                @class.CreatorId = model.teacher;
+                @class.ClassName = model.@class;
+                RoomDAO.UpdateRoom(_roomContext, @class);
                 result.Add(new ClassResponse
                 {
                     id = @class.RoomId.ToString(),
@@ -681,15 +815,17 @@ namespace BackEnd.Services
                 if (room != null)
                 {
                     var roomUserLinks = RoomUserLinkDAO.GetRoomLink(_roomContext, room.RoomId);
+                    var links = roomUserLinks.Where(link => link.UserId != room.CreatorId).Select(link => link.UserId).ToList();
                     var roomChats = RoomChatDAO.GetChatByRoomId(_roomContext, room.RoomId);
                     var roomTimetables = TimetableDAO.GetByRoomId(_roomContext, room.RoomId);
                     var groups = RoomDAO.GetGroupByRoom(_roomContext, room.RoomId);
                     var log = _userContext.UserLog.Where(item => item.RoomId == id).ToList();
-                    if(roomUserLinks.Count >0 || roomTimetables.Count >0)
+                    if (links.Count > 0 || roomTimetables.Count > 0)
                     {
                         failed.Add(id);
                         continue;
                     }
+                    await RoomUserLinkDAO.Delete(_roomContext, roomUserLinks);
                     await _logDAO.DeleteLogs(log);
                     await RoomChatDAO.DeleteRoomChat(_roomContext, roomChats);
                     foreach (var group in groups)

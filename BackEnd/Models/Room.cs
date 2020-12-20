@@ -9,7 +9,9 @@ namespace BackEnd.Models
     [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class Room
     {
+        [Key]
         public int RoomId { get; set; }
+        [Required]
         public string Subject { get; set; }
         public string? ClassName { get; set; }
         public string? CreatorId { get; set; }

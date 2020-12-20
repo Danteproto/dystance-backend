@@ -16,12 +16,10 @@ namespace BackEnd.Controllers
     public class UsersRoomsController : ControllerBase
     {
         private readonly IUserRoomService _userRoomService;
-        private readonly IMapper _mapper;
 
-        public UsersRoomsController(IUserRoomService userRoomService , IMapper mapper)
+        public UsersRoomsController(IUserRoomService userRoomService )
         {
             _userRoomService = userRoomService;
-            _mapper = mapper;
         }
 
         [HttpGet("timetable")]

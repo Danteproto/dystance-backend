@@ -30,7 +30,7 @@ namespace BackEnd.Controllers
             return await _adminService.AddAccount(Request);
         }
         [HttpGet("accounts")]
-        public async Task<IActionResult> GetAllTeacher()
+        public async Task<IActionResult> GetAll()
         {
             return await _adminService.GetAccounts();
         }

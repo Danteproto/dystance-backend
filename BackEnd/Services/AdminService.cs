@@ -1,12 +1,16 @@
-﻿using BackEnd.Context;
+﻿using BackEnd.Constant;
+using BackEnd.Context;
 using BackEnd.DAO;
 using BackEnd.Models;
 using BackEnd.Requests;
 using BackEnd.Responses;
+using EmailService;
 using ExcelDataReader;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -31,18 +35,27 @@ namespace BackEnd.Services
         private readonly ILogDAO _logDAO;
         private readonly IPrivateMessageDAO _privateMessageDAO;
         private readonly IAttendanceDAO _attendanceDAO;
+        private readonly IEmailSender _emailSender;
+        private readonly IUrlHelperFactory _urlHelperFactory;
+        private readonly IActionContextAccessor _actionContextAccessor;
 
         public AdminService(UserManager<AppUser> userManager,
             UserDbContext usercontext,
             ILogDAO logDAO,
             IPrivateMessageDAO privateMessageDAO,
-            IAttendanceDAO attendanceDAO)
+            IAttendanceDAO attendanceDAO,
+            IEmailSender emailSender,
+            IUrlHelperFactory urlHelperFactory,
+            IActionContextAccessor actionContextAccessor)
         {
             _userManager = userManager;
             _userContext = usercontext;
             _logDAO = logDAO;
             _privateMessageDAO = privateMessageDAO;
             _attendanceDAO = attendanceDAO;
+            _emailSender = emailSender;
+            _urlHelperFactory = urlHelperFactory;
+            _actionContextAccessor = actionContextAccessor;
         }
 
 
@@ -62,7 +75,7 @@ namespace BackEnd.Services
                         {
                             if (reader.Name == "Quality Assurance") // "Quality Assurance" SHEET
                             {
-                                if (reader.GetValue(0).ToString() == "No")
+                                if (reader.GetValue(0).ToString() == "No" || reader.GetValue(0) == null)
                                 {
                                     continue;
                                 }
@@ -100,8 +113,13 @@ namespace BackEnd.Services
                                 var result = await _userManager.CreateAsync(user, "123@123a");
 
                                 //Confirm email
+                                var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
                                 var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                                await _userManager.ConfirmEmailAsync(user, token);
+                                var confirmationLink = urlHelper.Action("ConfirmEmail", "Users", new { token, email = user.Email }, "https");
+                                var content = String.Format(EmailTemplate.HTML_CONTENT, reader.GetValue(3).ToString(), reader.GetValue(1).ToString(), "123@123a", confirmationLink);
+
+                                var message = new Message(new string[] { user.Email }, "Your Account On DYSTANCE", content, null);
+                                await _emailSender.SendEmailAsync(message);
 
                                 //roleManager.AddUserToRole
                                 await _userManager.AddToRoleAsync(user, "quality assurance");
@@ -118,9 +136,9 @@ namespace BackEnd.Services
                                 });
                             }
 
-                            if (reader.Name == "Academic Management") // "Academic Management" SHEET
+                            else if (reader.Name == "Academic Management") // "Academic Management" SHEET
                             {
-                                if (reader.GetValue(0).ToString() == "No")
+                                if (reader.GetValue(0).ToString() == "No" || reader.GetValue(0) == null)
                                 {
                                     continue;
                                 }
@@ -143,6 +161,15 @@ namespace BackEnd.Services
                                 //Create user
                                 var result = await _userManager.CreateAsync(user, "123@123a");
 
+                                //Confirm email
+                                var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
+                                var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                                var confirmationLink = urlHelper.Action("ConfirmEmail", "Users", new { token, email = user.Email }, "https");
+                                var content = String.Format(EmailTemplate.HTML_CONTENT, reader.GetValue(3).ToString(), reader.GetValue(1).ToString(), "123@123a", confirmationLink);
+
+                                var message = new Message(new string[] { user.Email }, "Your Account On DYSTANCE", content, null);
+                                await _emailSender.SendEmailAsync(message);
+
                                 //roleManager.AddUserToRole
                                 await _userManager.AddToRoleAsync(user, "academic management");
 
@@ -156,6 +183,10 @@ namespace BackEnd.Services
                                     Dob = user.DOB.ToString("yyyy-MM-dd"),
                                     Role = "academic management"
                                 });
+                            }
+                            else
+                            {
+                                return new BadRequestObjectResult(new { message = "QA and AM import error: Wrong file format" });
                             }
 
                         }
@@ -245,8 +276,14 @@ namespace BackEnd.Services
                 return internalErr;
             }
 
+            //Confirm email
+            var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(registerUser);
-            await _userManager.ConfirmEmailAsync(registerUser, token);
+            var confirmationLink = urlHelper.Action("ConfirmEmail", "Users", new { token, email = registerUser.Email }, "https");
+            var content = String.Format(EmailTemplate.HTML_CONTENT, model.Email, model.Code, "123@123a", confirmationLink);
+
+            var message = new Message(new string[] { registerUser.Email }, "Your Account On DYSTANCE", content, null);
+            await _emailSender.SendEmailAsync(message);
 
 
             await _userManager.AddToRoleAsync(registerUser, model.Role);
@@ -281,7 +318,7 @@ namespace BackEnd.Services
                 {
                     if (await _userManager.IsInRoleAsync(user, "academic management") || await _userManager.IsInRoleAsync(user, "quality assurance"))
                     {
-                        if (!(user.UserName == req.Code && user.RealName == req.RealName && user.Email == req.Email && DateTime.Compare(user.DOB, Convert.ToDateTime(req.Dob))==0 && await _userManager.IsInRoleAsync(user, req.Role)))
+                        if (!(user.UserName == req.Code && user.RealName == req.RealName && user.Email == req.Email && DateTime.Compare(user.DOB, Convert.ToDateTime(req.Dob)) == 0 && await _userManager.IsInRoleAsync(user, req.Role)))
                         {
                             //Update Profile
                             if (await _userManager.FindByEmailAsync(req.Email) != null && user.Email != req.Email)
@@ -331,7 +368,7 @@ namespace BackEnd.Services
                         else
                         {
 
-                            return new ObjectResult(new { type = 3, code = resultUpdate.Errors.ToList()[0].Code, description = resultUpdate.Errors.ToList()[0].Description })
+                            return new ObjectResult(new { type = 3, code = resultUpdate.Errors.ToList()[0].Code, message = resultUpdate.Errors.ToList()[0].Description })
                             {
                                 StatusCode = 500
                             };
@@ -381,7 +418,7 @@ namespace BackEnd.Services
                     });
                     continue;
                 }
-                
+
                 var listLog = await (from logs in _userContext.UserLog
                                      where logs.UserId.Contains(id)
                                      select logs).ToListAsync();

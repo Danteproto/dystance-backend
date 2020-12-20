@@ -8,7 +8,6 @@
 
   <ItemGroup>
     <Folder Include="Migrations\" />
-    <Folder Include="Controllers\" />
     <Folder Include="DBContext\" />
     <Folder Include="DAO\" />
   </ItemGroup>
@@ -20,6 +19,7 @@
   <ItemGroup>
     <PackageReference Include="AspNetCore.IServiceCollection.AddIUrlHelper" Version="1.1.0" />
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="8.0.1" />
+    <PackageReference Include="EPPlus.Core" Version="1.5.4" />
     <PackageReference Include="ExcelDataReader" Version="3.6.0" />
     <PackageReference Include="Google.Apis.Auth" Version="1.49.0" />
     <PackageReference Include="MailKit" Version="2.8.0" />
@@ -39,6 +39,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="3.1.7" />
     <PackageReference Include="MimeKit" Version="2.9.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="3.1.8" />

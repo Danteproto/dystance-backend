@@ -11,10 +11,10 @@ namespace BackEnd.Responses
     {
         public int RoomId { get; set; }
         public string RoomName { get; set; }
-        public string CreatorId { get; set; }
+        public string TeacherId { get; set; }
         public string Image { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
-        public string RoomTimes { get; set; }
+        public int SemesterId { get; set; }
     }
 }

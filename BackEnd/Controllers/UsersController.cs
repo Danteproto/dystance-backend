@@ -13,6 +13,9 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using System.Linq;
 using System.Collections.Generic;
+using System.IO;
+using System.Net;
+using System.Net.Http;
 using System.Diagnostics.CodeAnalysis;
 
 namespace BackEnd.Controllers
@@ -28,14 +31,16 @@ namespace BackEnd.Controllers
         private readonly IMapper _mapper;
         private readonly ITeacherService _teacherService;
         private readonly IStudentService _studentService;
+        private readonly IWebHostEnvironment _env;
 
-        public UsersController(IUserService userService, IAuthService authService, IMapper mapper, ITeacherService teacherService, IStudentService studentService)
+        public UsersController(IUserService userService, IAuthService authService, IMapper mapper, ITeacherService teacherService, IStudentService studentService, IWebHostEnvironment environment)
         {
             _userService = userService;
             _authService = authService;
             _mapper = mapper;
             _teacherService = teacherService;
             _studentService = studentService;
+            _env = environment;
         }
 
         [AllowAnonymous]
@@ -146,7 +151,7 @@ namespace BackEnd.Controllers
             var reqForm = Extensions.DictionaryToPascal(Request.Form.GetFormParameters());
             return await _userService.UpdateProfile(_mapper.Map<UpdateProfileRequest>(reqForm));
         }
-        
+
         [AllowAnonymous]
         [HttpGet("getAvatar")]
         public async Task<IActionResult> GetAvatar(string userName, string fileName, string realName)
@@ -205,7 +210,7 @@ namespace BackEnd.Controllers
                 Formatting = Formatting.Indented
             }));
         }
-        
+
         [AllowAnonymous]
         [HttpGet("chat/getFile")]
         public async Task<IActionResult> PMFile(string Id, string fileName, int type, string realName)
@@ -276,7 +281,6 @@ namespace BackEnd.Controllers
         {
             return await _userService.AddAccount(Request);
         }
-        
         [HttpGet("reports/attendance")]
         public async Task<IActionResult> GetAttendanceReports(string id, string semesterId)
         {
@@ -285,8 +289,48 @@ namespace BackEnd.Controllers
 
         [HttpPost("reports/attendance/update")]
         public async Task<IActionResult> UpdateAttendanceReports([FromBody] UpdateAttendanceStudentRequest model)
-        {   
-            return await _userService.UpdateAttendanceReports( model);
+        {
+            return await _userService.UpdateAttendanceReports(model);
         }
+
+        [HttpGet("reports/attendance/export")]
+        public async Task<IActionResult> ExportAttendanceReports(string roomId)
+        {
+            var fileInfo = await _userService.ExportAttendance(roomId);
+            var bytes = System.IO.File.ReadAllBytes(fileInfo.FullName);
+
+            const string contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            HttpContext.Response.ContentType = contentType;
+            HttpContext.Response.Headers.Add("Access-Control-Expose-Headers", "Content-Disposition");
+
+            var fileContentResult = new FileContentResult(bytes, contentType)
+            {
+                FileDownloadName = fileInfo.Name
+            };
+
+            return fileContentResult;
+
+            //string filePath = string.Format("api/users/reports/attendance/getFile?fileName={0}&roomId={1}", fileInfo.Name, roomId);
+            //return Ok(new ExportExcelResponse
+            //{
+            //    RoomId = roomId,
+            //    Url = filePath
+            //});
+
+        }
+
+        //[AllowAnonymous]
+        //[HttpGet("reports/attendance/getFile")]
+        //public async Task<IActionResult> GetExport(string fileName, string roomId)
+        //{
+        //    var rootPath = _env.ContentRootPath;
+        //    var filePath = Path.Combine(rootPath, $"Files/{roomId}/Exports/" + fileName);
+        //    var file = System.IO.File.OpenRead(filePath);
+        //    string contentType;
+        //    new FileExtensionContentTypeProvider().TryGetContentType(fileName, out contentType);
+        //    Response.Headers.Add("Content-Disposition", $"attachment; filename={fileName}");
+        //    return File(file, contentType);
+        //}
+
     }
 }
