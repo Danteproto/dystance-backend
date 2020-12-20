@@ -69,21 +69,20 @@ namespace BackEnd.Services
         {
             var listUserId = await _userManager.GetUsersInRoleAsync("teacher");
             var listTeacher = new List<TeacherInfoResponse>();
-
-            foreach (var user in listUserId)
+            if (listUserId != null)
             {
-
-                listTeacher.Add(new TeacherInfoResponse
+                foreach (var user in listUserId)
                 {
-                    Id = user.Id,
-                    Code = user.UserName,
-                    Email = user.Email,
-                    RealName = user.RealName,
-                    Dob = String.Format("{0:yyyy-MM-dd}", Convert.ToDateTime(user.DOB))
-                });
 
-
-
+                    listTeacher.Add(new TeacherInfoResponse
+                    {
+                        Id = user.Id,
+                        Code = user.UserName,
+                        Email = user.Email,
+                        RealName = user.RealName,
+                        Dob = String.Format("{0:yyyy-MM-dd}", Convert.ToDateTime(user.DOB))
+                    });
+                }
             }
 
             return new OkObjectResult(listTeacher);
@@ -186,30 +185,31 @@ namespace BackEnd.Services
                             user.RealName = req.RealName;
                             user.DOB = Convert.ToDateTime(req.Dob);
                             user.Email = req.Email;
-                        }
 
 
-                        var resultUpdate = await _userManager.UpdateAsync(user);
-                        if (resultUpdate.Succeeded)
-                        {
-                            response.Add(new TeacherInfoResponse
+
+                            var resultUpdate = await _userManager.UpdateAsync(user);
+                            if (resultUpdate.Succeeded)
                             {
-                                Id = user.Id,
-                                Code = user.UserName,
-                                RealName = user.RealName,
-                                Email = user.Email,
-                                Dob = user.DOB.ToString("yyyy-MM-dd")
-                            });
-                        }
-                        else
-                        {
-
-                            return new ObjectResult(new { type = 3, code = resultUpdate.Errors.ToList()[0].Code, message = resultUpdate.Errors.ToList()[0].Description })
+                                response.Add(new TeacherInfoResponse
+                                {
+                                    Id = user.Id,
+                                    Code = user.UserName,
+                                    RealName = user.RealName,
+                                    Email = user.Email,
+                                    Dob = user.DOB.ToString("yyyy-MM-dd")
+                                });
+                            }
+                            else
                             {
-                                StatusCode = 500
-                            };
-                        }
 
+                                return new ObjectResult(new { type = 3, code = resultUpdate.Errors.ToList()[0].Code, message = resultUpdate.Errors.ToList()[0].Description })
+                                {
+                                    StatusCode = 500
+                                };
+                            }
+
+                        }
                     }
                 }
                 catch (Exception ex)

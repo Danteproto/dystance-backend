@@ -13,12 +13,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Routing;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Moq;
 using System;
 using System.Collections.Generic;
-using System.Data.Entity.Infrastructure;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -26,17 +24,15 @@ using Xunit;
 
 namespace BackEnd.Test.Services.Test
 {
-    public class TeacherServiceTest
+    public class AdminServiceTest
     {
         private Mock<FakeUserManager> fakeUserManager;
 
         private UserDbContext _userContext;
 
-        private RoomDBContext _roomContext;
-
         private ConnectionFactory factory;
 
-        private Mock<TeacherService> _teacherService;
+        private Mock<AdminService> _adminService;
 
         private IQueryable<AppUser> users;
 
@@ -52,7 +48,7 @@ namespace BackEnd.Test.Services.Test
 
         private Mock<IUrlHelper> mockUrlHelper;
 
-        public TeacherServiceTest()
+        public AdminServiceTest()
         {
             //setting up context
             factory = new ConnectionFactory();
@@ -61,20 +57,15 @@ namespace BackEnd.Test.Services.Test
             _userContext.Database.EnsureCreated();
             _userContext.SaveChanges();
 
-            _roomContext = factory.CreateRoomDbContextForInMemory();
-            _roomContext.Database.EnsureDeleted();
-            _roomContext.Database.EnsureCreated();
-            _roomContext.SaveChanges();
-
             //mocking user manager
             fakeUserManager = new Mock<FakeUserManager>();
 
             fakeUserManager.Setup(x => x.DeleteAsync(It.IsAny<AppUser>()))
             .ReturnsAsync(IdentityResult.Success);
             fakeUserManager.Setup(x => x.CreateAsync(It.IsAny<AppUser>(), It.IsAny<string>()))
-                .ReturnsAsync(IdentityResult.Success);
+                    .ReturnsAsync(IdentityResult.Success);
             fakeUserManager.Setup(x => x.UpdateAsync(It.IsAny<AppUser>()))
-            .ReturnsAsync(IdentityResult.Success);
+                .ReturnsAsync(IdentityResult.Success);
 
             //MockLogDAO
             var logDAO = new Mock<ILogDAO>();
@@ -134,20 +125,19 @@ namespace BackEnd.Test.Services.Test
             var privateDAO = new Mock<IPrivateMessageDAO>();
             privateDAO.Setup(x => x.DeletePrivateMessages(It.IsAny<List<PrivateMessage>>())).ReturnsAsync(new OkObjectResult(""));
 
-            _teacherService = new Mock<TeacherService>(
-                _userContext,
+            _adminService = new Mock<AdminService>(
                 fakeUserManager.Object,
-                _roomContext,
+                _userContext,
                 logDAO.Object,
-                attendanceDAO.Object,
                 privateDAO.Object,
+                attendanceDAO.Object,
                 mockEmailSender.Object,
                 mockUrlHelperFactory.Object,
                 actionContextAccessor.Object);
         }
 
         [Fact]
-        public async void GetTeacher_Returns_Correctly()
+        public async void GetAdmin_Returns_Correctly()
         {
             //Arrange
             var user = new AppUser
@@ -170,30 +160,37 @@ namespace BackEnd.Test.Services.Test
                 DOB = new DateTime(2020, 02, 29)
             };
 
-            var teacherResponses = new List<TeacherInfoResponse>()
+            var teacherResponses = new List<AdminInfoResponse>()
             {
-                new TeacherInfoResponse{
+                new AdminInfoResponse{
                     Id = user.Id,
                     Code = user.UserName,
                     Email = user.Email,
                     RealName = user.RealName,
-                    Dob = String.Format("{0:yyyy-MM-dd}", Convert.ToDateTime(user.DOB))
+                    Dob = String.Format("{0:yyyy-MM-dd}", Convert.ToDateTime(user.DOB)),
+                    Role = "quality assurance"
                 },
-                new TeacherInfoResponse{
+                new AdminInfoResponse{
                     Id = user2.Id,
                     Code = user2.UserName,
                     Email = user2.Email,
                     RealName = user2.RealName,
-                    Dob = String.Format("{0:yyyy-MM-dd}", Convert.ToDateTime(user2.DOB))
+                    Dob = String.Format("{0:yyyy-MM-dd}", Convert.ToDateTime(user2.DOB)),
+                    Role = "academic management"
                 }
             };
 
-            fakeUserManager.Setup(x => x.GetUsersInRoleAsync(It.IsAny<string>())).ReturnsAsync(new List<AppUser>() { user, user2 });
+            List<AppUser> list = new List<AppUser>() { user, user2};
+
+            fakeUserManager.Setup(x => x.IsInRoleAsync(It.IsAny<AppUser>(), "quality assurance")).ReturnsAsync(true);
+            _userContext.Users.AddRange(list);
+            await _userContext.SaveChangesAsync();
+            var check = _userContext.Users.ToList();
 
             //Act
-            var result = await _teacherService.Object.GetTeacher();
+            var result = await _adminService.Object.GetAccounts();
             var okObjectResult = result as OkObjectResult;
-            var model = okObjectResult.Value as List<TeacherInfoResponse>;
+            var model = okObjectResult.Value as List<AdminInfoResponse>;
 
 
             //Assert
@@ -220,16 +217,16 @@ namespace BackEnd.Test.Services.Test
         }
 
         [Fact]
-        public async void GetTeacher_Returns_Fail()
+        public async void GetAdminReturns_Fail()
         {
             //Arrange
 
             //fakeUserManager.Setup(x => x.GetUsersInRoleAsync(It.IsAny<string>())).ReturnsAsync(new List<AppUser>() { user, user2 });
 
             //Act
-            var result = await _teacherService.Object.GetTeacher();
+            var result = await _adminService.Object.GetAccounts();
             var okObjectResult = result as OkObjectResult;
-            var model = okObjectResult.Value as List<TeacherInfoResponse>;
+            var model = okObjectResult.Value as List<AdminInfoResponse>;
 
 
             //Assert
@@ -245,7 +242,7 @@ namespace BackEnd.Test.Services.Test
         [InlineData("2")]
         [InlineData("3")]
         [InlineData("4")]
-        public async void AddTeacher_Returns_Correctly(string id)
+        public async void AddAdmin_Returns_Correctly(string id)
         {
             //Arrange
             var user = new AppUser
@@ -259,7 +256,7 @@ namespace BackEnd.Test.Services.Test
             };
 
 
-            var teacherRequest = new TeacherRequest
+            var adminRequest = new AdminRequest
             {
                 Id = user.Id,
                 Code = user.UserName,
@@ -268,14 +265,14 @@ namespace BackEnd.Test.Services.Test
                 Dob = "2020-09-29"
             };
 
-            var teacherResponses = new List<TeacherInfoResponse>()
+            var teacherResponses = new List<AdminInfoResponse>()
             {
-                new TeacherInfoResponse{
-                    Id = teacherRequest.Id,
-                    Code = teacherRequest.Code,
-                    Email = teacherRequest.Email,
-                    RealName = teacherRequest.RealName,
-                    Dob = teacherRequest.Dob
+                new AdminInfoResponse{
+                    Id = adminRequest.Id,
+                    Code = adminRequest.Code,
+                    Email = adminRequest.Email,
+                    RealName = adminRequest.RealName,
+                    Dob = adminRequest.Dob
                 },
             };
 
@@ -305,7 +302,7 @@ namespace BackEnd.Test.Services.Test
             mockEmailSender.Setup(x => x.SendEmailAsync(It.IsAny<Message>())).Returns(() => Task.FromResult(""));
 
             //Act
-            var result = await _teacherService.Object.AddTeacher(teacherRequest);
+            var result = await _adminService.Object.AddAccountAdmin(adminRequest);
             var okObjectResult = result as OkObjectResult;
 
 
@@ -321,7 +318,7 @@ namespace BackEnd.Test.Services.Test
         [InlineData("2")]
         [InlineData("3")]
         [InlineData("4")]
-        public async void AddTeacher_Returns_Fail_CodeExist(string id)
+        public async void AddStudent_Returns_Fail_CodeExist(string id)
         {
             //Arrange
             var user = new AppUser
@@ -335,7 +332,7 @@ namespace BackEnd.Test.Services.Test
             };
 
 
-            var teacherRequest = new TeacherRequest
+            var adminRequest = new AdminRequest
             {
                 Id = user.Id,
                 Code = user.UserName,
@@ -344,14 +341,14 @@ namespace BackEnd.Test.Services.Test
                 Dob = "2020-09-29"
             };
 
-            var teacherResponses = new List<TeacherInfoResponse>()
+            var teacherResponses = new List<AdminInfoResponse>()
             {
-                new TeacherInfoResponse{
-                    Id = teacherRequest.Id,
-                    Code = teacherRequest.Code,
-                    Email = teacherRequest.Email,
-                    RealName = teacherRequest.RealName,
-                    Dob = teacherRequest.Dob
+                new AdminInfoResponse{
+                    Id = adminRequest.Id,
+                    Code = adminRequest.Code,
+                    Email = adminRequest.Email,
+                    RealName = adminRequest.RealName,
+                    Dob = adminRequest.Dob
                 },
             };
 
@@ -379,12 +376,12 @@ namespace BackEnd.Test.Services.Test
 
             fakeUserManager.Setup(x => x.GenerateEmailConfirmationTokenAsync(It.IsAny<AppUser>())).ReturnsAsync("");
             mockEmailSender.Setup(x => x.SendEmailAsync(It.IsAny<Message>())).Returns(() => Task.FromResult(""));
-            fakeUserManager.Setup(x => x.FindByNameAsync(teacherRequest.Code)).Returns(() => Task.FromResult(user));
+            fakeUserManager.Setup(x => x.FindByNameAsync(adminRequest.Code)).Returns(() => Task.FromResult(user));
 
 
 
             //Act
-            var result = await _teacherService.Object.AddTeacher(teacherRequest);
+            var result = await _adminService.Object.AddAccountAdmin(adminRequest);
             var okObjectResult = result as BadRequestObjectResult;
 
 
@@ -398,7 +395,7 @@ namespace BackEnd.Test.Services.Test
         [InlineData("2")]
         [InlineData("3")]
         [InlineData("4")]
-        public async void AddTeacher_Returns_Fail_EmailExist(string id)
+        public async void AddStudent_Returns_Fail_EmailExist(string id)
         {
             //Arrange
             var user = new AppUser
@@ -412,7 +409,7 @@ namespace BackEnd.Test.Services.Test
             };
 
 
-            var teacherRequest = new TeacherRequest
+            var adminRequest = new AdminRequest
             {
                 Id = user.Id,
                 Code = user.UserName,
@@ -421,14 +418,14 @@ namespace BackEnd.Test.Services.Test
                 Dob = "2020-09-29"
             };
 
-            var teacherResponses = new List<TeacherInfoResponse>()
+            var teacherResponses = new List<AdminInfoResponse>()
             {
-                new TeacherInfoResponse{
-                    Id = teacherRequest.Id,
-                    Code = teacherRequest.Code,
-                    Email = teacherRequest.Email,
-                    RealName = teacherRequest.RealName,
-                    Dob = teacherRequest.Dob
+                new AdminInfoResponse{
+                    Id = adminRequest.Id,
+                    Code = adminRequest.Code,
+                    Email = adminRequest.Email,
+                    RealName = adminRequest.RealName,
+                    Dob = adminRequest.Dob
                 },
             };
 
@@ -456,12 +453,12 @@ namespace BackEnd.Test.Services.Test
 
             fakeUserManager.Setup(x => x.GenerateEmailConfirmationTokenAsync(It.IsAny<AppUser>())).ReturnsAsync("");
             mockEmailSender.Setup(x => x.SendEmailAsync(It.IsAny<Message>())).Returns(() => Task.FromResult(""));
-            fakeUserManager.Setup(x => x.FindByEmailAsync(teacherRequest.Email)).Returns(() => Task.FromResult(user));
+            fakeUserManager.Setup(x => x.FindByEmailAsync(adminRequest.Email)).Returns(() => Task.FromResult(user));
 
 
 
             //Act
-            var result = await _teacherService.Object.AddTeacher(teacherRequest);
+            var result = await _adminService.Object.AddAccountAdmin(adminRequest);
             var okObjectResult = result as BadRequestObjectResult;
 
 
@@ -476,7 +473,7 @@ namespace BackEnd.Test.Services.Test
         [InlineData("2")]
         [InlineData("3")]
         [InlineData("5")]
-        public async void DeleteTeacher_Returns_Correctly(string id)
+        public async void DeleteStudent_Returns_Correctly(string id)
         {
             //Arrange
             var user = new AppUser
@@ -491,12 +488,12 @@ namespace BackEnd.Test.Services.Test
 
             List<string> list = new List<string>() { user.Id };
             fakeUserManager.Setup(x => x.FindByIdAsync(user.Id)).ReturnsAsync(user);
-            fakeUserManager.Setup(x => x.IsInRoleAsync(It.IsAny<AppUser>(), "teacher")).ReturnsAsync(true);
+            fakeUserManager.Setup(x => x.IsInRoleAsync(It.IsAny<AppUser>(), "quality assurance")).ReturnsAsync(true);
 
 
 
             //Act
-            var result = await _teacherService.Object.DeleteTeacher(list);
+            var result = await _adminService.Object.DeleteManageAccounts(list);
             var okObjectResult = result as OkObjectResult;
             var model = okObjectResult.Value as Dictionary<String, object>;
             var keys = model.Keys.ToArray();
@@ -523,7 +520,7 @@ namespace BackEnd.Test.Services.Test
         [InlineData("2")]
         [InlineData("3")]
         [InlineData("5")]
-        public async void DeleteTeacher_Returns_Fail_NotFoundId(string id)
+        public async void DeleteStudent_Returns_Fail_NotFoundId(string id)
         {
             //Arrange
             var user = new AppUser
@@ -540,12 +537,12 @@ namespace BackEnd.Test.Services.Test
             List<string> listcheckSuccess = new List<string>() { user.Id };
 
             fakeUserManager.Setup(x => x.FindByIdAsync(user.Id)).ReturnsAsync(user);
-            fakeUserManager.Setup(x => x.IsInRoleAsync(It.IsAny<AppUser>(), "teacher")).ReturnsAsync(true);
+            fakeUserManager.Setup(x => x.IsInRoleAsync(It.IsAny<AppUser>(), "quality assurance")).ReturnsAsync(true);
 
 
 
             //Act
-            var result = await _teacherService.Object.DeleteTeacher(list);
+            var result = await _adminService.Object.DeleteManageAccounts(list);
             var okObjectResult = result as OkObjectResult;
             var model = okObjectResult.Value as Dictionary<String, object>;
             var keys = model.Keys.ToArray();
@@ -573,7 +570,7 @@ namespace BackEnd.Test.Services.Test
         [InlineData("2")]
         [InlineData("3")]
         [InlineData("5")]
-        public async void DeleteTeacher_Returns_Fail_NotTeacher(string id)
+        public async void DeleteAdmin_Returns_Fail_NotAdmin(string id)
         {
             //Arrange
             var user = new AppUser
@@ -601,16 +598,16 @@ namespace BackEnd.Test.Services.Test
 
             fakeUserManager.Setup(x => x.FindByIdAsync(user.Id)).ReturnsAsync(user);
             fakeUserManager.Setup(x => x.FindByIdAsync(user2.Id)).ReturnsAsync(user2);
-            fakeUserManager.Setup(x => x.IsInRoleAsync(user, "teacher")).ReturnsAsync(true);
+            fakeUserManager.Setup(x => x.IsInRoleAsync(user, "quality assurance")).ReturnsAsync(true);
 
 
             //Act
-            var result = await _teacherService.Object.DeleteTeacher(list);
+            var result = await _adminService.Object.DeleteManageAccounts(list);
             var okObjectResult = result as OkObjectResult;
             var model = okObjectResult.Value as Dictionary<String, object>;
             var keys = model.Keys.ToArray();
             var values = model.Values.ToArray();
-            var emptyList = new List<string>() { "The user " + user2.UserName + " is not a teacher" };
+            var emptyList = new List<string>() { "The user " + user2.UserName + " is not a quality assurance or academic management" };
             var listSuccess = (List<string>)values[0];
             var listFailed = (List<Error>)values[1];
 
@@ -628,80 +625,12 @@ namespace BackEnd.Test.Services.Test
 
         }
 
-        [Theory]
-        [InlineData("1")]
-        [InlineData("2")]
-        [InlineData("3")]
-        [InlineData("5")]
-        public async void DeleteTeacher_Returns_Fail_LinkedToRoom(string id)
-        {
-            //Arrange
-            var user = new AppUser
-            {
-                Id = id,
-                UserName = "Test1",
-                Email = "Test1@gmail",
-                Avatar = "default.png",
-                RealName = "Test 1",
-                DOB = new DateTime(2020, 09, 29)
-            };
-
-            var user2 = new AppUser
-            {
-                Id = "4",
-                UserName = "Test4",
-                Email = "Test4@gmail",
-                Avatar = "default.png",
-                RealName = "Test 4",
-                DOB = new DateTime(2020, 09, 29)
-            };
-
-            var roomUserLink = new RoomUserLink
-            {
-                RoomUserId = 1,
-                RoomId = 1,
-                UserId = "4"
-            };
-
-            _roomContext.RoomUserLink.Add(roomUserLink);
-            _roomContext.SaveChanges();
-
-            List<string> list = new List<string>() { user.Id, "4" };
-            List<string> listcheckSuccess = new List<string>() { user.Id };
-
-            fakeUserManager.Setup(x => x.FindByIdAsync(user.Id)).ReturnsAsync(user);
-            fakeUserManager.Setup(x => x.FindByIdAsync(user2.Id)).ReturnsAsync(user2);
-            fakeUserManager.Setup(x => x.IsInRoleAsync(It.IsAny<AppUser>(), "teacher")).ReturnsAsync(true);
-
-            //Act
-            var result = await _teacherService.Object.DeleteTeacher(list);
-            var okObjectResult = result as OkObjectResult;
-            var model = okObjectResult.Value as Dictionary<String, object>;
-            var keys = model.Keys.ToArray();
-            var values = model.Values.ToArray();
-            var emptyList = new List<string>() { "Teacher " + user2.UserName + " is still linked to a classroom" };
-            var listSuccess = (List<string>)values[0];
-            var listFailed = (List<Error>)values[1];
-
-            //Assert
-            Assert.Equal(200, okObjectResult.StatusCode);
-            Assert.IsType<OkObjectResult>(okObjectResult);
-            Assert.Equal(2, model.Count);
-            Assert.Equal("success", keys[0].ToString());
-            Assert.Equal("failed", keys[1].ToString());
-            Assert.Equal(listcheckSuccess, values[0]);
-
-            //check value in dictionary
-            Assert.Equal(user.Id, listSuccess[0]);
-            Assert.Equal(emptyList[0], listFailed[0].Message);
-
-        }
 
         [Theory]
         [InlineData("1")]
         [InlineData("2")]
         [InlineData("3")]
-        public async void UpdateTeacher_Returns_Correctly(string id)
+        public async void UpdateStudent_Returns_Correctly(string id)
         {
             //Arrange
             var user = new AppUser
@@ -724,18 +653,19 @@ namespace BackEnd.Test.Services.Test
                 DOB = new DateTime(2020, 09, 29)
             };
 
-            List<TeacherRequest> list = new List<TeacherRequest>() {
-                new TeacherRequest{
+            List<AdminRequest> list = new List<AdminRequest>() {
+                new AdminRequest{
                     Id = user.Id,
                     Code = user.UserName,
                     Email = user.Email,
                     RealName = user.RealName,
-                    Dob = user.DOB.ToString("yyyy-MM-dd")
+                    Dob = user.DOB.ToString("yyyy-MM-dd"),
+                   // Role = "quality assurance"
                 }
                 };
 
-            List<TeacherInfoResponse> listres = new List<TeacherInfoResponse>() {
-                new TeacherInfoResponse{
+            List<AdminInfoResponse> listres = new List<AdminInfoResponse>() {
+                new AdminInfoResponse{
                     Id = user.Id,
                     Code = user.UserName,
                     Email = user.Email,
@@ -744,17 +674,17 @@ namespace BackEnd.Test.Services.Test
                 } };
 
             fakeUserManager.Setup(x => x.FindByIdAsync(user.Id)).ReturnsAsync(userDB);
-            fakeUserManager.Setup(x => x.IsInRoleAsync(It.IsAny<AppUser>(), "teacher")).ReturnsAsync(true);
+            fakeUserManager.Setup(x => x.IsInRoleAsync(It.IsAny<AppUser>(), "quality assurance")).ReturnsAsync(true);
 
 
             //Act
-            var result = await _teacherService.Object.UpdateTeacher(list);
+            var result = await _adminService.Object.UpdateAccountAdmin(list);
             var okObjectResult = result as OkObjectResult;
             var model = okObjectResult.Value as Dictionary<String, object>;
             var keys = model.Keys.ToArray();
             var values = model.Values.ToArray();
 
-            var listSuccess = (List<TeacherInfoResponse>)values[0];
+            var listSuccess = (List<AdminInfoResponse>)values[0];
 
             var listFailed = new List<Error>();
 
@@ -780,7 +710,7 @@ namespace BackEnd.Test.Services.Test
         [InlineData("1")]
         [InlineData("2")]
         [InlineData("3")]
-        public async void UpdateTeacher_Returns_Fail_EmailExist(string id)
+        public async void UpdateStudent_Returns_Fail_EmailExist(string id)
         {
             //Arrange
             var user = new AppUser
@@ -813,15 +743,15 @@ namespace BackEnd.Test.Services.Test
                 DOB = new DateTime(2020, 09, 29)
             };
 
-            List<TeacherRequest> list = new List<TeacherRequest>() {
-                new TeacherRequest{
+            List<AdminRequest> list = new List<AdminRequest>() {
+                new AdminRequest{
                     Id = user.Id,
                     Code = user.UserName,
                     Email = user.Email,
                     RealName = user.RealName,
                     Dob = user.DOB.ToString("yyyy-MM-dd")
                 },
-                new TeacherRequest{
+                new AdminRequest{
                     Id = user2.Id,
                     Code = user2.UserName,
                     Email = user2.Email,
@@ -830,8 +760,8 @@ namespace BackEnd.Test.Services.Test
                 }
                 };
 
-            List<TeacherInfoResponse> listres = new List<TeacherInfoResponse>() {
-                new TeacherInfoResponse{
+            List<AdminInfoResponse> listres = new List<AdminInfoResponse>() {
+                new AdminInfoResponse{
                     Id = user.Id,
                     Code = user.UserName,
                     Email = user.Email,
@@ -841,17 +771,17 @@ namespace BackEnd.Test.Services.Test
 
             fakeUserManager.Setup(x => x.FindByIdAsync(user.Id)).ReturnsAsync(userDB);
             fakeUserManager.Setup(x => x.FindByIdAsync(user2.Id)).ReturnsAsync(user);
-            fakeUserManager.Setup(x => x.IsInRoleAsync(It.IsAny<AppUser>(), "teacher")).ReturnsAsync(true);
+            fakeUserManager.Setup(x => x.IsInRoleAsync(It.IsAny<AppUser>(), "quality assurance")).ReturnsAsync(true);
             fakeUserManager.Setup(x => x.FindByEmailAsync(user2.Email)).ReturnsAsync(user);
 
             //Act
-            var result = await _teacherService.Object.UpdateTeacher(list);
+            var result = await _adminService.Object.UpdateAccountAdmin(list);
             var okObjectResult = result as OkObjectResult;
             var model = okObjectResult.Value as Dictionary<String, object>;
             var keys = model.Keys.ToArray();
             var values = model.Values.ToArray();
 
-            var listSuccess = (List<TeacherInfoResponse>)values[0];
+            var listSuccess = (List<AdminInfoResponse>)values[0];
 
             var listFailed = (List<Error>)values[1];
 
@@ -879,7 +809,7 @@ namespace BackEnd.Test.Services.Test
         [InlineData("1")]
         [InlineData("2")]
         [InlineData("3")]
-        public async void UpdateTeacher_Returns_Fail_CodeExist(string id)
+        public async void UpdateStudent_Returns_Fail_CodeExist(string id)
         {
             //Arrange
             var user = new AppUser
@@ -912,15 +842,15 @@ namespace BackEnd.Test.Services.Test
                 DOB = new DateTime(2020, 09, 29)
             };
 
-            List<TeacherRequest> list = new List<TeacherRequest>() {
-                new TeacherRequest{
+            List<AdminRequest> list = new List<AdminRequest>() {
+                new AdminRequest{
                     Id = user.Id,
                     Code = user.UserName,
                     Email = user.Email,
                     RealName = user.RealName,
                     Dob = user.DOB.ToString("yyyy-MM-dd")
                 },
-                new TeacherRequest{
+                new AdminRequest{
                     Id = user2.Id,
                     Code = user2.UserName,
                     Email = user2.Email,
@@ -929,8 +859,8 @@ namespace BackEnd.Test.Services.Test
                 }
                 };
 
-            List<TeacherInfoResponse> listres = new List<TeacherInfoResponse>() {
-                new TeacherInfoResponse{
+            List<AdminInfoResponse> listres = new List<AdminInfoResponse>() {
+                new AdminInfoResponse{
                     Id = user.Id,
                     Code = user.UserName,
                     Email = user.Email,
@@ -940,17 +870,17 @@ namespace BackEnd.Test.Services.Test
 
             fakeUserManager.Setup(x => x.FindByIdAsync(user.Id)).ReturnsAsync(userDB);
             fakeUserManager.Setup(x => x.FindByIdAsync(user2.Id)).ReturnsAsync(user);
-            fakeUserManager.Setup(x => x.IsInRoleAsync(It.IsAny<AppUser>(), "teacher")).ReturnsAsync(true);
+            fakeUserManager.Setup(x => x.IsInRoleAsync(It.IsAny<AppUser>(), "quality assurance")).ReturnsAsync(true);
             fakeUserManager.Setup(x => x.FindByNameAsync(user2.UserName)).ReturnsAsync(user);
 
             //Act
-            var result = await _teacherService.Object.UpdateTeacher(list);
+            var result = await _adminService.Object.UpdateAccountAdmin(list);
             var okObjectResult = result as OkObjectResult;
             var model = okObjectResult.Value as Dictionary<String, object>;
             var keys = model.Keys.ToArray();
             var values = model.Values.ToArray();
 
-            var listSuccess = (List<TeacherInfoResponse>)values[0];
+            var listSuccess = (List<AdminInfoResponse>)values[0];
 
             var listFailed = (List<Error>)values[1];
 
@@ -973,6 +903,9 @@ namespace BackEnd.Test.Services.Test
             Assert.Equal("Employee Code " + user2.UserName + " already exists", listFailed[0].Message);
             Assert.Equal(2, listFailed[0].Type);
         }
+
+
+
 
     }
 }
