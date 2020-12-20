@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace BackEnd.Models
 {
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class User
     {
         public string Id { get; set; }

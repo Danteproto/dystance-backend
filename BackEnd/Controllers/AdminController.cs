@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using BackEnd.Requests;
@@ -13,6 +14,7 @@ namespace BackEnd.Controllers
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
+    [ExcludeFromCodeCoverage]
     public class AdminController : ControllerBase
     {
         private readonly IAdminService _adminService;

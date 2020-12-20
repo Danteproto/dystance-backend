@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace BackEnd.Models
 {
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class Room
     {
         [Key]

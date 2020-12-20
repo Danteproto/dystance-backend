@@ -4,6 +4,7 @@ using System.Text;
 
 namespace EmailService
 {
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class EmailConfiguration
     {
         public string From { get; set; }

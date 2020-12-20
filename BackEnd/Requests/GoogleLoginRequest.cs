@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace BackEnd.Requests
 {
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class GoogleLoginRequest
     {
         public string TokenId { get; set; }

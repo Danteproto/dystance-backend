@@ -10,7 +10,7 @@ namespace BackEnd.Stores
         public string GenerateTokenAndSave(string key);
         public bool IsTokenValid(string token);
     }
-
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class UserStore : IUserStore
     {
         public bool IsResetPasswordTokenVerified { get; set; } = false;

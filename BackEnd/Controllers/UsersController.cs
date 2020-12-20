@@ -16,12 +16,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BackEnd.Controllers
 {
     [Authorize]
     [ApiController]
     [Route("api/[controller]")]
+    [ExcludeFromCodeCoverage]
     public class UsersController : ControllerBase
     {
         private IUserService _userService;

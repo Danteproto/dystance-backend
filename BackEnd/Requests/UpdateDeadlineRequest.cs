@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 namespace BackEnd.Requests
 {
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class UpdateDeadlineRequest
     {
         public string Id { get; set; }

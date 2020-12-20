@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 namespace BackEnd.Responses
 {
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class AdminInfoResponse
     {
         public string Id { get; set; }

@@ -27,10 +27,10 @@ using BackEnd.DAO;
 using System.Text;
 using System.Text.RegularExpressions;
 using ExcelDataReader;
-using BackEnd.DBContext;
 using BackEnd.Constant;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BackEnd.Services
 {
@@ -71,6 +71,7 @@ namespace BackEnd.Services
         public Task<FileInfo> ExportAttendance(string roomId);
     }
 
+    [ExcludeFromCodeCoverage]
     public class UserService : IUserService
     {
         private UserDbContext _context;

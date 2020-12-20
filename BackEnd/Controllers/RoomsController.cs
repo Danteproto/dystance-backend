@@ -12,6 +12,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading.Tasks;
 using System.Web;
@@ -21,6 +22,7 @@ namespace BackEnd.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
+    [ExcludeFromCodeCoverage]
     public class RoomsController : ControllerBase
     {
         private readonly DefaultContractResolver _contractResolver;
