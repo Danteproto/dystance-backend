@@ -1710,7 +1710,7 @@ namespace BackEnd.Services
                     //
                     var listStudents = await (from students in _context.AttendanceReports
                                               where students.TimeTableId == timetable.Id
-                                              select students).ToListAsync();
+                                              select students).OrderByDescending(x => x.UserId).ToListAsync();
 
 
                     //Body of table  
