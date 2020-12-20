@@ -73,8 +73,11 @@ namespace BackEnd.Test.DAO.Test
             Assert.Equal((int)HttpStatusCode.InternalServerError, ((ObjectResult)result).StatusCode);
 
         }
-        [Fact]
-        public async void GetChatByRoomId()
+
+        [Theory]
+        [InlineData(1)]
+        [InlineData(2)]
+        public async void GetChatByRoomId(int roomId)
         {
             var chats = new List<RoomChat>();
             //Arrange
@@ -88,9 +91,17 @@ namespace BackEnd.Test.DAO.Test
                 await RoomChatDAO.Create(roomContext, chat);
             }
 
-            var result = RoomChatDAO.GetChatByRoomId(roomContext, 1);
-            Assert.Equal(3, result.Count);
+            var result = RoomChatDAO.GetChatByRoomId(roomContext, roomId);
+            if(roomId == 1) { 
+                Assert.Equal(3, result.Count);
+            }
+            else
+            {
+                Assert.Empty(result);
+            }
+
         }
+
         [Fact]
         public async void GetLastChat()
         {
@@ -108,14 +119,16 @@ namespace BackEnd.Test.DAO.Test
             }
 
             var result = RoomChatDAO.GetLastChat(roomContext, 1);
+            
             Assert.Equal(3, result.Id);
             Assert.Equal(1, result.RoomId);
             Assert.Equal("testUser", result.UserId);
             Assert.Equal("testChat", result.Content);
-            Assert.Equal(1, result.Type);
+            Assert.Equal(1, result.Type);         
         }
+
         [Fact]
-        public async void DeleteChat()
+        public async void DeleteChat_Successful()
         {
             var now = DateTime.Now;
             var chats = new List<RoomChat>();
@@ -133,6 +146,28 @@ namespace BackEnd.Test.DAO.Test
             var result = RoomChatDAO.DeleteRoomChat(roomContext, chats);
             var resultChat = RoomChatDAO.GetChatByRoomId(roomContext, 1);
             Assert.Empty(resultChat);
+        }
+
+        [Fact]
+        public async void DeleteChat_FAIL()
+        {
+            var now = DateTime.Now;
+            var chats = new List<RoomChat>();
+            var chats2 = new List<RoomChat>();
+            //Arrange
+            chats.Add(new RoomChat() { Id = 1, RoomId = 1, UserId = "testUser", Date = now, Content = "testChat", Type = 1, });
+            chats.Add(new RoomChat() { Id = 2, RoomId = 1, UserId = "testUser", Date = now, Content = "testChat", Type = 1, });
+            chats2.Add(new RoomChat() { Id = 3, RoomId = 1, UserId = "testUser", Date = now, Content = "testChat", Type = 1, });
+
+            // Act
+            foreach (var chat in chats)
+            {
+                await RoomChatDAO.Create(roomContext, chat);
+            }
+
+            var result = RoomChatDAO.DeleteRoomChat(roomContext, chats2);
+            var resultChat = RoomChatDAO.GetChatByRoomId(roomContext, 1);
+            Assert.NotEmpty(resultChat);
         }
     }
 }

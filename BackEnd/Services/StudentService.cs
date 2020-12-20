@@ -65,15 +65,13 @@ namespace BackEnd.Services
 
         public async Task<IActionResult> GetStudent()
         {
-            var listUserId = await _userManager.Users.ToListAsync();
+            var listUserId = await _userManager.GetUsersInRoleAsync("student");
 
             var listStudent = new List<TeacherInfoResponse>();
 
 
             foreach (var user in listUserId)
             {
-                if (await _userManager.IsInRoleAsync(user, "Student"))
-                {
                     listStudent.Add(new TeacherInfoResponse
                     {
                         Id = user.Id,
@@ -82,8 +80,6 @@ namespace BackEnd.Services
                         RealName = user.RealName,
                         Dob = String.Format("{0:yyyy-MM-dd}", Convert.ToDateTime(user.DOB))
                     });
-
-                }
             }
 
             return new OkObjectResult(listStudent);
@@ -124,7 +120,7 @@ namespace BackEnd.Services
                 return internalErr;
             }
 
-            await _userManager.AddToRoleAsync(registerUser, "Student");
+            await _userManager.AddToRoleAsync(registerUser, "student");
             var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(registerUser);
             var confirmationLink = urlHelper.Action("ConfirmEmail", "Users", new { token, email = registerUser.Email }, "https");

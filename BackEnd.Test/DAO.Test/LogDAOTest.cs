@@ -28,16 +28,43 @@ namespace BackEnd.Test.DAO.Test
 
 
         //Test CreateLog
-        [Fact]
-        public async Task TestCreateLogSuccess()
+        [Theory]
+        [InlineData(LogType.ATTENDANCE_JOIN)]
+        [InlineData(LogType.ATTENDANCE_LEAVE)]
+        [InlineData(LogType.PRIVATE_CHAT_IMAGE)]
+        [InlineData(LogType.PRIVATE_CHAT_FILE)]
+        [InlineData(LogType.PRIVATE_CHAT_MESSAGE)]
+        [InlineData(LogType.ROOM_CHAT_IMAGE)]
+        [InlineData(LogType.ROOM_CHAT_FILE)]
+        [InlineData(LogType.ROOM_CHAT_TEXT)]
+        [InlineData(LogType.KICK)]
+        [InlineData(LogType.MUTE)]
+        [InlineData(LogType.GOT_MUTED)]
+        [InlineData(LogType.TOGGLE_WHITEBOARD)]
+        [InlineData(LogType.REMOTE_CONTROL_PERMISSION)]
+        [InlineData(LogType.REMOTE_CONTROL_ACCEPT)]
+        [InlineData(LogType.REMOTE_CONTROL_REJECT)]
+        [InlineData(LogType.REMOTE_CONTROL_STOP)]
+        [InlineData(LogType.WHITEBOARD_ALLOW)]
+        [InlineData(LogType.WHITEBOARD_DISABLE)]
+        [InlineData(LogType.GROUP_CREATE)]
+        [InlineData(LogType.GROUP_DELETE)]
+        [InlineData(LogType.GROUP_START)]
+        [InlineData(LogType.GROUP_STOP)]
+        [InlineData(LogType.GROUP_JOIN)]
+        [InlineData(LogType.GROUP_LEAVE)]
+        [InlineData(LogType.PRIVATE_CHAT_TEXT)]
+        [InlineData(LogType.SCREEN_SHARE_START)]
+        [InlineData(LogType.SCREEN_SHARE_STOP)]
+        public async Task TestCreateLogSuccess(LogType logType)
         {
             //Arrange
             var userLog = new UsersLog()
             {
                 UserId = "1",
-                DateTime = DateTime.Parse("02/02/2020"),
+                DateTime = DateTime.Parse("2020-02-02"),
                 Description = "test",
-                LogType = LogType.ATTENDANCE_JOIN.ToString(),
+                LogType = logType.ToString(),
                 RoomId = "1"
             };
 
@@ -51,9 +78,9 @@ namespace BackEnd.Test.DAO.Test
             Assert.Contains("Success", result);
             Assert.NotEmpty(list);
             Assert.Equal("1", justAdded.UserId);
-            Assert.Equal(DateTime.Parse("02/02/2020"), justAdded.DateTime);
+            Assert.Equal(DateTime.Parse("2020-02-02"), justAdded.DateTime);
             Assert.Equal("test", justAdded.Description);
-            Assert.Equal(LogType.ATTENDANCE_JOIN.ToString(), justAdded.LogType);
+            Assert.Equal(logType.ToString(), justAdded.LogType);
             Assert.Equal("1", justAdded.RoomId);
         }
 
