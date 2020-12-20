@@ -640,7 +640,7 @@ namespace BackEnd.Services
             foreach (var @class in classes)
             {
                 var links = RoomUserLinkDAO.GetRoomLink(_roomContext, @class.RoomId);
-                var students = links.Where(link => link.UserId != @class.CreatorId).Select(link => link.UserId).ToList();
+                var students = links.Where(link => link.UserId != @class.CreatorId).OrderByDescending(x => x.UserId).Select(link => link.UserId).ToList();
                 result.Add(new ClassResponse
                 {
                     id = @class.RoomId.ToString(),
