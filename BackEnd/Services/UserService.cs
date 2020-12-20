@@ -1551,7 +1551,7 @@ namespace BackEnd.Services
                                                {
                                                    Id = attendances.UserId,
                                                    Status = attendances.Status
-                                               }).ToListAsync();
+                                               }).OrderByDescending(x=>x.Id).ToListAsync();
 
                     listStudent.AddRange(listStudentId);
 
@@ -1603,7 +1603,7 @@ namespace BackEnd.Services
                                                {
                                                    Id = attendances.UserId,
                                                    Status = attendances.Status
-                                               }).ToListAsync();
+                                               }).OrderByDescending(x=>x.Id).ToListAsync();
 
                     listStudent.AddRange(listStudentId);
 
