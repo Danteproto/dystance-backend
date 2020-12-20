@@ -1407,7 +1407,7 @@ namespace BackEnd.Services
                                 });
                             }
 
-                            if (reader.Name == "Teachers") // "TEACHERS" SHEET
+                            else if (reader.Name == "Teachers") // "TEACHERS" SHEET
                             {
                                 if (reader.GetValue(0).ToString() == "No" || reader.GetValue(0) == null)
                                 {
@@ -1466,6 +1466,11 @@ namespace BackEnd.Services
                                     Email = user.Email,
                                     Dob = user.DOB.ToString("yyyy-MM-dd")
                                 });
+                            }
+                            else
+                            {
+                                return new BadRequestObjectResult(new { message = "Teacher and student import error: Wrong file format" });
+
                             }
 
                         }

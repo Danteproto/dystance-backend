@@ -153,7 +153,7 @@ namespace BackEnd.Services
                                 }
 
 
-                                if (reader.Name == "Schedules") // "SCHEDULES" SHEET
+                                else if (reader.Name == "Schedules") // "SCHEDULES" SHEET
                                 {
                                     if (reader.GetValue(0).ToString() == "Date")
                                     {
@@ -200,6 +200,10 @@ namespace BackEnd.Services
                                         });
                                     }
                                     await _attendanceDAO.CreateAttendance(attendances);
+                                }
+                                else
+                                {
+                                    throw new Exception("Semester import error: Wrong file format");
                                 }
 
                             }
@@ -370,7 +374,7 @@ namespace BackEnd.Services
                                     }
 
 
-                                    if (reader.Name == "Schedules") // "SCHEDULES" SHEET
+                                    else if (reader.Name == "Schedules") // "SCHEDULES" SHEET
                                     {
                                         if (reader.GetValue(0).ToString() == "Date")
                                         {
@@ -426,6 +430,10 @@ namespace BackEnd.Services
                                         }
                                         await _attendanceDAO.CreateAttendance(attendances);
 
+                                    }
+                                    else
+                                    {
+                                        throw new Exception("Semester import error: Wrong file format");
                                     }
 
                                 }

@@ -136,7 +136,7 @@ namespace BackEnd.Services
                                 });
                             }
 
-                            if (reader.Name == "Academic Management") // "Academic Management" SHEET
+                            else if (reader.Name == "Academic Management") // "Academic Management" SHEET
                             {
                                 if (reader.GetValue(0).ToString() == "No" || reader.GetValue(0) == null)
                                 {
@@ -183,6 +183,10 @@ namespace BackEnd.Services
                                     Dob = user.DOB.ToString("yyyy-MM-dd"),
                                     Role = "academic management"
                                 });
+                            }
+                            else
+                            {
+                                return new BadRequestObjectResult(new { message = "QA and AM import error: Wrong file format" });
                             }
 
                         }
