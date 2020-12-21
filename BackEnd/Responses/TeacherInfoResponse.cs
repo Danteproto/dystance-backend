@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 namespace BackEnd.Responses
 {
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class TeacherInfoResponse
     {
         public string Id { get; set; }

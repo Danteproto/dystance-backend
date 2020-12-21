@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 namespace BackEnd.Requests
 {
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class RefreshTokenRequestz
     {
         public string AccessToken { get; set; }

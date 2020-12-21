@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 namespace BackEnd.Profiles
 {
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class UserProfile : Profile
     {
         public UserProfile()

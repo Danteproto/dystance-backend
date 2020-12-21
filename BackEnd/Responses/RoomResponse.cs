@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace BackEnd.Responses
 {
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class RoomResponse
     {
         public int RoomId { get; set; }

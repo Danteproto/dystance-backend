@@ -10,6 +10,7 @@ namespace BackEnd.Ultilities
         public bool IsValid();
         public bool VerifyToken(string token);
     }
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class TOTPUtil :ITOTP
     {
         Totp totp;

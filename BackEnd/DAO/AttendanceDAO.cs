@@ -51,7 +51,7 @@ namespace BackEnd.DAO
             {
                 _context.AttendanceReports.UpdateRange(attendances);
                 await _context.SaveChangesAsync();
-                return new ObjectResult(new { message = "Add success!" })
+                return new ObjectResult(new { message = "Update success!" })
                 {
                     StatusCode = 200,
                 };

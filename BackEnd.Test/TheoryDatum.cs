@@ -14,30 +14,26 @@ namespace BackEnd.Test
         public abstract object[] ToParameterArray();
 
 
-        public static ITheoryDatum Factory<TSystemUnderTest, TExpectedOutput>(TSystemUnderTest sut, TExpectedOutput expectedOutput, string description)
+        public static ITheoryDatum Factory<TSystemUnderTest>(TSystemUnderTest sut, string description)
         {
-            var datum = new TheoryDatum<TSystemUnderTest, TExpectedOutput>();
+            var datum = new TheoryDatum<TSystemUnderTest>();
             datum.SystemUnderTest = sut;
             datum.Description = description;
-            datum.ExpectedOutput = expectedOutput;
             return datum;
         }
     }
 
-    public class TheoryDatum<TSystemUnderTest, TExpectedOutput> : TheoryDatum
+    public class TheoryDatum<TSystemUnderTest> : TheoryDatum
     {
         public TSystemUnderTest SystemUnderTest { get; set; }
 
         public string Description { get; set; }
 
-        public TExpectedOutput ExpectedOutput { get; set; }
-
         public override object[] ToParameterArray()
         {
-            var output = new object[3];
+            var output = new object[2];
             output[0] = SystemUnderTest;
-            output[1] = ExpectedOutput;
-            output[2] = Description;
+            output[1] = Description;
             return output;
         }
 

@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace BackEnd.Models
 {
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [Owned]
     public class RefreshToken
     {

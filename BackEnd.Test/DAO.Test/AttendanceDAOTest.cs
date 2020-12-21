@@ -10,9 +10,11 @@ using Microsoft.AspNetCore.Mvc;
 using System.Net;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BackEnd.Test.DAO.Test
 {
+    
     public class AttendanceDAOTest
     {
         private ConnectionFactory factory;
@@ -90,7 +92,7 @@ namespace BackEnd.Test.DAO.Test
             var listUpdate = await context.AttendanceReports.ToListAsync();
             foreach(var rp in listUpdate)
             {
-                rp.Status = "attended";
+                rp.Status = "present";
             }
 
             //Act
@@ -100,7 +102,44 @@ namespace BackEnd.Test.DAO.Test
             Assert.Equal((int)HttpStatusCode.OK,((ObjectResult)result).StatusCode);
             foreach (var rp in listUpdate)
             {
-                Assert.Equal("attended",rp.Status);
+                Assert.Equal("present", rp.Status);
+            }
+        }
+
+        [Fact]
+        public async Task TestUpdateAttendanceTimetableIdAndStatusSuccessfully()
+        {
+            //Arrange
+            var listToUpdate = new List<AttendanceReports>();
+            listToUpdate.Add(new AttendanceReports() { AttendanceId = 1, Status = "future", TimeTableId = 1, UserId = "2" });
+            listToUpdate.Add(new AttendanceReports() { AttendanceId = 2, Status = "future", TimeTableId = 1, UserId = "2" });
+            listToUpdate.Add(new AttendanceReports() { AttendanceId = 3, Status = "future", TimeTableId = 1, UserId = "2" });
+            await context.AttendanceReports.AddRangeAsync(listToUpdate);
+            await context.SaveChangesAsync();
+
+            var listUpdate = await context.AttendanceReports.ToListAsync();
+            foreach (var rp in listUpdate)
+            {
+                rp.TimeTableId = 2;
+            }
+
+            foreach (var rp in listUpdate)
+            {
+                rp.Status = "present";
+            }
+
+            //Act
+            var result = await attendanceDAO.UpdateAttendance(listUpdate);
+
+            //Assert
+            Assert.Equal((int)HttpStatusCode.OK, ((ObjectResult)result).StatusCode);
+            foreach (var rp in listUpdate)
+            {
+                Assert.Equal(2, rp.TimeTableId);
+            }
+            foreach (var rp in listUpdate)
+            {
+                Assert.Equal("present", rp.Status);
             }
         }
 
@@ -133,17 +172,17 @@ namespace BackEnd.Test.DAO.Test
         }
 
         [Fact]
-        public async Task TestUpdateAttendanceFail()
+        public async Task TestUpdateAttendanceFail_NoData()
         {
             //Arrange
             var listToUpdate = new List<AttendanceReports>();
             AttendanceReports attendance = new AttendanceReports() { AttendanceId = 1, Status = "future", TimeTableId = 1, UserId = "1" };
             listToUpdate.Add(attendance);
-            await context.AttendanceReports.AddAsync(attendance);
-            await context.SaveChangesAsync();
+            //await context.AttendanceReports.AddAsync(attendance);
+            //await context.SaveChangesAsync();
 
             attendance.AttendanceId = 2;
-            attendance.Status = "attended";
+            attendance.Status = "present";
             attendance.TimeTableId = 2;
             attendance.UserId = "2";
             
@@ -154,9 +193,36 @@ namespace BackEnd.Test.DAO.Test
             //Assert
             Assert.Equal((int)HttpStatusCode.InternalServerError, ((ObjectResult)result).StatusCode);
             Assert.Equal(2 , attendance.AttendanceId);
-            Assert.Equal("attended" , attendance.Status);
+            Assert.Equal("present", attendance.Status);
             Assert.Equal(2 , attendance.TimeTableId);
             Assert.Equal("2" , attendance.UserId);
+        }
+
+        [Fact]
+        public async Task TestUpdateAttendanceFail()
+        {
+            //Arrange
+            var listToUpdate = new List<AttendanceReports>();
+            AttendanceReports attendance = new AttendanceReports() { AttendanceId = 1, Status = "future", TimeTableId = 1, UserId = "1" };
+            listToUpdate.Add(attendance);
+            await context.AttendanceReports.AddAsync(attendance);
+            await context.SaveChangesAsync();
+
+            attendance.AttendanceId = 2;
+            attendance.Status = "present";
+            attendance.TimeTableId = 2;
+            attendance.UserId = "2";
+
+
+            //Act
+            var result = await attendanceDAO.UpdateAttendance(listToUpdate);
+
+            //Assert
+            Assert.Equal((int)HttpStatusCode.InternalServerError, ((ObjectResult)result).StatusCode);
+            Assert.Equal(2, attendance.AttendanceId);
+            Assert.Equal("present", attendance.Status);
+            Assert.Equal(2, attendance.TimeTableId);
+            Assert.Equal("2", attendance.UserId);
         }
 
         [Fact]

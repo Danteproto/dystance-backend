@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 
 namespace EmailService
 {
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class EmailSender : IEmailSender
     {
         private readonly EmailConfiguration _emailConfig;

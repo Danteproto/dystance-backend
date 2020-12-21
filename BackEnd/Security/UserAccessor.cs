@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace BackEnd.Security
 {
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class UserAccessor : IUserAccessor
     {
         private readonly IHttpContextAccessor _httpContextAccessor;

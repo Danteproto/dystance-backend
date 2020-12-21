@@ -42,15 +42,14 @@ namespace BackEnd.Services
         private readonly IEmailSender _emailSender;
         private readonly IUrlHelperFactory _urlHelperFactory;
         private readonly IActionContextAccessor _actionContextAccessor;
-        
 
         public TeacherService(
             UserDbContext usercontext,
             UserManager<AppUser> userManager,
             RoomDBContext roomcontext,
             ILogDAO logDAO,
-            IPrivateMessageDAO privateMessageDAO,
             IAttendanceDAO attendanceDAO,
+            IPrivateMessageDAO privateMessageDAO,
             IEmailSender emailSender,
             IUrlHelperFactory urlHelperFactory,
             IActionContextAccessor actionContextAccessor)
@@ -59,8 +58,8 @@ namespace BackEnd.Services
             _userManager = userManager;
             _roomContext = roomcontext;
             _logDAO = logDAO;
-            _privateMessageDAO = privateMessageDAO;
             _attendanceDAO = attendanceDAO;
+            _privateMessageDAO = privateMessageDAO;
             _emailSender = emailSender;
             _urlHelperFactory = urlHelperFactory;
             _actionContextAccessor = actionContextAccessor;
@@ -68,14 +67,13 @@ namespace BackEnd.Services
 
         public async Task<IActionResult> GetTeacher()
         {
-            var listUserId = await _userManager.Users.ToListAsync();
-
+            var listUserId = await _userManager.GetUsersInRoleAsync("teacher");
             var listTeacher = new List<TeacherInfoResponse>();
-
-            foreach (var user in listUserId)
+            if (listUserId != null)
             {
-                if (await _userManager.IsInRoleAsync(user, "Teacher"))
+                foreach (var user in listUserId)
                 {
+
                     listTeacher.Add(new TeacherInfoResponse
                     {
                         Id = user.Id,
@@ -84,9 +82,7 @@ namespace BackEnd.Services
                         RealName = user.RealName,
                         Dob = String.Format("{0:yyyy-MM-dd}", Convert.ToDateTime(user.DOB))
                     });
-
                 }
-
             }
 
             return new OkObjectResult(listTeacher);
@@ -125,7 +121,7 @@ namespace BackEnd.Services
                 };
                 return internalErr;
             }
-           
+
             await _userManager.AddToRoleAsync(registerUser, "Teacher");
 
             var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
@@ -161,7 +157,7 @@ namespace BackEnd.Services
                 }
                 try
                 {
-                    if (await _userManager.IsInRoleAsync(user, "Teacher"))
+                    if (await _userManager.IsInRoleAsync(user, "teacher"))
                     {
                         if (!(user.UserName == req.Code && user.RealName == req.RealName && user.Email == req.Email && DateTime.Compare(user.DOB, Convert.ToDateTime(req.Dob)) == 0))
                         {
@@ -189,30 +185,31 @@ namespace BackEnd.Services
                             user.RealName = req.RealName;
                             user.DOB = Convert.ToDateTime(req.Dob);
                             user.Email = req.Email;
-                        }
 
 
-                        var resultUpdate = await _userManager.UpdateAsync(user);
-                        if (resultUpdate.Succeeded)
-                        {
-                            response.Add(new TeacherInfoResponse
+
+                            var resultUpdate = await _userManager.UpdateAsync(user);
+                            if (resultUpdate.Succeeded)
                             {
-                                Id = user.Id,
-                                Code = user.UserName,
-                                RealName = user.RealName,
-                                Email = user.Email,
-                                Dob = user.DOB.ToString("yyyy-MM-dd")
-                            });
-                        }
-                        else
-                        {
-
-                            return new ObjectResult(new { type = 3, code = resultUpdate.Errors.ToList()[0].Code, message = resultUpdate.Errors.ToList()[0].Description })
+                                response.Add(new TeacherInfoResponse
+                                {
+                                    Id = user.Id,
+                                    Code = user.UserName,
+                                    RealName = user.RealName,
+                                    Email = user.Email,
+                                    Dob = user.DOB.ToString("yyyy-MM-dd")
+                                });
+                            }
+                            else
                             {
-                                StatusCode = 500
-                            };
-                        }
 
+                                return new ObjectResult(new { type = 3, code = resultUpdate.Errors.ToList()[0].Code, message = resultUpdate.Errors.ToList()[0].Description })
+                                {
+                                    StatusCode = 500
+                                };
+                            }
+
+                        }
                     }
                 }
                 catch (Exception ex)

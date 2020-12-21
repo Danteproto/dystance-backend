@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 namespace BackEnd.Models
 {
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class RevokeTokenRequest
     {
         public string Token { get; set; }

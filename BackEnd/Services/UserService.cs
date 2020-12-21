@@ -27,10 +27,12 @@ using BackEnd.DAO;
 using System.Text;
 using System.Text.RegularExpressions;
 using ExcelDataReader;
-using BackEnd.DBContext;
 using BackEnd.Constant;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
+using System.Diagnostics.CodeAnalysis;
+using BackEnd.DBContext;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BackEnd.Services
 {
@@ -71,6 +73,7 @@ namespace BackEnd.Services
         public Task<FileInfo> ExportAttendance(string roomId);
     }
 
+    [ExcludeFromCodeCoverage]
     public class UserService : IUserService
     {
         private UserDbContext _context;
@@ -85,7 +88,6 @@ namespace BackEnd.Services
         private readonly IUserStore _userStore;
         private readonly IWebHostEnvironment _env;
         private readonly ILogDAO _logDAO;
-        private readonly RoleManager<AppRole> _roleManager;
         private readonly RoomDBContext _roomDBContext;
         private readonly IAttendanceDAO _attendanceDAO;
 
@@ -108,7 +110,6 @@ namespace BackEnd.Services
             IUserStore userStore,
             IWebHostEnvironment env,
             ILogDAO logDAO,
-            RoleManager<AppRole> roleManager,
             RoomDBContext roomDBContext,
             IAttendanceDAO attendanceDAO)
         {
@@ -124,7 +125,6 @@ namespace BackEnd.Services
             _userStore = userStore;
             _env = env;
             _logDAO = logDAO;
-            _roleManager = roleManager;
             _roomDBContext = roomDBContext;
             _attendanceDAO = attendanceDAO;
         }
@@ -294,7 +294,7 @@ namespace BackEnd.Services
                 Dob = user.DOB.ToString("yyyy-MM-dd"),
                 Avatar = $"api/users/getAvatar?fileName={user.Avatar}&realName=&userName={user.UserName}",
                 UserName = user.UserName,
-                Role = roles[0]
+                Role = roles.Any() ? roles[0] : ""
             };
             return new OkObjectResult(response);
         }
@@ -1393,7 +1393,6 @@ namespace BackEnd.Services
                                 var message = new Message(new string[] { user.Email }, "Your Account On DYSTANCE", content, null);
                                 await _emailSender.SendEmailAsync(message);
 
-                                //roleManager.AddUserToRole
                                 await _userManager.AddToRoleAsync(user, "Student");
 
                                 //debug

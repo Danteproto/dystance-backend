@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 
 namespace BackEnd.Models
 {
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class AppUser : IdentityUser
     { 
         public string RealName { get; set; }

@@ -1,5 +1,6 @@
 ﻿namespace BackEnd.Services
 {
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class ResetPasswordUpdate
     {
         public string Email { get; set; }

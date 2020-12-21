@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace BackEnd.Context
 {
+    [ExcludeFromCodeCoverage]
     public class UserDbContext : IdentityDbContext<AppUser, AppRole, string>
     {
         public UserDbContext(DbContextOptions<UserDbContext> options) : base (options)

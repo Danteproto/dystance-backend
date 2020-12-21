@@ -44,9 +44,9 @@ namespace BackEnd.Services
             UserDbContext context,
             UserManager<AppUser> userManager,
             RoomDBContext roomcontext,
-             ILogDAO logDAO,
-            IPrivateMessageDAO privateMessageDAO,
+            ILogDAO logDAO,
             IAttendanceDAO attendanceDAO,
+            IPrivateMessageDAO privateMessageDAO,
             IEmailSender emailSender,
             IUrlHelperFactory urlHelperFactory,
             IActionContextAccessor actionContextAccessor)
@@ -65,14 +65,12 @@ namespace BackEnd.Services
 
         public async Task<IActionResult> GetStudent()
         {
-            var listUserId = await _userManager.Users.ToListAsync();
-
+            var listUserId = await _userManager.GetUsersInRoleAsync("student");
             var listStudent = new List<TeacherInfoResponse>();
 
-
-            foreach (var user in listUserId)
+            if (listUserId != null)
             {
-                if (await _userManager.IsInRoleAsync(user, "Student"))
+                foreach (var user in listUserId)
                 {
                     listStudent.Add(new TeacherInfoResponse
                     {
@@ -82,10 +80,8 @@ namespace BackEnd.Services
                         RealName = user.RealName,
                         Dob = String.Format("{0:yyyy-MM-dd}", Convert.ToDateTime(user.DOB))
                     });
-
                 }
             }
-
             return new OkObjectResult(listStudent);
         }
 
@@ -124,7 +120,7 @@ namespace BackEnd.Services
                 return internalErr;
             }
 
-            await _userManager.AddToRoleAsync(registerUser, "Student");
+            await _userManager.AddToRoleAsync(registerUser, "student");
             var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(registerUser);
             var confirmationLink = urlHelper.Action("ConfirmEmail", "Users", new { token, email = registerUser.Email }, "https");
@@ -160,7 +156,7 @@ namespace BackEnd.Services
                 try
                 {
                     //Update thong tin user
-                    if (await _userManager.IsInRoleAsync(user, "Student"))
+                    if (await _userManager.IsInRoleAsync(user, "student"))
                     {
                         //Update Profile
 

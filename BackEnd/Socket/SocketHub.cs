@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 
 namespace BackEnd.Socket
 {
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class SocketHub : Hub
     {
         private static Dictionary<string, List<SocketUser>> _currentUsers = new Dictionary<string, List<SocketUser>>();

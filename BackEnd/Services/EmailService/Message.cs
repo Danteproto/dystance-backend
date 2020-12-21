@@ -7,6 +7,7 @@ using System.Text;
 
 namespace EmailService
 {
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class Message
     {
         public List<MailboxAddress> To { get; set; }

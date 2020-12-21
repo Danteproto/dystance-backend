@@ -39,7 +39,8 @@ namespace BackEnd.Services
         private readonly IUrlHelperFactory _urlHelperFactory;
         private readonly IActionContextAccessor _actionContextAccessor;
 
-        public AdminService(UserManager<AppUser> userManager,
+        public AdminService(
+            UserManager<AppUser> userManager,
             UserDbContext usercontext,
             ILogDAO logDAO,
             IPrivateMessageDAO privateMessageDAO,
@@ -205,7 +206,7 @@ namespace BackEnd.Services
 
         public async Task<IActionResult> GetAccounts()
         {
-            var listUserId = await _userManager.Users.ToListAsync();
+            var listUserId = _userContext.Users.ToList();
 
             var listAdmin = new List<AdminInfoResponse>();
 
@@ -344,34 +345,35 @@ namespace BackEnd.Services
                             user.RealName = req.RealName;
                             user.Email = req.Email;
                             user.DOB = Convert.ToDateTime(req.Dob);
-                            if (!await _userManager.IsInRoleAsync(user, req.Role))
+                            if (!await _userManager.IsInRoleAsync(user, req.Role) && req.Role != null)
                             {
                                 await _userManager.RemoveFromRoleAsync(user, (await _userManager.GetRolesAsync(user))[0]);
                                 await _userManager.AddToRoleAsync(user, req.Role);
                             }
-                        }
 
 
-                        var resultUpdate = await _userManager.UpdateAsync(user);
-                        if (resultUpdate.Succeeded)
-                        {
-                            response.Add(new AdminInfoResponse
+
+                            var resultUpdate = await _userManager.UpdateAsync(user);
+                            if (resultUpdate.Succeeded)
                             {
-                                Id = user.Id,
-                                Code = user.UserName,
-                                RealName = user.RealName,
-                                Email = user.Email,
-                                Dob = user.DOB.ToString("yyyy-MM-dd"),
-                                Role = req.Role
-                            });
-                        }
-                        else
-                        {
-
-                            return new ObjectResult(new { type = 3, code = resultUpdate.Errors.ToList()[0].Code, message = resultUpdate.Errors.ToList()[0].Description })
+                                response.Add(new AdminInfoResponse
+                                {
+                                    Id = user.Id,
+                                    Code = user.UserName,
+                                    RealName = user.RealName,
+                                    Email = user.Email,
+                                    Dob = user.DOB.ToString("yyyy-MM-dd"),
+                                    Role = req.Role
+                                });
+                            }
+                            else
                             {
-                                StatusCode = 500
-                            };
+
+                                return new ObjectResult(new { type = 3, code = resultUpdate.Errors.ToList()[0].Code, message = resultUpdate.Errors.ToList()[0].Description })
+                                {
+                                    StatusCode = 500
+                                };
+                            }
                         }
                     }
                 }

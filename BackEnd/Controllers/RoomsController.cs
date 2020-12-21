@@ -12,6 +12,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading.Tasks;
 using System.Web;
@@ -21,6 +22,7 @@ namespace BackEnd.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
+    [ExcludeFromCodeCoverage]
     public class RoomsController : ControllerBase
     {
         private readonly DefaultContractResolver _contractResolver;
@@ -123,7 +125,6 @@ namespace BackEnd.Controllers
         [HttpGet("chat/getFile")]
         public async Task<IActionResult> GetFile(string fileName, int type, int roomId, string realName)
         {
-
             var rootPath = _env.ContentRootPath;
             string path = "";
             if (type == (int)RoomService.ChatType.Image)
