@@ -43,28 +43,11 @@ namespace BackEnd.Controllers
             };
         }
 
-        //[HttpPost("create")]
-        //public async Task<IActionResult> CreateRoom()
-        //{
-        //    return await RoomService.CreateRoom(_roomContext, Request, _env);
-        //}
-
         [HttpDelete]
         public async Task<IActionResult> Delete(int id)
         {
             return await RoomService.DeleteRoom(_roomContext, id, _env);
         }
-
-        //[HttpGet("getById")]
-        //public IActionResult GetRoomById(int Id)
-        //{
-        //    Room room = RoomService.GetRoomById(_roomContext, Id);
-        //    return Content(JsonConvert.SerializeObject(room, new JsonSerializerSettings
-        //    {
-        //        ContractResolver = _contractResolver,
-        //        Formatting = Formatting.Indented
-        //    }));
-        //}
 
         [HttpGet("getByUserId")]
         public IActionResult GetRoomByUserId(string Id)

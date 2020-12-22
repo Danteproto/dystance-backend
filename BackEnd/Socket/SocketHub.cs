@@ -332,16 +332,5 @@ namespace BackEnd.Socket
                 Formatting = Formatting.Indented
             }));
         }
-        //private async Task JsonWhiteBoardReturn(string roomId, Whiteboard whiteboard)
-        //{
-        //    await Clients.Group(roomId).SendAsync("DrawToWhiteboard", JsonConvert.SerializeObject(wb, new JsonSerializerSettings
-        //    {
-        //        ContractResolver = new DefaultContractResolver
-        //        {
-        //            NamingStrategy = new CamelCaseNamingStrategy()
-        //        },
-        //        Formatting = Formatting.Indented
-        //    }));
-        //}
     }
 }
