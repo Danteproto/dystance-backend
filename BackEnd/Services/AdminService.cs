@@ -120,7 +120,7 @@ namespace BackEnd.Services
                                 var content = String.Format(EmailTemplate.HTML_CONTENT, reader.GetValue(3).ToString(), reader.GetValue(1).ToString(), "123@123a", confirmationLink);
 
                                 var message = new Message(new string[] { user.Email }, "Your Account On DYSTANCE", content, null);
-                                await _emailSender.SendEmailAsync(message);
+                                _emailSender.SendEmailAsync(message);
 
                                 //roleManager.AddUserToRole
                                 await _userManager.AddToRoleAsync(user, "quality assurance");
@@ -182,7 +182,7 @@ namespace BackEnd.Services
                                 var content = String.Format(EmailTemplate.HTML_CONTENT, reader.GetValue(3).ToString(), reader.GetValue(1).ToString(), "123@123a", confirmationLink);
 
                                 var message = new Message(new string[] { user.Email }, "Your Account On DYSTANCE", content, null);
-                                await _emailSender.SendEmailAsync(message);
+                                _emailSender.SendEmailAsync(message);
 
                                 //roleManager.AddUserToRole
                                 await _userManager.AddToRoleAsync(user, "academic management");

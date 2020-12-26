@@ -310,27 +310,8 @@ namespace BackEnd.Controllers
 
             return fileContentResult;
 
-            //string filePath = string.Format("api/users/reports/attendance/getFile?fileName={0}&roomId={1}", fileInfo.Name, roomId);
-            //return Ok(new ExportExcelResponse
-            //{
-            //    RoomId = roomId,
-            //    Url = filePath
-            //});
-
         }
 
-        //[AllowAnonymous]
-        //[HttpGet("reports/attendance/getFile")]
-        //public async Task<IActionResult> GetExport(string fileName, string roomId)
-        //{
-        //    var rootPath = _env.ContentRootPath;
-        //    var filePath = Path.Combine(rootPath, $"Files/{roomId}/Exports/" + fileName);
-        //    var file = System.IO.File.OpenRead(filePath);
-        //    string contentType;
-        //    new FileExtensionContentTypeProvider().TryGetContentType(fileName, out contentType);
-        //    Response.Headers.Add("Content-Disposition", $"attachment; filename={fileName}");
-        //    return File(file, contentType);
-        //}
 
     }
 }
