@@ -125,9 +125,22 @@ namespace BackEnd.Services
                                     continue;
                                 }
 
-                                if (await _userManager.FindByNameAsync(reader.GetValue(1).ToString()) != null ||
-                                    await _userManager.FindByEmailAsync(reader.GetValue(3).ToString()) != null)
+                                if (await _userManager.FindByEmailAsync(reader.GetValue(3).ToString()) != null)
                                 {
+                                    errors.Add(new Error
+                                    {
+                                        Type = 1,
+                                        Message = "Email " + reader.GetValue(3).ToString() + " already exists",
+                                    });
+                                    continue;
+                                }
+                                if (await _userManager.FindByNameAsync(reader.GetValue(1).ToString()) != null)
+                                {
+                                    errors.Add(new Error
+                                    {
+                                        Type = 2,
+                                        Message = "Employee Code " + reader.GetValue(1).ToString() + " already exists",
+                                    });
                                     continue;
                                 }
 
