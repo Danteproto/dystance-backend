@@ -19,6 +19,7 @@ namespace BackEnd.Services
         public Task<IActionResult> GetLogByRoom(int id);
         public Task<IActionResult> GetAttendanceByRoom(int id);
     }
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class PublicService : IPublicService
     {
         private readonly RoomDBContext _roomContext;

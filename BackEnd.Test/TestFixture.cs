@@ -16,7 +16,7 @@ namespace BackEnd.Test
         public TestFixture()
         {
             var builder = new WebHostBuilder()
-                .UseContentRoot(@"D:\LEARning cac kieu\Ky 9\Back End")
+                .UseContentRoot(@"F:\Asus\BackEnd\BackEnd")
                 .UseStartup<TStartup>();
 
             Server = new TestServer(builder);

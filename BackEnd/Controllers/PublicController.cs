@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 namespace BackEnd.Controllers
 {
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [ApiKey]
     [Route("api/[controller]")]
     [ApiController]
