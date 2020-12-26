@@ -35,6 +35,7 @@ using BackEnd.DAO;
 
 namespace BackEnd
 {
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class Startup
     {
         public Startup(IConfiguration configuration)

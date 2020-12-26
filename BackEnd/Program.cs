@@ -15,6 +15,7 @@ using Microsoft.IdentityModel.Logging;
 
 namespace BackEnd
 {
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class Program
     {
         public static void Main(string[] args)

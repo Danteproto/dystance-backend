@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 namespace BackEnd.Attributes
 {
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     [AttributeUsage(validOn: AttributeTargets.Class)]
     public class ApiKeyAttribute : Attribute, IAsyncActionFilter
     {

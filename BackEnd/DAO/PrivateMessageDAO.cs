@@ -13,7 +13,7 @@ namespace BackEnd.DAO
         public Task<IActionResult> CreatePrivateMessage(PrivateMessage privateMessage);
         public Task<IActionResult> DeletePrivateMessages(List<PrivateMessage> privateMessages);
     }
-
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class PrivateMessageDAO : IPrivateMessageDAO
     {
         private readonly UserDbContext _context;
