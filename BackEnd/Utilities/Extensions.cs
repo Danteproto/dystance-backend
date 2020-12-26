@@ -14,6 +14,7 @@ namespace BackEnd.Ultilities
 {
     public static class Extensions
     {
+        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
         public static IDictionary<string, string> ToDictionary(this NameValueCollection col)
         {
             IDictionary<string, string> myDictionary = new Dictionary<string, string>();
@@ -56,7 +57,7 @@ namespace BackEnd.Ultilities
 
             return formParameters;
         }
-
+        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
         public static string ToPascalCase(this string str)
         {
             if (!string.IsNullOrEmpty(str) && str.Length > 1)
@@ -65,7 +66,7 @@ namespace BackEnd.Ultilities
             }
             return str;
         }
-
+        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
         public static IDictionary<string, object> DictionaryToPascal(IDictionary<string, object> source)
         {
             var dest = new Dictionary<string, object>();
@@ -98,7 +99,7 @@ namespace BackEnd.Ultilities
                 ms.Dispose();
             }
         }
-
+        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
         public static IFormFile GetRoomDefaultAvatar(IWebHostEnvironment _env)
         {
             var ms = new MemoryStream();
@@ -122,7 +123,7 @@ namespace BackEnd.Ultilities
                 ms.Dispose();
             }
         }
-
+        [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
         public static DateTime ToDateTime(this string s,
                 string format = "ddMMyyyy", string cultureString = "en-US")
         {
