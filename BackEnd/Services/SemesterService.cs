@@ -70,7 +70,8 @@ namespace BackEnd.Services
                 LastUpdated = DateTime.Now,
                 File = file.FileName
             };
-            SemesterDAO.Create(_roomContext, semester);
+            var fail = new List<object>();
+            await SemesterDAO.Create(_roomContext, semester);
             semester = SemesterDAO.GetLast(_roomContext);
             System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
             try
@@ -88,7 +89,7 @@ namespace BackEnd.Services
                                 if (reader.Name == "Classes") // "CLASSES" SHEET
                                 {
                                     var room = new Room();
-                                    if (reader.GetValue(0) == null && reader.GetValue(1) == null)
+                                    if (reader.GetValue(0) == null)
                                     {
                                         continue;
                                     }
@@ -97,15 +98,24 @@ namespace BackEnd.Services
                                         room.Subject = reader.GetValue(1).ToString();
                                         reader.Read();
                                     }
+                                    else
+                                    {
+                                        continue;
+                                    }
                                     if (reader.GetValue(0).ToString() == "Class")
                                     {
                                         room.ClassName = reader.GetValue(1).ToString();
                                         reader.Read();
                                     }
-                                    var extRoom = RoomDAO.GetRoomByClassSubjectSemester(_roomContext, room.ClassName, room.Subject, semester.Id);
-                                    if(extRoom!= null)
+                                    else
                                     {
-                                        throw new Exception("Excel File Error: Class Already Exists");
+                                        continue;
+                                    }
+                                    var extRoom = RoomDAO.GetRoomByClassSubjectSemester(_roomContext, room.ClassName, room.Subject, semester.Id);
+                                    if (extRoom != null)
+                                    {
+                                        fail.Add(new { message = $"Class {room.Subject}-{room.ClassName} already exist" });
+                                        continue;
                                     }
                                     room.StartDate = DateTime.Now;
                                     room.EndDate = DateTime.Now;
@@ -119,7 +129,9 @@ namespace BackEnd.Services
                                         var teacher = await _userManager.FindByNameAsync(reader.GetValue(1).ToString());
                                         if (teacher == null)
                                         {
-                                            throw new Exception(" Teacher Accounts in this semester doesn't exist yet. Please import the accounts first");
+                                            fail.Add(new { message = $"Class {room.Subject}-{room.ClassName} error: Teacher {reader.GetValue(1)} not exist " });
+                                            await RoomService.DeleteRoom(_roomContext, room.RoomId, _env);
+                                            continue;
                                         }
                                         room.CreatorId = teacher.Id;
                                         RoomDAO.UpdateRoom(_roomContext, room);
@@ -134,20 +146,36 @@ namespace BackEnd.Services
                                     if (reader.GetValue(0).ToString() == "Num of students")
                                     {
                                         var count = Convert.ToInt32(reader.GetValue(1).ToString());
+                                        var links = new List<RoomUserLink>();
+                                        var flag = true;
                                         for (int i = 0; i < count; i++)
                                         {
                                             reader.Read();
                                             var student = _userManager.FindByNameAsync(reader.GetValue(1).ToString()).Result;
                                             if (student == null)
                                             {
-                                                throw new Exception(" Students Accounts in this semester doesn't exist yet. Please import the accounts first");
+                                                fail.Add(new { message = $"Class {room.Subject}-{room.ClassName} error: Student {reader.GetValue(1)} not exist " });
+                                                await RoomService.DeleteRoom(_roomContext, room.RoomId, _env);
+                                                flag = false;
+                                                break;
                                             }
-                                            var link = new RoomUserLink
+                                            if (!links.Any(item => item.UserId == student.Id))
                                             {
-                                                UserId = student.Id,
-                                                RoomId = room.RoomId,
-                                            };
-                                            result = RoomUserLinkDAO.Create(_roomContext, link);
+                                                links.Add(new RoomUserLink
+                                                {
+                                                    UserId = student.Id,
+                                                    RoomId = room.RoomId,
+                                                });
+                                            }
+                                            else
+                                            {
+                                                fail.Add(new { message = $"Class {room.Subject}-{room.ClassName} error: Student {reader.GetValue(1)} duplicate " });
+                                            }
+
+                                        }
+                                        if (flag)
+                                        {
+                                            result = RoomUserLinkDAO.Create(_roomContext, links);
                                         }
                                     }
                                 }
@@ -162,6 +190,11 @@ namespace BackEnd.Services
                                     var subject = reader.GetValue(3).ToString();
                                     var className = reader.GetValue(4).ToString();
                                     var room = RoomDAO.GetRoomByClassSubjectSemester(_roomContext, className, subject, semester.Id);
+                                    if (room == null)
+                                    {
+                                        fail.Add(new { message = $"Schedule for Class {subject}-{className} at date {reader.GetValue(0)} error: Class doesn't exist " });
+                                        continue;
+                                    }
                                     var schedule = new Timetable
                                     {
                                         RoomId = room.RoomId,
@@ -171,35 +204,49 @@ namespace BackEnd.Services
                                     };
                                     var userIds = RoomUserLinkDAO.GetRoomLink(_roomContext, schedule.RoomId)
                                     .Select(item => item.UserId);
+                                    var flag = false;
                                     foreach (var id in userIds)
                                     {
                                         var roomsList = RoomDAO.GetRoomsByUserId(_roomContext, id);
                                         foreach (var r in roomsList)
                                         {
                                             var rSchedules = TimetableDAO.GetByRoomId(_roomContext, r.RoomId);
+                                            if(rSchedules.Count == 0)
+                                            {
+                                                continue;
+                                            }
                                             if (rSchedules.Any(item => (item.Date == schedule.Date) &&
                                              ((item.StartTime <= schedule.EndTime && schedule.EndTime <= item.EndTime) ||
                                              (item.EndTime >= schedule.StartTime && schedule.StartTime >= item.StartTime) ||
                                              (item.StartTime > schedule.StartTime && item.EndTime < schedule.EndTime))))
                                             {
-                                                throw new Exception("User schedule is overlaping");
+                                                flag = true;
                                             }
                                         }
                                     }
-                                    var result = TimetableDAO.Create(_roomContext, schedule);
-                                    schedule = TimetableDAO.GetLast(_roomContext);
-                                    var attendances = new List<AttendanceReports>();
-                                    userIds = userIds.Where(item => item != room.CreatorId).ToList();
-                                    foreach (var userId in userIds)
+                                    if (!flag)
                                     {
-                                        attendances.Add(new AttendanceReports
+                                        var result = await TimetableDAO.Create(_roomContext, schedule);
+                                        schedule = TimetableDAO.GetLast(_roomContext);
+                                        var attendances = new List<AttendanceReports>();
+                                        userIds = userIds.Where(item => item != room.CreatorId).ToList();
+                                        if (schedule != null)
                                         {
-                                            UserId = userId,
-                                            Status = "future",
-                                            TimeTableId = schedule.Id,
-                                        });
+                                            foreach (var userId in userIds)
+                                            {
+                                                attendances.Add(new AttendanceReports
+                                                {
+                                                    UserId = userId,
+                                                    Status = "future",
+                                                    TimeTableId = schedule.Id,
+                                                });
+                                            }
+                                            await _attendanceDAO.CreateAttendance(attendances);
+                                        }
                                     }
-                                    await _attendanceDAO.CreateAttendance(attendances);
+                                    else{
+                                        fail.Add(new { message = $"Schedule for Class {subject}-{className} at date {schedule.Date} error: User schedule overlapping" });
+                                    }
                                 }
                                 else
                                 {
@@ -212,7 +259,11 @@ namespace BackEnd.Services
 
                 }
 
-                return new OkObjectResult(semester);
+                return new OkObjectResult(new
+                {
+                    success = semester,
+                    failed = fail
+                });
             }
             catch (Exception e)
             {
@@ -270,6 +321,7 @@ namespace BackEnd.Services
             var semester = SemesterDAO.GetById(_roomContext, Convert.ToInt32(request.Form["id"]));
             semester.Name = request.Form["name"];
             semester.LastUpdated = DateTime.Now;
+            var fail = new List<object>();
             if (request.Form.Files.Any())
             {
                 var appUsers = new List<AppUser>();
@@ -289,7 +341,7 @@ namespace BackEnd.Services
                                     if (reader.Name == "Classes") // "CLASSES" SHEET
                                     {
                                         var room = new Room();
-                                        if ((reader.GetValue(0) == null && reader.GetValue(1) == null))
+                                        if (reader.GetValue(0) == null)
                                         {
                                             continue;
                                         }
@@ -298,10 +350,18 @@ namespace BackEnd.Services
                                             room.Subject = reader.GetValue(1).ToString();
                                             reader.Read();
                                         }
+                                        else
+                                        {
+                                            continue;
+                                        }
                                         if (reader.GetValue(0).ToString() == "Class")
                                         {
                                             room.ClassName = reader.GetValue(1).ToString();
                                             reader.Read();
+                                        }
+                                        else
+                                        {
+                                            continue;
                                         }
                                         var extRoom = RoomDAO.GetRoomByClassSubjectSemester(_roomContext, room.ClassName, room.Subject, semester.Id);
                                         if (extRoom == null)
@@ -322,12 +382,12 @@ namespace BackEnd.Services
                                             var teacher = await _userManager.FindByNameAsync(reader.GetValue(1).ToString());
                                             if (teacher == null)
                                             {
-                                                throw new Exception(" Teacher Accounts in this semester doesn't exist yet. Please import the accounts first");
+                                                fail.Add(new { message = $"Class {room.Subject}-{room.ClassName} error: Teacher {reader.GetValue(1)} not exist " });
                                             }
-                                            if (room.CreatorId != teacher.Id)
+                                            else if (room.CreatorId != teacher.Id)
                                             {
                                                 var delLink = RoomUserLinkDAO.GetRoomUserLink(_roomContext, room.RoomId, room.CreatorId);
-                                                RoomUserLinkDAO.Delete(_roomContext, delLink);
+                                                await RoomUserLinkDAO.Delete(_roomContext, delLink);
                                                 room.CreatorId = teacher.Id;
                                                 RoomDAO.UpdateRoom(_roomContext, room);
                                                 var link = new RoomUserLink
@@ -335,7 +395,7 @@ namespace BackEnd.Services
                                                     UserId = teacher.Id,
                                                     RoomId = room.RoomId,
                                                 };
-                                                RoomUserLinkDAO.Create(_roomContext, link);
+                                                await RoomUserLinkDAO.Create(_roomContext, link);
                                             }
 
                                             reader.Read();
@@ -350,9 +410,17 @@ namespace BackEnd.Services
                                                 var student = _userManager.FindByNameAsync(reader.GetValue(1).ToString()).Result;
                                                 if (student == null)
                                                 {
-                                                    throw new Exception($" Student Accounts {reader.GetValue(1).ToString()} in this semester doesn't exist yet. Please import the accounts first");
+                                                    fail.Add(new { message = $"Class {room.Subject}-{room.ClassName} error: Student {reader.GetValue(1)} not exist " });
+                                                    continue;
                                                 }
-                                                listUserIds.Add(student.Id);
+                                                if (!listUserIds.Contains(student.Id))
+                                                {
+                                                    listUserIds.Add(student.Id);
+                                                }
+                                                else
+                                                {
+                                                    fail.Add(new { message = $"Class {room.Subject}-{room.ClassName} error: Student {reader.GetValue(1)} duplicate " });
+                                                }
                                             }
                                             listUserIds.Add(room.CreatorId);
                                             var extLinkUserIds = RoomUserLinkDAO.GetRoomLink(_roomContext, room.RoomId)
@@ -368,8 +436,8 @@ namespace BackEnd.Services
                                                 RoomId = room.RoomId
                                             }).ToList();
 
-                                            RoomUserLinkDAO.Create(_roomContext, addLinks);
-                                            RoomUserLinkDAO.Delete(_roomContext, deleteLinks);
+                                            await RoomUserLinkDAO.Create(_roomContext, addLinks);
+                                            await RoomUserLinkDAO.Delete(_roomContext, deleteLinks);
                                         }
                                     }
 
@@ -383,6 +451,11 @@ namespace BackEnd.Services
                                         var subject = reader.GetValue(3).ToString();
                                         var className = reader.GetValue(4).ToString();
                                         var room = RoomDAO.GetRoomByClassSubjectSemester(_roomContext, className, subject, semester.Id);
+                                        if (room == null)
+                                        {
+                                            fail.Add(new { message = $"Schedule for Class {subject}-{className} at date {reader.GetValue(0)} error: Class doesn't exist " });
+                                            continue;
+                                        }
                                         var extSchedules = TimetableDAO.GetByRoomId(_roomContext, room.RoomId);
                                         var schedule = new Timetable
                                         {
@@ -400,6 +473,7 @@ namespace BackEnd.Services
                                         }
                                         var userIds = RoomUserLinkDAO.GetRoomLink(_roomContext, schedule.RoomId)
                                         .Select(item => item.UserId);
+                                        var flag = false;
                                         foreach (var id in userIds)
                                         {
                                             var roomsList = RoomDAO.GetRoomsByUserId(_roomContext, id);
@@ -411,24 +485,30 @@ namespace BackEnd.Services
                                                  (item.EndTime >= schedule.StartTime && schedule.StartTime >= item.StartTime) ||
                                                  (item.StartTime > schedule.StartTime && item.EndTime < schedule.EndTime))))
                                                 {
-                                                    throw new Exception("User schedule is overlaping");
+                                                    var user = await _userManager.FindByIdAsync(id);
+                                                    fail.Add(new { message = $"Schedule for Class {subject}-{className} at date {schedule.Date} error: User {user.UserName} schedule overlapping" });
+                                                    flag = true;
                                                 }
                                             }
                                         }
-                                        var result = TimetableDAO.Create(_roomContext, schedule);
-                                        schedule = TimetableDAO.GetLast(_roomContext);
-                                        var attendances = new List<AttendanceReports>();
-                                        userIds = userIds.Where(item => item != room.CreatorId).ToList();
-                                        foreach (var userId in userIds)
+                                        if (!flag)
                                         {
-                                            attendances.Add(new AttendanceReports
+                                            var result = TimetableDAO.Create(_roomContext, schedule);
+                                            schedule = TimetableDAO.GetLast(_roomContext);
+                                            var attendances = new List<AttendanceReports>();
+                                            userIds = userIds.Where(item => item != room.CreatorId).ToList();
+                                            foreach (var userId in userIds)
                                             {
-                                                UserId = userId,
-                                                Status = "future",
-                                                TimeTableId = schedule.Id,
-                                            });
+                                                attendances.Add(new AttendanceReports
+                                                {
+                                                    UserId = userId,
+                                                    Status = "future",
+                                                    TimeTableId = schedule.Id,
+                                                });
+                                            }
+                                            await _attendanceDAO.CreateAttendance(attendances);
                                         }
-                                        await _attendanceDAO.CreateAttendance(attendances);
+
 
                                     }
                                     else
@@ -448,7 +528,11 @@ namespace BackEnd.Services
                 }
             }
             var finalResult = SemesterDAO.Update(_roomContext, semester);
-            return new OkObjectResult(semester);
+            return new OkObjectResult(new
+            {
+                success = semester,
+                failed = fail
+            });
 
         }
 
@@ -493,12 +577,13 @@ namespace BackEnd.Services
                      (item.EndTime >= schedule.StartTime && schedule.StartTime >= item.StartTime) ||
                      (item.StartTime > schedule.StartTime && item.EndTime < schedule.EndTime))))
                 {
-                    return new BadRequestObjectResult(new { message = "Cannot add overlapping schedule" });
+                    return new BadRequestObjectResult(new { message = $"Add schedule for {room.Subject}-{room.ClassName} at date {schedule.Date} {schedule.StartTime} error: Cannot add overlapping schedule" });
                 }
                 var userIds = RoomUserLinkDAO.GetRoomLink(_roomContext, schedule.RoomId)
                 .Select(item => item.UserId);
                 foreach (var id in userIds)
                 {
+                    var user = await _userManager.FindByIdAsync(id);
                     var roomsList = RoomDAO.GetRoomsByUserId(_roomContext, id);
                     foreach (var r in roomsList)
                     {
@@ -508,7 +593,7 @@ namespace BackEnd.Services
                          (item.EndTime >= schedule.StartTime && schedule.StartTime >= item.StartTime) ||
                          (item.StartTime > schedule.StartTime && item.EndTime < schedule.EndTime))))
                         {
-                            return new BadRequestObjectResult(new { message = "User Schedule overlapping!" });
+                            return new BadRequestObjectResult(new { message = $"Add schedule for {room.Subject}-{room.ClassName} at date {schedule.Date} {schedule.StartTime} error: User Schedule overlapping!" });
                         }
                     }
                 }
@@ -548,7 +633,7 @@ namespace BackEnd.Services
                 var room = RoomDAO.GetRoomByClassSubjectSemester(_roomContext, model.@class, model.subject, semesterId);
                 if (room == null)
                 {
-                    fail.Add(new { message = "Schedule update error: Class not exist" });
+                    fail.Add(new { message = $"Schedule update for {model.subject}-{model.@class} error: Class doesn't exist " });
                     continue;
                 }
                 var schedule = new Timetable
@@ -560,12 +645,12 @@ namespace BackEnd.Services
                     EndTime = Convert.ToDateTime(model.endTime).TimeOfDay,
                 };
                 var extSchedules = TimetableDAO.GetByRoomId(_roomContext, room.RoomId);
-                if (extSchedules.Any(item =>(item.Id != schedule.Id) && (item.Date == schedule.Date) &&
+                if (extSchedules.Any(item => (item.Id != schedule.Id) && (item.Date == schedule.Date) &&
                      ((item.StartTime <= schedule.EndTime && schedule.EndTime <= item.EndTime) ||
                      (item.EndTime >= schedule.StartTime && schedule.StartTime >= item.StartTime) ||
                      (item.StartTime > schedule.StartTime && item.EndTime < schedule.EndTime))))
                 {
-                    fail.Add(new { message = "Schedule update error: Schedule overlaping"});
+                    fail.Add(new { message = $"Schedule update for {room.Subject}-{room.ClassName} at date {schedule.Date} {schedule.StartTime} error: Schedule overlaping" });
                     continue;
                 }
                 else
@@ -575,6 +660,7 @@ namespace BackEnd.Services
                     .Select(item => item.UserId);
                     foreach (var id in userIds)
                     {
+                        var user = await _userManager.FindByIdAsync(id);
                         var roomsList = RoomDAO.GetRoomsByUserId(_roomContext, id);
                         foreach (var r in roomsList)
                         {
@@ -584,13 +670,13 @@ namespace BackEnd.Services
                              (item.EndTime >= schedule.StartTime && schedule.StartTime >= item.StartTime) ||
                              (item.StartTime > schedule.StartTime && item.EndTime < schedule.EndTime))))
                             {
-                                fail.Add(new { message="Schedule update error: User's schedule overlaping"});
                                 flag = true;
                             }
                         }
                     }
                     if (flag)
                     {
+                        fail.Add(new { message = $"Schedule update for {room.Subject}-{room.ClassName} at date {schedule.Date} {schedule.StartTime} error: User schedule overlaping" });
                         continue;
                     }
                     foreach (var item in extSchedules)
@@ -658,7 +744,7 @@ namespace BackEnd.Services
             var extClass = RoomDAO.GetRoomByClassSubjectSemester(_roomContext, model.@class, model.subject, semesterId);
             if (extClass != null)
             {
-                return new BadRequestObjectResult(new { message = "class already exist!" });
+                return new BadRequestObjectResult(new { message = "Class already exist!" });
             }
             var @class = new Room
             {
@@ -706,17 +792,17 @@ namespace BackEnd.Services
         public async Task<IActionResult> UpdateClass(int semesterId, List<ClassRequest> models)
         {
             var result = new List<ClassResponse>();
-            var failed = new List<string>();
+            var failed = new List<object>();
             foreach (var model in models)
             {
                 var @class = RoomDAO.Get(_roomContext, Convert.ToInt32(model.id));
                 var extClass = RoomDAO.GetRoomByClassSubjectSemester(_roomContext, model.@class, model.subject, semesterId);
                 if (extClass != null && extClass.RoomId != Convert.ToInt32(model.id))
                 {
-                    failed.Add($"Cannot Update Class: Class Already Exists!");
+                    failed.Add(new { message = $"Cannot Update Class: Class Already Exists!" });
                     continue;
                 }
-                
+
                 var listUserIds = model.students;
                 listUserIds.Add(model.teacher);
                 var extLinkUserIds = RoomUserLinkDAO.GetRoomLink(_roomContext, @class.RoomId)
@@ -728,75 +814,79 @@ namespace BackEnd.Services
                 var flag = false;
                 foreach (var id in addUserIds)
                 {
-                    var roomsList = RoomDAO.GetRoomsByUserId(_roomContext, id);
+                    var user = await _userManager.FindByIdAsync(id);
+                    var roomsList = RoomDAO.GetRoomsByUserId(_roomContext, id).Where(item => item.RoomId != @class.RoomId);
                     foreach (var r in roomsList)
                     {
                         foreach (var schedule in schedules)
                         {
                             var rSchedules = TimetableDAO.GetByRoomId(_roomContext, r.RoomId);
-                            if (rSchedules.Any(item => (item.Date == schedule.Date) &&
+                            if (rSchedules.Any(item => (item.Id != schedule.Id) && (item.Date == schedule.Date) &&
                              ((item.StartTime <= schedule.EndTime && schedule.EndTime <= item.EndTime) ||
                              (item.EndTime >= schedule.StartTime && schedule.StartTime >= item.StartTime) ||
                              (item.StartTime > schedule.StartTime && item.EndTime < schedule.EndTime))))
                             {
-                                failed.Add($"Cannot Update Class: User Schedule Overlapping!");
                                 flag = true;
                             }
                         }
                     }
+                    if (flag)
+                    {
+                        failed.Add(new { message = $"Cannot Update Class: User {user.UserName} Schedule Overlapping!" });
+                    }
                 }
-                if (flag)
-                {
-                    continue;
-                }
-                var deleteLinks = deleteUserIds.Select(item => RoomUserLinkDAO.GetRoomUserLink(_roomContext, @class.RoomId, item)).ToList();
 
-                var addLinks = addUserIds.Select(item => new RoomUserLink
+                if (!flag)
                 {
-                    UserId = item,
-                    RoomId = @class.RoomId
-                }).ToList();
-                var addAttendance = new List<AttendanceReports>();
-                var delAttendance = new List<AttendanceReports>();
-                foreach (var schedule in schedules)
-                {
-                    foreach (var userId in addUserIds)
+                    var deleteLinks = deleteUserIds.Select(item => RoomUserLinkDAO.GetRoomUserLink(_roomContext, @class.RoomId, item)).ToList();
+
+                    var addLinks = addUserIds.Select(item => new RoomUserLink
                     {
-                        if (userId != @class.CreatorId)
+                        UserId = item,
+                        RoomId = @class.RoomId
+                    }).ToList();
+                    var addAttendance = new List<AttendanceReports>();
+                    var delAttendance = new List<AttendanceReports>();
+                    foreach (var schedule in schedules)
+                    {
+                        foreach (var userId in addUserIds)
                         {
-                            addAttendance.Add(new AttendanceReports
+                            if (userId != @class.CreatorId)
                             {
-                                UserId = userId,
-                                TimeTableId = schedule.Id,
-                                Status = "future"
-                            });
+                                addAttendance.Add(new AttendanceReports
+                                {
+                                    UserId = userId,
+                                    TimeTableId = schedule.Id,
+                                    Status = "future"
+                                });
+                            }
                         }
-                    }
-                    foreach (var userId in deleteUserIds)
-                    {
-                        var attendance = _attendanceDAO.GetAttendanceByScheduleUserId(schedule.Id, userId);
-                        if (attendance != null && schedule.Date > DateTime.Now)
+                        foreach (var userId in deleteUserIds)
                         {
-                            delAttendance.Add(attendance);
+                            var attendance = _attendanceDAO.GetAttendanceByScheduleUserId(schedule.Id, userId);
+                            if (attendance != null && schedule.Date > DateTime.Now)
+                            {
+                                delAttendance.Add(attendance);
+                            }
                         }
                     }
+                    await _attendanceDAO.DeleteAttendance(delAttendance);
+                    await _attendanceDAO.CreateAttendance(addAttendance);
+                    await RoomUserLinkDAO.Create(_roomContext, addLinks);
+                    await RoomUserLinkDAO.Delete(_roomContext, deleteLinks);
+                    @class.Subject = model.subject;
+                    @class.CreatorId = model.teacher;
+                    @class.ClassName = model.@class;
+                    RoomDAO.UpdateRoom(_roomContext, @class);
+                    result.Add(new ClassResponse
+                    {
+                        id = @class.RoomId.ToString(),
+                        subject = @class.Subject,
+                        @class = @class.ClassName,
+                        teacher = @class.CreatorId,
+                        students = model.students.Where(x => x != @class.CreatorId).ToList()
+                    });
                 }
-                await _attendanceDAO.DeleteAttendance(delAttendance);
-                await _attendanceDAO.CreateAttendance(addAttendance);
-                await RoomUserLinkDAO.Create(_roomContext, addLinks);
-                await RoomUserLinkDAO.Delete(_roomContext, deleteLinks);
-                @class.Subject = model.subject;
-                @class.CreatorId = model.teacher;
-                @class.ClassName = model.@class;
-                RoomDAO.UpdateRoom(_roomContext, @class);
-                result.Add(new ClassResponse
-                {
-                    id = @class.RoomId.ToString(),
-                    subject = @class.Subject,
-                    @class = @class.ClassName,
-                    teacher = @class.CreatorId,
-                    students = model.students.Where(x => x != @class.CreatorId).ToList()
-                });
             }
             return new OkObjectResult(new
             {

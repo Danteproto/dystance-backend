@@ -32,14 +32,18 @@ namespace BackEnd.Test.DAO.Test
             };
             RoomDAO.Create(roomContext, room);
         }
-        [Fact]
-        public async void ChatCreateSuccessfully()
+        [Theory]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(3)]
+        [InlineData(999999)]
+        public async void ChatCreateSuccessfully(int roomid)
         {
             //Arrange
             var chat = new RoomChat()
             {
                 Id = 1,
-                RoomId = 1,
+                RoomId = roomid,
                 UserId = "testUser",
                 Date = DateTime.Now,
                 Content = "testChat",
@@ -50,14 +54,18 @@ namespace BackEnd.Test.DAO.Test
             // Assert
             Assert.Equal((int)HttpStatusCode.OK, ((ObjectResult)result).StatusCode);
         }
-        [Fact]
-        public async void ChatCreateFail()
+        [Theory]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(3)]
+        [InlineData(999999)]
+        public async void ChatCreateFail(int roomid)
         {
             //Arrange
             var chat = new RoomChat()
             {
                 Id = 1,
-                RoomId = 1,
+                RoomId = roomid,
                 UserId = "testUser",
                 Date = DateTime.Now,
                 Content = "testChat",
@@ -77,6 +85,8 @@ namespace BackEnd.Test.DAO.Test
         [Theory]
         [InlineData(1)]
         [InlineData(2)]
+        [InlineData(3)]
+        [InlineData(999999)]
         public async void GetChatByRoomId(int roomId)
         {
             var chats = new List<RoomChat>();
@@ -102,15 +112,19 @@ namespace BackEnd.Test.DAO.Test
 
         }
 
-        [Fact]
-        public async void GetLastChat()
+        [Theory]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(3)]
+        [InlineData(999999)]
+        public async void GetLastChat(int roomId)
         {
             var now = DateTime.Now;
             var chats = new List<RoomChat>();
             //Arrange
-            chats.Add(new RoomChat() { Id = 1, RoomId = 1, UserId = "testUser", Date = now, Content = "testChat", Type = 1, });
-            chats.Add(new RoomChat() { Id = 2, RoomId = 1, UserId = "testUser", Date = now, Content = "testChat", Type = 1, });
-            chats.Add(new RoomChat() { Id = 3, RoomId = 1, UserId = "testUser", Date = now, Content = "testChat", Type = 1, });
+            chats.Add(new RoomChat() { Id = 1, RoomId = roomId, UserId = "testUser", Date = now, Content = "testChat", Type = 1, });
+            chats.Add(new RoomChat() { Id = 2, RoomId = roomId, UserId = "testUser", Date = now, Content = "testChat", Type = 1, });
+            chats.Add(new RoomChat() { Id = 3, RoomId = roomId, UserId = "testUser", Date = now, Content = "testChat", Type = 1, });
 
             // Act
             foreach (var chat in chats)
@@ -118,24 +132,28 @@ namespace BackEnd.Test.DAO.Test
                 await RoomChatDAO.Create(roomContext, chat);
             }
 
-            var result = RoomChatDAO.GetLastChat(roomContext, 1);
+            var result = RoomChatDAO.GetLastChat(roomContext, roomId);
             
             Assert.Equal(3, result.Id);
-            Assert.Equal(1, result.RoomId);
+            Assert.Equal(roomId, result.RoomId);
             Assert.Equal("testUser", result.UserId);
             Assert.Equal("testChat", result.Content);
             Assert.Equal(1, result.Type);         
         }
 
-        [Fact]
-        public async void DeleteChat_Successful()
+        [Theory]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(3)]
+        [InlineData(999999)]
+        public async void DeleteChat_Successful(int roomId)
         {
             var now = DateTime.Now;
             var chats = new List<RoomChat>();
             //Arrange
-            chats.Add(new RoomChat() { Id = 1, RoomId = 1, UserId = "testUser", Date = now, Content = "testChat", Type = 1, });
-            chats.Add(new RoomChat() { Id = 2, RoomId = 1, UserId = "testUser", Date = now, Content = "testChat", Type = 1, });
-            chats.Add(new RoomChat() { Id = 3, RoomId = 1, UserId = "testUser", Date = now, Content = "testChat", Type = 1, });
+            chats.Add(new RoomChat() { Id = 1, RoomId = roomId, UserId = "testUser", Date = now, Content = "testChat", Type = 1, });
+            chats.Add(new RoomChat() { Id = 2, RoomId = roomId, UserId = "testUser", Date = now, Content = "testChat", Type = 1, });
+            chats.Add(new RoomChat() { Id = 3, RoomId = roomId, UserId = "testUser", Date = now, Content = "testChat", Type = 1, });
 
             // Act
             foreach (var chat in chats)
@@ -144,20 +162,24 @@ namespace BackEnd.Test.DAO.Test
             }
 
             var result = RoomChatDAO.DeleteRoomChat(roomContext, chats);
-            var resultChat = RoomChatDAO.GetChatByRoomId(roomContext, 1);
+            var resultChat = RoomChatDAO.GetChatByRoomId(roomContext, roomId);
             Assert.Empty(resultChat);
         }
 
-        [Fact]
-        public async void DeleteChat_FAIL()
+        [Theory]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(3)]
+        [InlineData(999999)]
+        public async void DeleteChat_FAIL(int roomId)
         {
             var now = DateTime.Now;
             var chats = new List<RoomChat>();
             var chats2 = new List<RoomChat>();
             //Arrange
-            chats.Add(new RoomChat() { Id = 1, RoomId = 1, UserId = "testUser", Date = now, Content = "testChat", Type = 1, });
-            chats.Add(new RoomChat() { Id = 2, RoomId = 1, UserId = "testUser", Date = now, Content = "testChat", Type = 1, });
-            chats2.Add(new RoomChat() { Id = 3, RoomId = 1, UserId = "testUser", Date = now, Content = "testChat", Type = 1, });
+            chats.Add(new RoomChat() { Id = 1, RoomId = roomId, UserId = "testUser", Date = now, Content = "testChat", Type = 1, });
+            chats.Add(new RoomChat() { Id = 2, RoomId = roomId, UserId = "testUser", Date = now, Content = "testChat", Type = 1, });
+            chats2.Add(new RoomChat() { Id = 3, RoomId = roomId, UserId = "testUser", Date = now, Content = "testChat", Type = 1, });
 
             // Act
             foreach (var chat in chats)
@@ -166,7 +188,7 @@ namespace BackEnd.Test.DAO.Test
             }
 
             var result = RoomChatDAO.DeleteRoomChat(roomContext, chats2);
-            var resultChat = RoomChatDAO.GetChatByRoomId(roomContext, 1);
+            var resultChat = RoomChatDAO.GetChatByRoomId(roomContext, roomId);
             Assert.NotEmpty(resultChat);
         }
     }

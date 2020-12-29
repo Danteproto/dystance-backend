@@ -1679,17 +1679,7 @@ namespace BackEnd.Services
         {
             var room = _roomDBContext.Room.FirstOrDefault(x => x.RoomId.ToString() == roomId);
             var stream = new MemoryStream();
-<<<<<<< HEAD
             FileInfo fileInfo = new FileInfo(room.Subject + "-" + room.ClassName + ".xlsx");
-=======
-            string filePath = String.Format(@"Files/{0}/Exports/", roomId);
-
-            if (!Directory.Exists(filePath))
-            {
-                Directory.CreateDirectory(filePath);
-            }
-            FileInfo fileInfo = new FileInfo(filePath + room.Subject + "-" + room.ClassName + ".xlsx");
->>>>>>> feature/DL-255-b-export-attendance-reports
             using (ExcelPackage excel = new ExcelPackage(stream))
             {
 

@@ -33,14 +33,17 @@ namespace BackEnd.Test.DAO.Test
             };
             RoomDAO.Create(roomContext, room);
         }
-        [Fact]
-        public async Task LinkCreateSuccessfully()
+        [Theory]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(999999)]
+        public async Task LinkCreateSuccessfully(int id)
         {
             //Arrange
             var link = new RoomUserLink()
             {
                 RoomId = 1,
-                RoomUserId = 1,
+                RoomUserId = id,
                 UserId = "testUser"
             };
             // Act
@@ -77,14 +80,17 @@ namespace BackEnd.Test.DAO.Test
             // Assert
             Assert.Equal((int)HttpStatusCode.InternalServerError, ((ObjectResult)result).StatusCode);
         }
-        [Fact]
-        public async Task LinkCreateFail()
+        [Theory]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(999999)]
+        public async Task LinkCreateFail(int id)
         {
             //Arrange
             var link = new RoomUserLink()
             {
                 RoomId = 1,
-                RoomUserId = 1,
+                RoomUserId = id,
                 UserId = "testUser"
             };
             // Act
@@ -95,7 +101,7 @@ namespace BackEnd.Test.DAO.Test
             result = await RoomUserLinkDAO.Create(roomContext, new RoomUserLink()
             {
                 RoomId = 1,
-                RoomUserId = 1,
+                RoomUserId = id,
                 UserId = "testUser"
             });
             // Assert
@@ -166,30 +172,29 @@ namespace BackEnd.Test.DAO.Test
 
             Assert.Equal(2, resultLinks.Count);
         }
-        [Fact]
-        public async void DeleteLinkFail()
+        [Theory]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(999999)]
+        public async void DeleteLinkFail(int roomId)
         {
             //Arrange
             var links = new List<RoomUserLink>();
-            links.Add(new RoomUserLink() { RoomId = 1, RoomUserId = 1, UserId = "testUser" });
-            links.Add(new RoomUserLink() { RoomId = 1, RoomUserId = 2, UserId = "testUser1" });
-            links.Add(new RoomUserLink() { RoomId = 1, RoomUserId = 3, UserId = "testUser2" });
+            links.Add(new RoomUserLink() { RoomId = roomId, RoomUserId = 1, UserId = "testUser" });
+            links.Add(new RoomUserLink() { RoomId = roomId, RoomUserId = 2, UserId = "testUser1" });
+            links.Add(new RoomUserLink() { RoomId = roomId, RoomUserId = 3, UserId = "testUser2" });
 
             var result = await RoomUserLinkDAO.Create(roomContext, links);
 
             Assert.Equal((int)HttpStatusCode.OK, ((ObjectResult)result).StatusCode);
 
-            var resultLinks = RoomUserLinkDAO.GetRoomLink(roomContext, 1);
+            var resultLinks = RoomUserLinkDAO.GetRoomLink(roomContext, roomId);
 
             Assert.Equal(3, resultLinks.Count);
 
-            result = await RoomUserLinkDAO.Delete(roomContext, new RoomUserLink() { RoomId = 1, RoomUserId = 1, UserId = "testUser12" });
+            result = await RoomUserLinkDAO.Delete(roomContext, new RoomUserLink() { RoomId = roomId, RoomUserId = 1, UserId = "testUser12" });
 
             Assert.Equal((int)HttpStatusCode.InternalServerError, ((ObjectResult)result).StatusCode);
-
-            resultLinks = RoomUserLinkDAO.GetRoomLink(roomContext, 1);
-
-            Assert.Equal(3, resultLinks.Count);
         }
         [Fact]
         public async void DeleteListLinkSuccessfully()
