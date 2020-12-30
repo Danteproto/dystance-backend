@@ -24,13 +24,16 @@ namespace BackEnd.Test.DAO.Test
         }
 
         //Test create
-        [Fact]
-        public async Task RoomCreateSuccessfully()
+        [Theory]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(999999)]
+        public async Task RoomCreateSuccessfully(int roomId)
         {
             //Arrange
             var room = new Room()
             {
-                RoomId = 1,
+                RoomId = roomId,
                 Subject = "testSubject",
                 ClassName = "testName",
                 CreatorId = "testUser",
@@ -42,12 +45,15 @@ namespace BackEnd.Test.DAO.Test
             Assert.Equal((int)HttpStatusCode.OK, ((ObjectResult)result).StatusCode);
         }
 
-        [Fact]
-        public async Task RoomCreateFail()
+        [Theory]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(999999)]
+        public async Task RoomCreateFail(int roomId)
         {
             var result = await RoomDAO.Create(roomContext, new Room()
             {
-                RoomId = 1,
+                RoomId = roomId,
                 Subject = "testSubject",
                 ClassName = "testName",
                 CreatorId = "testUser",
@@ -55,7 +61,7 @@ namespace BackEnd.Test.DAO.Test
             });
             result = await RoomDAO.Create(roomContext, new Room()
             {
-                RoomId = 1,
+                RoomId = roomId,
                 Subject = "testSubject",
                 ClassName = "testName",
                 CreatorId = "testUser",
@@ -64,13 +70,17 @@ namespace BackEnd.Test.DAO.Test
             // Assert
             Assert.Equal((int)HttpStatusCode.InternalServerError, ((ObjectResult)result).StatusCode);
         }
-        [Fact]
-        public async Task RoomUpdateSuccessfully()
+        [Theory]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(3)]
+        [InlineData(999999)]
+        public async Task RoomUpdateSuccessfully(int roomId)
         {
             //Arrange
             var room = new Room()
             {
-                RoomId = 1,
+                RoomId = roomId,
                 Subject = "testSubject",
                 ClassName = "testName",
                 CreatorId = "testUser",
@@ -84,7 +94,7 @@ namespace BackEnd.Test.DAO.Test
             room.Subject = "testSubject2";
             room.ClassName = "testName2";
             result = RoomDAO.UpdateRoom(roomContext, room);
-            var resultRoom = RoomDAO.Get(roomContext, 1);
+            var resultRoom = RoomDAO.Get(roomContext, roomId);
             Assert.Equal((int)HttpStatusCode.OK, ((ObjectResult)result).StatusCode);
             Assert.Equal(resultRoom.RoomId, room.RoomId);
             Assert.Equal(resultRoom.Subject, room.Subject);
@@ -92,13 +102,17 @@ namespace BackEnd.Test.DAO.Test
             Assert.Equal(resultRoom.CreatorId, room.CreatorId);
             Assert.Equal(resultRoom.SemesterId, room.SemesterId);
         }
-        [Fact]
-        public async Task RoomUpdateFail()
+        [Theory]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(3)]
+        [InlineData(999999)]
+        public async Task RoomUpdateFail(int roomId)
         {
             //Arrange
             var room = new Room()
             {
-                RoomId = 1,
+                RoomId = roomId,
                 Subject = "testSubject",
                 ClassName = "testName",
                 CreatorId = "testUser",
@@ -109,25 +123,24 @@ namespace BackEnd.Test.DAO.Test
             // Assert
             Assert.Equal((int)HttpStatusCode.OK, ((ObjectResult)result).StatusCode);
 
-            room.RoomId = 2;
+            room.RoomId = -1;
             room.Subject = "testSubject2";
             room.ClassName = "testName2";
             result = RoomDAO.UpdateRoom(roomContext, room);
-            var resultRoom = RoomDAO.Get(roomContext, 1);
+            var resultRoom = RoomDAO.Get(roomContext, roomId);
             Assert.Equal((int)HttpStatusCode.InternalServerError, ((ObjectResult)result).StatusCode);
-            Assert.Equal(2, resultRoom.RoomId);
-            Assert.Equal(resultRoom.Subject, room.Subject);
-            Assert.Equal(resultRoom.ClassName, room.ClassName);
-            Assert.Equal(resultRoom.CreatorId, room.CreatorId);
-            Assert.Equal(resultRoom.SemesterId, room.SemesterId);
         }
 
-        [Fact]
-        public async Task DeleteSuccessfull()
+        [Theory]
+        [InlineData(1)]
+        [InlineData(2)]
+        [InlineData(3)]
+        [InlineData(999999)]
+        public async Task DeleteSuccessfull(int roomId)
         {
             var room = new Room()
             {
-                RoomId = 1,
+                RoomId = roomId,
                 Subject = "testSubject",
                 ClassName = "testName",
                 CreatorId = "testUser",
@@ -142,18 +155,22 @@ namespace BackEnd.Test.DAO.Test
 
             Assert.Equal((int)HttpStatusCode.OK, ((ObjectResult)result).StatusCode);
 
-            room = RoomDAO.Get(roomContext, 1);
+            room = RoomDAO.Get(roomContext, roomId);
 
             Assert.Null(room);
 
         }
 
-        [Fact]
-        public async Task DeleteFail()
+        [Theory]
+        [InlineData(1,2)]
+        [InlineData(2,3)]
+        [InlineData(3,4)]
+        [InlineData(999999,9999)]
+        public async Task DeleteFail(int roomId1, int roomId2)
         {
             var room = new Room()
             {
-                RoomId = 1,
+                RoomId = roomId1,
                 Subject = "testSubject",
                 ClassName = "testName",
                 CreatorId = "testUser",
@@ -162,7 +179,7 @@ namespace BackEnd.Test.DAO.Test
 
             var room2 = new Room()
             {
-                RoomId = 2,
+                RoomId = roomId2,
                 Subject = "testSubject",
                 ClassName = "testName",
                 CreatorId = "testUser",
@@ -178,7 +195,7 @@ namespace BackEnd.Test.DAO.Test
 
             Assert.Equal((int)HttpStatusCode.InternalServerError, ((ObjectResult)result).StatusCode);
 
-            room = RoomDAO.Get(roomContext, 1);
+            room = RoomDAO.Get(roomContext, roomId1);
 
             Assert.NotNull(room);
 

@@ -1391,7 +1391,7 @@ namespace BackEnd.Services
                                 var content = String.Format(EmailTemplate.HTML_CONTENT, reader.GetValue(3).ToString(), reader.GetValue(1).ToString(), "123@123a", confirmationLink);
 
                                 var message = new Message(new string[] { user.Email }, "Your Account On DYSTANCE", content, null);
-                                await _emailSender.SendEmailAsync(message);
+                                _emailSender.SendEmailAsync(message);
 
                                 await _userManager.AddToRoleAsync(user, "Student");
 
@@ -1451,7 +1451,7 @@ namespace BackEnd.Services
                                 var content = String.Format(EmailTemplate.HTML_CONTENT, reader.GetValue(3).ToString(), reader.GetValue(1).ToString(), "123@123a", confirmationLink);
 
                                 var message = new Message(new string[] { user.Email }, "Your Account On DYSTANCE", content, null);
-                                await _emailSender.SendEmailAsync(message);
+                                _emailSender.SendEmailAsync(message);
 
                                 //roleManager.AddUserToRole
                                 await _userManager.AddToRoleAsync(user, "Teacher");
@@ -1550,7 +1550,7 @@ namespace BackEnd.Services
                                                {
                                                    Id = attendances.UserId,
                                                    Status = attendances.Status
-                                               }).OrderByDescending(x=>x.Id).ToListAsync();
+                                               }).OrderByDescending(x => x.Id).ToListAsync();
 
                     listStudent.AddRange(listStudentId);
 
@@ -1602,7 +1602,7 @@ namespace BackEnd.Services
                                                {
                                                    Id = attendances.UserId,
                                                    Status = attendances.Status
-                                               }).OrderByDescending(x=>x.Id).ToListAsync();
+                                               }).OrderByDescending(x => x.Id).ToListAsync();
 
                     listStudent.AddRange(listStudentId);
 
@@ -1687,24 +1687,28 @@ namespace BackEnd.Services
                                            where timetables.RoomId.ToString().Contains(roomId)
                                            select timetables).ToListAsync();
 
-
+                var workSheet = excel.Workbook.Worksheets.Add(room.Subject + "." + room.ClassName);
+                int recordIndex = 2;
                 foreach (var timetable in listTimetable)
                 {
                     var startMinutes = String.Format(timetable.StartTime.Minutes == 0 ? "{0:00}" : "{0:##}", timetable.StartTime.Minutes);
-                    var endMinutes = String.Format(timetable.EndTime.Minutes == 0 ? "{0:00}" : "{0:##}", timetable.EndTime.Minutes);    
-                    var workSheet = excel.Workbook.Worksheets.Add(String.Format("{0} {1}h{2}-{3}h{4}", timetable.Date.ToString("dd-MM-yyyy"), timetable.StartTime.Hours, startMinutes, timetable.EndTime.Hours, endMinutes));
+                    var endMinutes = String.Format(timetable.EndTime.Minutes == 0 ? "{0:00}" : "{0:##}", timetable.EndTime.Minutes);
+
 
                     //Header of table  
                     // 
                     workSheet.Row(1).Height = 20;
                     workSheet.Row(1).Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
                     workSheet.Row(1).Style.Font.Bold = true;
-                    workSheet.Cells[1, 1].Value = "Student Code";
-                    workSheet.Cells[1, 2].Value = "Real Name";
-                    workSheet.Cells[1, 3].Value = "Email";
-                    workSheet.Cells[1, 4].Value = "Status";
-
-                    //Get students from slot
+                    workSheet.Cells[1, 1].Value = "Date";
+                    workSheet.Cells[1, 2].Value = "Start Time";
+                    workSheet.Cells[1, 3].Value = "End Time";
+                    workSheet.Cells[1, 4].Value = "Student Code";
+                    workSheet.Cells[1, 5].Value = "Real Name";
+                    workSheet.Cells[1, 6].Value = "Email";
+                    workSheet.Cells[1, 7].Value = "Status";
+                    
+                    //Get students from slotz
                     //
                     var listStudents = await (from students in _context.AttendanceReports
                                               where students.TimeTableId == timetable.Id
@@ -1713,15 +1717,22 @@ namespace BackEnd.Services
 
                     //Body of table  
                     //
-                    int recordIndex = 2;
                     foreach (var student in listStudents)
                     {
                         var user = await _userManager.FindByIdAsync(student.UserId);
-                        workSheet.Cells[recordIndex, 1].Value = user.UserName;
-                        workSheet.Cells[recordIndex, 2].Value = user.RealName;
-                        workSheet.Cells[recordIndex, 3].Value = user.Email;
-                        workSheet.Cells[recordIndex, 4].Value = student.Status;
-                        recordIndex++;
+
+                        if (await _userManager.IsInRoleAsync(user, "student"))
+                        {
+                            workSheet.Cells[recordIndex, 1].Value = timetable.Date.ToString("dd-MM-yyyy");
+                            workSheet.Cells[recordIndex, 2].Value = timetable.StartTime.Hours + "h" + startMinutes;
+                            workSheet.Cells[recordIndex, 3].Value = timetable.EndTime.Hours + "h" + endMinutes;
+                            workSheet.Cells[recordIndex, 4].Value = user.UserName;
+                            workSheet.Cells[recordIndex, 5].Value = user.RealName;
+                            workSheet.Cells[recordIndex, 6].Value = user.Email;
+                            workSheet.Cells[recordIndex, 7].Value = student.Status;
+                           
+                            recordIndex++;
+                        }
                     }
 
 
@@ -1730,8 +1741,9 @@ namespace BackEnd.Services
                     workSheet.Column(2).AutoFit();
                     workSheet.Column(3).AutoFit();
                     workSheet.Column(4).AutoFit();
-
-                    
+                    workSheet.Column(5).AutoFit();
+                    workSheet.Column(6).AutoFit();
+                    workSheet.Column(7).AutoFit();
                 }
                 excel.SaveAs(fileInfo);
             }

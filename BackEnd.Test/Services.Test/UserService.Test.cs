@@ -269,7 +269,7 @@ namespace BackEnd.Test.Services.Test
             fakeUserManager.Setup(x => x.FindByEmailAsync(user.Email)).Returns(Task.FromResult(users.FirstOrDefault<AppUser>(u => u.Email == user.Email) == null ? null : user));
             fakeUserManager.Setup(x => x.FindByNameAsync(user.UserName)).Returns(Task.FromResult(users.FirstOrDefault<AppUser>(u => u.UserName == user.UserName) == null ? null : user));
             fakeSignInManager.Setup(x => x.CheckPasswordSignInAsync(It.IsAny<AppUser>(), It.IsAny<String>(), false)).ReturnsAsync(SignInResult.Success);
-            context.Add(user);
+            context.Users.Add(user);
             context.SaveChanges();
 
 

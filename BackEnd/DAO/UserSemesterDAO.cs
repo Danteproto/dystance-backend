@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 namespace BackEnd.DAO
 {
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class UserSemesterDAO
     {
         public static async Task<int> Create(UserDbContext context, UserSemesters userSemester)

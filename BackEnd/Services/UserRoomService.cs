@@ -23,7 +23,7 @@ namespace BackEnd.Services
     {
         public Task<IActionResult> GetTimeTable(TimetableRequest model);
     }
-
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public class UserRoomService : IUserRoomService
     {
         private readonly RoomDBContext _roomDbContext;

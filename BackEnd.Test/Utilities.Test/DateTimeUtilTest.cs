@@ -70,7 +70,7 @@ namespace BackEnd.Test.Utilities.Test
         [Theory]
         [InlineData("",
             "",
-            "1/1/0001 00:00:00")]
+            "1/1/0001 12:00:00 AM")]
         public void EachDay_Returns_0001Date_WhenEmpty(string from, string to, string expected)
         {
             //Arrange
